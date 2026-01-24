@@ -1,78 +1,104 @@
-# Environment variables
-.env
-.env.local
-.env.*.local
-
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-*.egg-info/
-dist/
 build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
 *.egg
-
-# Virtual environments
+.env
 venv/
-env/
-ENV/
-.venv
+.venv/
+site/
+# Node
+node_modules/
+coverage/
+.DS_Store
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # IDEs
-.vscode/
 .idea/
+.vscode/
 *.swp
 *.swo
-*~
-.DS_Store
+
+# SQLite
+*.db
+*.sqlite3
+
+# Docker
+.docker/
+env/
+
+# Alembic cache files
+alembic/__pycache__/
+alembic/versions/__pycache__/
+__pycache__/
 
 # Logs
-*.log
 logs/
-audio_splitter.log
-generate_scripts.log
-
-# Output files
-output/
-*.mp3
-*.wav
-*.m4a
-*.txt
-!requirements.txt
-!README.txt
-
-# Whisper models cache
-~/.cache/whisper/
-
-# Jupyter Notebook
-.ipynb_checkpoints
+*.log
 
 # Testing
-.pytest_cache/
 .coverage
 htmlcov/
+.pytest_cache/
+.tox/
+nosetests.xml
+coverage.xml
+*.cover
 
-# Temporary files
-*.tmp
-*.bak
-*.swp
-temp/
-tmp/
+# Environments beyond venv
+.env.*
+!.env.example
+!.env.docker
 
-# Large input files
-input/*.mp3
-input/*.wav
-input/*.m4a
-!input/.gitkeep
-
-# Mac
-.DS_Store
-.AppleDouble
-.LSOverride
-
-# Windows
+# OS specific files
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+# Frontend build artifacts
+frontend/dist/
+frontend/build/
+frontend/.cache/
+
+# TypeScript
+*.tsbuildinfo
+.eslintcache
+.vercel
+.turbo
+
+# Package managers
+yarn.lock
+package-lock.json
+
+# Temporary files
+*.tmp
+*~
+tmp/
+temp/
+
+# Certificates and keys
+*.pem
+*.key
+*.crt
+*.cert
