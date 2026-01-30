@@ -1,9 +1,9 @@
 import { use } from 'react'
 import { StatusDot } from '../../components/ui/StatusDot'
-import { useHealthStatus } from '../../hooks/useHealthStatus'
+import { useHealthStatus, HealthStatusData } from '../../hooks/useHealthStatus'
 
 export function HealthStatus() {
-  const data = use(useHealthStatus())
+  const data = use(useHealthStatus()) as HealthStatusData
 
   return (
     <div className="flex items-center">
