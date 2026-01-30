@@ -1,0 +1,85 @@
+{
+  "nav": {
+    "home": "Trang chủ",
+    "dashboard": "Bảng điều khiển",
+    "login": "Đăng nhập",
+    "logout": "Đăng xuất",
+    "signUp": "Đăng ký"
+  },
+  "hero": {
+    "badge": "Nền Tảng Học Tiếng Nhật Với AI",
+    "title": "Chuyển Đổi File Âm Thanh Thành",
+    "titleHighlight": "Ngân Hàng Đề Thi Tiếng Nhật",
+    "description": "Tự động chia nhỏ file âm thanh dài thành các phân đoạn luyện tập, tạo bản phiên âm và xây dựng ngân hàng đề thi toàn diện cho việc luyện nghe tiếng Nhật.",
+    "getStarted": "Bắt Đầu Miễn Phí",
+    "watchDemo": "Xem Demo",
+    "fastProcessing": "Xử Lý Nhanh",
+    "secure": "An Toàn & Bảo Mật",
+    "available": "Hoạt Động 24/7"
+  },
+  "stats": {
+    "audioHours": "Giờ Âm Thanh Đã Xử Lý",
+    "questions": "Câu Hỏi Đã Tạo",
+    "teachers": "Giáo Viên Đang Hoạt Động",
+    "successRate": "Tỷ Lệ Thành Công Của Học Sinh"
+  },
+  "howItWorks": {
+    "badge": "Quy Trình Đơn Giản",
+    "title": "Cách Hoạt Động",
+    "description": "Từ tải file âm thanh đến ngân hàng đề thi chỉ trong vài phút",
+    "step1": {
+      "title": "Tải Lên Âm Thanh",
+      "description": "Tải lên file âm thanh tiếng Nhật hoặc bản ghi âm của bạn"
+    },
+    "step2": {
+      "title": "Xử Lý AI",
+      "description": "AI tự động chia nhỏ âm thanh, tạo phiên âm và câu hỏi"
+    },
+    "step3": {
+      "title": "Kiểm Tra & Triển Khai",
+      "description": "Giáo viên kiểm tra, phê duyệt và triển khai cho học sinh ngay lập tức"
+    }
+  },
+  "features": {
+    "badge": "Tính Năng",
+    "title": "Tính Năng Mạnh Mẽ",
+    "description": "Mọi thứ bạn cần để tạo tài liệu luyện nghe tiếng Nhật hấp dẫn",
+    "uploadAudio": {
+      "title": "Tải File Âm Thanh Dài",
+      "description": "Nhập bài học, bài giảng hoặc hội thoại tiếng Nhật ở bất kỳ định dạng nào"
+    },
+    "autoSplit": {
+      "title": "Tự Động Chia Nhỏ",
+      "description": "AI tự động phân đoạn âm thanh thành các phần luyện tập có ý nghĩa"
+    },
+    "transcription": {
+      "title": "Phiên Âm Văn Bản",
+      "description": "Xem phiên âm tiếng Nhật chính xác với hiragana, katakana và kanji"
+    },
+    "aiAnalysis": {
+      "title": "Phân Tích Bằng AI",
+      "description": "Đánh giá độ khó thông minh và phát hiện mẫu ngữ pháp"
+    },
+    "teacherTools": {
+      "title": "Công Cụ Dành Cho Giáo Viên",
+      "description": "Xem xét, chỉnh sửa và phê duyệt câu hỏi trước khi xuất bản cho học sinh"
+    },
+    "questionBank": {
+      "title": "Tạo Ngân Hàng Câu Hỏi",
+      "description": "Xây dựng ngân hàng đề thi toàn diện cho luyện nghe hiểu"
+    }
+  },
+  "cta": {
+    "badge": "Bắt Đầu Ngay Hôm Nay",
+    "title": "Sẵn Sàng Chuyển Đổi Cách Dạy Tiếng Nhật?",
+    "description": "Tham gia cùng hàng trăm giáo viên đang tạo tài liệu luyện nghe tốt hơn với AI",
+    "startTrial": "Dùng Thử Miễn Phí",
+    "signIn": "Đăng Nhập",
+    "noCredit": "Không cần thẻ tín dụng",
+    "freeTrial": "Dùng thử miễn phí 14 ngày",
+    "cancelAnytime": "Hủy bất cứ lúc nào"
+  },
+  "footer": {
+    "copyright": "Ngân Hàng Đề Thi Âm Thanh Tiếng Nhật. Được hỗ trợ bởi AI."
+  }
+}

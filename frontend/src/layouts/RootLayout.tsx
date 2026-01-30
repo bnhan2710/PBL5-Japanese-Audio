@@ -1,7 +1,9 @@
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { AppProvider } from '../context/AppContext'
 import { Notification } from '../components/ui/Notification'
 import { ThemeToggle } from '../components/ui/ThemeToggle'
+import { LanguageSwitcher } from '../components/ui/LanguageSwitcher'
 import { useAuth } from '../context/AuthContext'
 import { Button } from '../components/ui/Button'
 
@@ -14,6 +16,7 @@ const privateNavLinks = [{ to: '/dashboard', label: 'Dashboard' }] as const
 function Navigation() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { t } = useTranslation()
   const { isAuthenticated, logout } = useAuth()
   const linkBase =
     'text-foreground hover:text-primary px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-accent/10'
@@ -39,29 +42,30 @@ function Navigation() {
             </Link>
             
             <div className="flex space-x-2">
-              {publicNavLinks.map(({ to, label }) => (
+              {publicNavLinks.map(({ to }) => (
                 <Link
                   key={to}
                   to={to}
                   className={location.pathname === to ? `${linkBase} ${activeLink}` : linkBase}
                 >
-                  {label}
+                  {t('nav.home')}
                 </Link>
               ))}
               {isAuthenticated &&
-                privateNavLinks.map(({ to, label }) => (
+                privateNavLinks.map(({ to }) => (
                   <Link
                     key={to}
                     to={to}
                     className={location.pathname === to ? `${linkBase} ${activeLink}` : linkBase}
                   >
-                    {label}
+                    {t('nav.dashboard')}
                   </Link>
                 ))}
             </div>
           </div>
           
           <div className="flex items-center space-x-3">
+            <LanguageSwitcher />
             <ThemeToggle />
             {isAuthenticated ? (
               <Button
@@ -69,7 +73,7 @@ function Navigation() {
                 onClick={handleLogout}
                 className="text-foreground hover:text-primary"
               >
-                Logout
+                {t('nav.logout')}
               </Button>
             ) : (
               <>
@@ -78,12 +82,12 @@ function Navigation() {
                     variant="ghost"
                     className={location.pathname === '/login' ? 'text-primary' : ''}
                   >
-                    Login
+                    {t('nav.login')}
                   </Button>
                 </Link>
                 <Link to="/register">
                   <Button size="sm" className="shadow-md">
-                    Sign Up
+                    {t('nav.signUp')}
                   </Button>
                 </Link>
               </>
@@ -97,6 +101,7 @@ function Navigation() {
 
 export default function RootLayout() {
   const currentYear = new Date().getFullYear()
+  const { t } = useTranslation()
 
   return (
     <AppProvider>
@@ -108,7 +113,7 @@ export default function RootLayout() {
         <footer className="bg-card text-card-foreground shadow-sm transition-colors mt-auto border-t border-border">
           <div className="container mx-auto px-6 py-6">
             <p className="text-center text-sm text-muted-foreground">
-              © {currentYear} Japanese Audio Question Bank. Powered by AI.
+              © {currentYear} {t('footer.copyright')}
             </p>
           </div>
         </footer>

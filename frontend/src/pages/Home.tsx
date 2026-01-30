@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   AudioWaveform,
   Scissors,
@@ -22,58 +23,59 @@ import { Card } from '../components/ui/Card'
 type FeatureItem = {
   id: string
   icon: React.ReactNode
-  title: string
-  description: string
+  titleKey: string
+  descriptionKey: string
 }
-
-const features: FeatureItem[] = [
-  {
-    id: '1',
-    icon: <AudioWaveform className="w-6 h-6" />,
-    title: 'Upload Long Audio Files',
-    description: 'Import your Japanese audio lessons, lectures, or conversations in any format',
-  },
-  {
-    id: '2',
-    icon: <Scissors className="w-6 h-6" />,
-    title: 'Auto-Split & Segment',
-    description: 'AI automatically segments audio into meaningful practice chunks',
-  },
-  {
-    id: '3',
-    icon: <FileText className="w-6 h-6" />,
-    title: 'Text Transcription',
-    description: 'View accurate Japanese transcriptions with hiragana, katakana, and kanji',
-  },
-  {
-    id: '4',
-    icon: <Brain className="w-6 h-6" />,
-    title: 'AI-Powered Analysis',
-    description: 'Intelligent difficulty assessment and grammar pattern detection',
-  },
-  {
-    id: '5',
-    icon: <CheckCircle2 className="w-6 h-6" />,
-    title: 'Teacher Review Tools',
-    description: 'Review, edit, and approve questions before publishing to students',
-  },
-  {
-    id: '6',
-    icon: <Languages className="w-6 h-6" />,
-    title: 'Question Bank Creation',
-    description: 'Build comprehensive exam banks for listening comprehension practice',
-  },
-]
-
-const stats = [
-  { label: 'Audio Hours Processed', value: '10,000+' },
-  { label: 'Questions Generated', value: '50,000+' },
-  { label: 'Active Teachers', value: '500+' },
-  { label: 'Student Success Rate', value: '95%' },
-]
 
 export default function Home() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
+
+  const features: FeatureItem[] = [
+    {
+      id: '1',
+      icon: <AudioWaveform className="w-6 h-6" />,
+      titleKey: 'features.uploadAudio.title',
+      descriptionKey: 'features.uploadAudio.description',
+    },
+    {
+      id: '2',
+      icon: <Scissors className="w-6 h-6" />,
+      titleKey: 'features.autoSplit.title',
+      descriptionKey: 'features.autoSplit.description',
+    },
+    {
+      id: '3',
+      icon: <FileText className="w-6 h-6" />,
+      titleKey: 'features.transcription.title',
+      descriptionKey: 'features.transcription.description',
+    },
+    {
+      id: '4',
+      icon: <Brain className="w-6 h-6" />,
+      titleKey: 'features.aiAnalysis.title',
+      descriptionKey: 'features.aiAnalysis.description',
+    },
+    {
+      id: '5',
+      icon: <CheckCircle2 className="w-6 h-6" />,
+      titleKey: 'features.teacherTools.title',
+      descriptionKey: 'features.teacherTools.description',
+    },
+    {
+      id: '6',
+      icon: <Languages className="w-6 h-6" />,
+      titleKey: 'features.questionBank.title',
+      descriptionKey: 'features.questionBank.description',
+    },
+  ]
+
+  const stats = [
+    { labelKey: 'stats.audioHours', value: '10,000+' },
+    { labelKey: 'stats.questions', value: '50,000+' },
+    { labelKey: 'stats.teachers', value: '500+' },
+    { labelKey: 'stats.successRate', value: '95%' },
+  ]
 
   return (
     <div className="space-y-24 py-8">
@@ -86,19 +88,18 @@ export default function Home() {
         <div className="max-w-5xl mx-auto text-center space-y-8 py-20 px-4">
           <Badge variant="success" className="px-4 py-2 text-sm">
             <Sparkles className="w-4 h-4 mr-2" />
-            AI-Powered Japanese Learning Platform
+            {t('hero.badge')}
           </Badge>
 
           <h1 className="text-5xl md:text-7xl font-extrabold leading-tight tracking-tight">
-            Transform Audio Files into
+            {t('hero.title')}
             <span className="block bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mt-3">
-              Japanese Question Banks
+              {t('hero.titleHighlight')}
             </span>
           </h1>
 
           <p className="text-xl md:text-2xl text-muted-foreground leading-relaxed max-w-3xl mx-auto">
-            Automatically split long audio files into practice segments, generate transcriptions,
-            and create comprehensive exam banks for Japanese listening comprehension.
+            {t('hero.description')}
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-6">
@@ -107,7 +108,7 @@ export default function Home() {
               size="lg"
               className="group min-w-[200px] h-12 text-base shadow-lg hover:shadow-xl transition-all"
             >
-              Get Started Free
+              {t('hero.getStarted')}
               <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
             </Button>
             <Button
@@ -117,22 +118,22 @@ export default function Home() {
               className="min-w-[200px] h-12 text-base"
             >
               <Play className="w-5 h-5 mr-2" />
-              Watch Demo
+              {t('hero.watchDemo')}
             </Button>
           </div>
 
           <div className="flex flex-wrap justify-center gap-8 pt-8 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               <Zap className="w-5 h-5 text-accent" />
-              <span>Fast Processing</span>
+              <span>{t('hero.fastProcessing')}</span>
             </div>
             <div className="flex items-center gap-2">
               <Shield className="w-5 h-5 text-accent" />
-              <span>Secure & Private</span>
+              <span>{t('hero.secure')}</span>
             </div>
             <div className="flex items-center gap-2">
               <Clock className="w-5 h-5 text-accent" />
-              <span>24/7 Available</span>
+              <span>{t('hero.available')}</span>
             </div>
           </div>
         </div>
@@ -151,7 +152,7 @@ export default function Home() {
               <div className="text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-3">
                 {stat.value}
               </div>
-              <div className="text-sm font-medium text-muted-foreground">{stat.label}</div>
+              <div className="text-sm font-medium text-muted-foreground">{t(stat.labelKey)}</div>
             </Card>
           ))}
         </div>
@@ -163,11 +164,11 @@ export default function Home() {
       <section className="max-w-6xl mx-auto px-4">
         <div className="text-center mb-16">
           <Badge variant="outline" className="mb-4 px-3 py-1">
-            Simple Process
+            {t('howItWorks.badge')}
           </Badge>
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">How It Works</h2>
+          <h2 className="text-4xl md:text-5xl font-bold mb-4">{t('howItWorks.title')}</h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            From audio upload to exam-ready question bank in minutes
+            {t('howItWorks.description')}
           </p>
         </div>
 
@@ -183,9 +184,9 @@ export default function Home() {
                   <AudioWaveform className="w-6 h-6" />
                 </div>
               </div>
-              <h3 className="text-xl font-bold">Upload Audio</h3>
+              <h3 className="text-xl font-bold">{t('howItWorks.step1.title')}</h3>
               <p className="text-muted-foreground leading-relaxed">
-                Upload your long-form Japanese audio files or recordings
+                {t('howItWorks.step1.description')}
               </p>
             </Card>
             <div className="hidden md:block absolute top-10 -right-4 w-8 h-1 bg-gradient-to-r from-border to-transparent" />
@@ -202,9 +203,9 @@ export default function Home() {
                   <Brain className="w-6 h-6" />
                 </div>
               </div>
-              <h3 className="text-xl font-bold">AI Processing</h3>
+              <h3 className="text-xl font-bold">{t('howItWorks.step2.title')}</h3>
               <p className="text-muted-foreground leading-relaxed">
-                Our AI splits audio, generates transcriptions, and creates questions
+                {t('howItWorks.step2.description')}
               </p>
             </Card>
             <div className="hidden md:block absolute top-10 -right-4 w-8 h-1 bg-gradient-to-r from-border to-transparent" />
@@ -220,9 +221,9 @@ export default function Home() {
                 <Users className="w-6 h-6" />
               </div>
             </div>
-            <h3 className="text-xl font-bold">Review & Deploy</h3>
+            <h3 className="text-xl font-bold">{t('howItWorks.step3.title')}</h3>
             <p className="text-muted-foreground leading-relaxed">
-              Teachers review, approve, and deploy to students instantly
+              {t('howItWorks.step3.description')}
             </p>
           </Card>
         </div>
@@ -234,11 +235,11 @@ export default function Home() {
       <section className="max-w-6xl mx-auto px-4">
         <div className="text-center mb-16">
           <Badge variant="outline" className="mb-4 px-3 py-1">
-            Features
+            {t('features.badge')}
           </Badge>
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">Powerful Features</h2>
+          <h2 className="text-4xl md:text-5xl font-bold mb-4">{t('features.title')}</h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Everything you need to create engaging Japanese listening practice materials
+            {t('features.description')}
           </p>
         </div>
 
@@ -254,10 +255,10 @@ export default function Home() {
                 </div>
                 <div className="flex-1 space-y-2">
                   <h3 className="text-lg font-bold group-hover:text-primary transition-colors">
-                    {feature.title}
+                    {t(feature.titleKey)}
                   </h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    {feature.description}
+                    {t(feature.descriptionKey)}
                   </p>
                 </div>
               </div>
@@ -278,13 +279,13 @@ export default function Home() {
             <div className="space-y-4">
               <Badge className="bg-primary-foreground/20 text-primary-foreground border-primary-foreground/30">
                 <Sparkles className="w-3 h-3 mr-1" />
-                Start Today
+                {t('cta.badge')}
               </Badge>
               <h2 className="text-4xl md:text-5xl font-extrabold text-primary-foreground">
-                Ready to Transform Your Japanese Teaching?
+                {t('cta.title')}
               </h2>
               <p className="text-xl text-primary-foreground/90 max-w-2xl mx-auto leading-relaxed">
-                Join hundreds of teachers creating better listening comprehension materials with AI
+                {t('cta.description')}
               </p>
             </div>
             
@@ -295,7 +296,7 @@ export default function Home() {
                 variant="secondary"
                 className="min-w-[220px] h-14 text-base font-semibold shadow-xl hover:shadow-2xl group"
               >
-                Start Free Trial
+                {t('cta.startTrial')}
                 <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
               <Button
@@ -303,22 +304,22 @@ export default function Home() {
                 size="lg"
                 className="min-w-[220px] h-14 text-base font-semibold bg-primary-foreground/10 hover:bg-primary-foreground/20 text-primary-foreground border-2 border-primary-foreground/30"
               >
-                Sign In
+                {t('cta.signIn')}
               </Button>
             </div>
 
             <div className="flex flex-wrap justify-center gap-6 pt-6 text-sm text-primary-foreground/80">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4" />
-                <span>No credit card required</span>
+                <span>{t('cta.noCredit')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4" />
-                <span>14-day free trial</span>
+                <span>{t('cta.freeTrial')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4" />
-                <span>Cancel anytime</span>
+                <span>{t('cta.cancelAnytime')}</span>
               </div>
             </div>
           </div>

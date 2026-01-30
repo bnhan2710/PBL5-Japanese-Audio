@@ -1,0 +1,85 @@
+{
+  "nav": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "login": "Login",
+    "logout": "Logout",
+    "signUp": "Sign Up"
+  },
+  "hero": {
+    "badge": "AI-Powered Japanese Learning Platform",
+    "title": "Transform Audio Files into",
+    "titleHighlight": "Japanese Question Banks",
+    "description": "Automatically split long audio files into practice segments, generate transcriptions, and create comprehensive exam banks for Japanese listening comprehension.",
+    "getStarted": "Get Started Free",
+    "watchDemo": "Watch Demo",
+    "fastProcessing": "Fast Processing",
+    "secure": "Secure & Private",
+    "available": "24/7 Available"
+  },
+  "stats": {
+    "audioHours": "Audio Hours Processed",
+    "questions": "Questions Generated",
+    "teachers": "Active Teachers",
+    "successRate": "Student Success Rate"
+  },
+  "howItWorks": {
+    "badge": "Simple Process",
+    "title": "How It Works",
+    "description": "From audio upload to exam-ready question bank in minutes",
+    "step1": {
+      "title": "Upload Audio",
+      "description": "Upload your long-form Japanese audio files or recordings"
+    },
+    "step2": {
+      "title": "AI Processing",
+      "description": "Our AI splits audio, generates transcriptions, and creates questions"
+    },
+    "step3": {
+      "title": "Review & Deploy",
+      "description": "Teachers review, approve, and deploy to students instantly"
+    }
+  },
+  "features": {
+    "badge": "Features",
+    "title": "Powerful Features",
+    "description": "Everything you need to create engaging Japanese listening practice materials",
+    "uploadAudio": {
+      "title": "Upload Long Audio Files",
+      "description": "Import your Japanese audio lessons, lectures, or conversations in any format"
+    },
+    "autoSplit": {
+      "title": "Auto-Split & Segment",
+      "description": "AI automatically segments audio into meaningful practice chunks"
+    },
+    "transcription": {
+      "title": "Text Transcription",
+      "description": "View accurate Japanese transcriptions with hiragana, katakana, and kanji"
+    },
+    "aiAnalysis": {
+      "title": "AI-Powered Analysis",
+      "description": "Intelligent difficulty assessment and grammar pattern detection"
+    },
+    "teacherTools": {
+      "title": "Teacher Review Tools",
+      "description": "Review, edit, and approve questions before publishing to students"
+    },
+    "questionBank": {
+      "title": "Question Bank Creation",
+      "description": "Build comprehensive exam banks for listening comprehension practice"
+    }
+  },
+  "cta": {
+    "badge": "Start Today",
+    "title": "Ready to Transform Your Japanese Teaching?",
+    "description": "Join hundreds of teachers creating better listening comprehension materials with AI",
+    "startTrial": "Start Free Trial",
+    "signIn": "Sign In",
+    "noCredit": "No credit card required",
+    "freeTrial": "14-day free trial",
+    "cancelAnytime": "Cancel anytime"
+  },
+  "footer": {
+    "copyright": "Japanese Audio Question Bank. Powered by AI."
+  }
+}

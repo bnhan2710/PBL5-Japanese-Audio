@@ -1,0 +1,85 @@
+{
+  "nav": {
+    "home": "ホーム",
+    "dashboard": "ダッシュボード",
+    "login": "ログイン",
+    "logout": "ログアウト",
+    "signUp": "登録"
+  },
+  "hero": {
+    "badge": "AI搭載の日本語学習プラットフォーム",
+    "title": "音声ファイルを",
+    "titleHighlight": "日本語問題バンクに変換",
+    "description": "長い音声ファイルを自動的に練習用セグメントに分割し、文字起こしを生成し、日本語リスニング理解のための包括的な試験バンクを作成します。",
+    "getStarted": "無料で始める",
+    "watchDemo": "デモを見る",
+    "fastProcessing": "高速処理",
+    "secure": "安全・プライベート",
+    "available": "24時間365日利用可能"
+  },
+  "stats": {
+    "audioHours": "処理された音声時間",
+    "questions": "生成された問題",
+    "teachers": "アクティブな教師",
+    "successRate": "学生の成功率"
+  },
+  "howItWorks": {
+    "badge": "シンプルなプロセス",
+    "title": "仕組み",
+    "description": "音声アップロードから試験準備完了の問題バンクまで数分で",
+    "step1": {
+      "title": "音声をアップロード",
+      "description": "長い形式の日本語音声ファイルまたは録音をアップロード"
+    },
+    "step2": {
+      "title": "AI処理",
+      "description": "AIが音声を分割し、文字起こしを生成し、問題を作成"
+    },
+    "step3": {
+      "title": "確認と展開",
+      "description": "教師が確認、承認し、即座に学生に展開"
+    }
+  },
+  "features": {
+    "badge": "機能",
+    "title": "強力な機能",
+    "description": "魅力的な日本語リスニング練習教材を作成するために必要なすべて",
+    "uploadAudio": {
+      "title": "長い音声ファイルのアップロード",
+      "description": "任意の形式で日本語のレッスン、講義、会話をインポート"
+    },
+    "autoSplit": {
+      "title": "自動分割・セグメント化",
+      "description": "AIが自動的に音声を意味のある練習チャンクにセグメント化"
+    },
+    "transcription": {
+      "title": "テキスト文字起こし",
+      "description": "ひらがな、カタカナ、漢字を含む正確な日本語の文字起こしを表示"
+    },
+    "aiAnalysis": {
+      "title": "AI搭載分析",
+      "description": "インテリジェントな難易度評価と文法パターン検出"
+    },
+    "teacherTools": {
+      "title": "教師用レビューツール",
+      "description": "学生に公開する前に問題を確認、編集、承認"
+    },
+    "questionBank": {
+      "title": "問題バンクの作成",
+      "description": "リスニング理解練習のための包括的な試験バンクを構築"
+    }
+  },
+  "cta": {
+    "badge": "今日から始めよう",
+    "title": "日本語教育を変革する準備はできましたか？",
+    "description": "AIでより良いリスニング理解教材を作成している何百人もの教師に参加しましょう",
+    "startTrial": "無料トライアルを開始",
+    "signIn": "サインイン",
+    "noCredit": "クレジットカード不要",
+    "freeTrial": "14日間無料トライアル",
+    "cancelAnytime": "いつでもキャンセル可能"
+  },
+  "footer": {
+    "copyright": "日本語オーディオ問題バンク。AIによって動力を与えられた。"
+  }
+}
