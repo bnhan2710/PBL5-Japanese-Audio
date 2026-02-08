@@ -1,4 +1,4 @@
-"""Auto migration
+    """Auto migration
 
 Revision ID: e33bb845793c
 Revises: fc150bd13ee2

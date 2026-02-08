@@ -1,7 +1,11 @@
 import asyncio
 from alembic import context
 from logging.config import fileConfig
-from app.db import Base, get_database_url, create_engine_with_retry
+from app.db.base import Base
+from app.db.session import get_database_url, create_engine_with_retry
+
+# Import all models so Alembic can detect them
+from app.modules.users.models import User  # noqa: F401
 
 # Load Alembic configuration and set up logging
 config = context.config

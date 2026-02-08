@@ -2,11 +2,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from app.utils.logger import setup_logger
-from app.routes.health import router as health_router
-from app.routes.auth import router as auth_router
-from app.db.database import init_db, engine
-from app.config import get_settings
+from app.shared.utils import setup_logger
+from app.core.health import router as health_router
+from app.modules.users.router import router as users_router
+from app.db.session import init_db, engine
+from app.core.config import get_settings
 
 settings = get_settings()
 logger = setup_logger(__name__)
@@ -51,6 +51,6 @@ app.add_middleware(
 
 # Include routers
 app.include_router(health_router, prefix="/api")
-app.include_router(auth_router, prefix="/api")
+app.include_router(users_router, prefix="/api")
 
 logger.info("Application routes configured")

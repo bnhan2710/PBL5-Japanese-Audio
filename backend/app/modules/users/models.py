@@ -1,11 +1,8 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, DateTime
 from sqlalchemy.sql import func
-from .database import Base
-from passlib.context import CryptContext
 import secrets
 
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+from app.db.base import Base
 
 
 class User(Base):
@@ -22,14 +19,6 @@ class User(Base):
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     reset_token = Column(String, unique=True, nullable=True)
-
-    def verify_password(self, password: str) -> bool:
-        """Check if a plain password matches the hashed password."""
-        return pwd_context.verify(password, self.hashed_password)
-
-    def set_password(self, password: str):
-        """Hash and store a password."""
-        self.hashed_password = pwd_context.hash(password)
 
     def generate_reset_token(self):
         """Generate a secure reset token."""

@@ -5,7 +5,7 @@ from logging.handlers import RotatingFileHandler
 import json
 from datetime import datetime
 
-from app.config import CURRENT_LOGGING_CONFIG
+from app.core.config import CURRENT_LOGGING_CONFIG
 
 
 class CustomFormatter(logging.Formatter):
