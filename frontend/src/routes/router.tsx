@@ -8,6 +8,7 @@ const Home = lazy(() => import('../pages/Home'))
 const Dashboard = lazy(() => import('../pages/Dashboard'))
 const Login = lazy(() => import('../pages/Login'))
 const Register = lazy(() => import('../pages/Register'))
+const UsersPage = lazy(() => import('../features/admin/users/UsersPage'))
 
 // Error boundary component
 function ErrorBoundary() {
@@ -47,6 +48,10 @@ const routes = {
     {
       path: 'dashboard',
       element: <Dashboard />,
+    },
+    {
+      path: 'admin/users',
+      element: <UsersPage />,
     },
   ],
 }
