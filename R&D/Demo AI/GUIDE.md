@@ -2,7 +2,38 @@
 
 This guide documents the complete workflow to split JLPT audio files and generate high-accuracy Japanese scripts using AI.
 
-## � Workflow Overview
+## 🆕 New: All-in-One Workflow (v2.0)
+
+**Best for:** Processing a raw audio file from start to finish in one command.
+
+### `audio_splitter_to_text_v2.py`
+This script performs the entire pipeline:
+1.  **Transcribe**: ReazonSpeech (High Accuracy).
+2.  **Refine**: Gemini (Speaker labels, Punctuation).
+3.  **Split**: Cuts audio into Mondai and Questions using Gemini timestamps.
+
+**Command:**
+```bash
+python3 R\&D/Demo\ AI/audio_splitter_to_text_v2.py "input/jlpt_n2.mp3" --output_dir output_v2
+```
+
+**Output Structure:**
+```
+output_v2/
+├── raw_transcript.txt      # Raw Reazon text
+├── refined_script.txt      # Final script
+├── timestamps.json         # Cut times
+└── mondai/                 # Audio files
+    ├── mondai_1/
+    │   ├── mondai_1.mp3
+    │   └── questions/
+    │       ├── question_1.mp3
+    │       └── ...
+```
+
+---
+
+## 🔄 Standard Workflow (v1.0) - Step-by-Step
 
 The process is divided into 2 distinct steps:
 
@@ -58,6 +89,11 @@ python3 R\&D/Demo\ AI/full_pipeline.py "output/mondai/mondai_1/questions" --batc
 ---
 
 ## 🛠️ Usage Reference
+
+### `audio_splitter_to_text_v2.py` (v2.0)
+*   **Input**: Raw Audio File.
+*   **Action**: Reazon Transcribe -> Gemini Refine + Timestamp -> PyDub Cut.
+*   **Output**: Unified folder with Script + Split Audio.
 
 ### `audio_splitter.py`
 *   **Input**: Long JLPT Audio File.
