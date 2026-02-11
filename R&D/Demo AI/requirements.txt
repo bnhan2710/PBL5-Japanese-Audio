@@ -18,23 +18,3 @@ google-generativeai>=0.3.2
 sherpa_onnx
 git+https://github.com/reazon-research/reazonspeech.git#subdirectory=pkg/k2-asr
 
-# Utilities (auto-installed with whisper)
-# numpy>=1.26.3
-# torch>=2.0.0
-# tqdm>=4.65.0
-
-# =============================================================================
-# FUTURE DEPENDENCIES (not yet implemented):
-# =============================================================================
-# Backend API:
-# fastapi==0.109.0
-# uvicorn[standard]==0.27.0
-# python-multipart==0.0.6
-#
-# Database:
-# psycopg2-binary==2.9.9
-# sqlalchemy==2.0.25
-#
-# Image Processing (OCR):
-# Pillow==10.2.0
-# pytesseract==0.3.10

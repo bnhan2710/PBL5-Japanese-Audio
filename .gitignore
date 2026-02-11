@@ -112,6 +112,7 @@ input/
 
 # Output files
 output/
+output_v2/
 *.mp3
 *.wav
 *.m4a

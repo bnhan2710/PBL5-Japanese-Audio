@@ -4,18 +4,10 @@ from pydub import AudioSegment
 from pydub.silence import split_on_silence
 import reazonspeech as rs
 
-def main():
-    print("--- Chunked ReazonSpeech Transcriber ---")
-    
-    # 1. Get input file
-    if len(sys.argv) > 1:
-        input_file = sys.argv[1]
-    else:
-        input_file = input("Enter the path to the audio file: ").strip().strip("'").strip('"')
-    
+def process_audio_file(input_file, save_file=True):
     if not os.path.isfile(input_file):
         print(f"Error: File not found at '{input_file}'")
-        return
+        return None
 
     print(f"Processing: {input_file}")
     
@@ -94,17 +86,32 @@ def main():
 
     # 5. Combine and Save
     final_text = "".join(full_transcript)
-    output_file = f"{os.path.splitext(input_file)[0]}_transcript.txt"
     
-    with open(output_file, "w", encoding="utf-8") as f:
-        f.write(final_text)
+    if save_file:
+        output_file = f"{os.path.splitext(input_file)[0]}_transcript.txt"
         
-    print("-" * 30)
-    print("Transcription Complete!")
-    print(f"Saved to: {output_file}")
+        with open(output_file, "w", encoding="utf-8") as f:
+            f.write(final_text)
+            
+        print("-" * 30)
+        print("Transcription Complete!")
+        print(f"Saved to: {output_file}")
     
     # Cleanup temp dir
     os.rmdir(temp_dir)
+    
+    return final_text
+
+def main():
+    print("--- Chunked ReazonSpeech Transcriber ---")
+    
+    # 1. Get input file
+    if len(sys.argv) > 1:
+        input_file = sys.argv[1]
+    else:
+        input_file = input("Enter the path to the audio file: ").strip().strip("'").strip('"')
+
+    process_audio_file(input_file)
 
 if __name__ == "__main__":
     main()
