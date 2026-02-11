@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
 from contextlib import asynccontextmanager
 
 from app.shared.utils import setup_logger
@@ -34,12 +35,73 @@ async def lifespan(app: FastAPI):
         await engine.dispose()
 
 
+# Swagger/OpenAPI configuration
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
     description=settings.APP_DESCRIPTION,
     lifespan=lifespan,
+    docs_url="/api/docs",  # Swagger UI
+    redoc_url="/api/redoc",  # ReDoc
+    openapi_url="/api/openapi.json",  # OpenAPI schema
+    openapi_tags=[
+        {
+            "name": "health",
+            "description": "Health check endpoints for system and database"
+        },
+        {
+            "name": "auth",
+            "description": "Authentication and user management (registration, login, password reset)"
+        },
+        {
+            "name": "admin",
+            "description": "User management for administrators (admin access required)"
+        }
+    ],
+    swagger_ui_parameters={
+        "persistAuthorization": True,  # Keep token after page reload
+        "displayRequestDuration": True,  # Display request duration
+        "docExpansion": "none",  # Don't expand endpoints by default
+        "filter": True,  # Enable endpoint search
+    },
+    contact={
+        "name": "PBL5 Japanese Audio Team",
+        "email": "support@pbl5.com",
+    },
+    license_info={
+        "name": "MIT",
+    },
 )
+
+
+# Custom OpenAPI schema to add JWT Bearer authentication
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+        tags=app.openapi_tags,
+    )
+    
+    # Add JWT Bearer security scheme
+    openapi_schema["components"]["securitySchemes"] = {
+        "Bearer": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+            "description": "Enter JWT token (obtained from /api/auth/login endpoint). Just enter the token, no need to add 'Bearer ' prefix."
+        }
+    }
+    
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi
 
 # Configure CORS
 app.add_middleware(

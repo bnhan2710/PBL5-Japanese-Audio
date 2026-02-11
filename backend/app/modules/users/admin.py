@@ -14,7 +14,7 @@ from app.modules.users.schemas import (
 from app.modules.users.admin_service import AdminUserService
 from app.core.security import get_current_user
 
-router = APIRouter(prefix="/admin/users", tags=["admin-users"])
+router = APIRouter(prefix="/admin/users", tags=["admin"])
 
 
 def get_admin_service(db: AsyncSession = Depends(get_db)) -> AdminUserService:
@@ -46,7 +46,7 @@ async def list_users(
     """
     List all users with optional filters and pagination.
     
-    **Requires:** Admin role
+    🔒 **Requires**: Admin role
     """
     filters = {}
     if email:
@@ -68,12 +68,12 @@ async def create_user(
     admin: User = Depends(require_admin)
 ):
     """
-    Create a new user as admin.
+    Create a new user (Admin).
     
     - Sends verification email to the new user
     - If password not provided, generates random password
     
-    **Requires:** Admin role
+    🔒 **Requires**: Admin role
     """
     return await service.create_user_by_admin(user_data)
 
@@ -87,7 +87,7 @@ async def get_user(
     """
     Get user details by ID.
     
-    **Requires:** Admin role
+    🔒 **Requires**: Admin role
     """
     return await service.get_user_by_id(user_id)
 
@@ -102,10 +102,10 @@ async def update_user(
     """
     Update user information.
     
-    - Sends notification email to user if changes are made
+    - Sends notification email to user when changes are made
     - If email is changed, requires re-verification
     
-    **Requires:** Admin role
+    🔒 **Requires**: Admin role
     """
     return await service.update_user(user_id, update_data)
 
@@ -120,10 +120,10 @@ async def lock_user(
     """
     Lock user account temporarily.
     
-    - User will not be able to login until lock expires
+    - User cannot login until lock expires
     - Lock duration specified in hours (max 1 year)
     
-    **Requires:** Admin role
+    🔒 **Requires**: Admin role
     """
     return await service.lock_user(user_id, lock_data.duration_hours)
 
@@ -139,7 +139,7 @@ async def unlock_user(
     
     - Removes account lock immediately
     
-    **Requires:** Admin role
+    🔒 **Requires**: Admin role
     """
     return await service.unlock_user(user_id)
 
@@ -151,12 +151,12 @@ async def reset_password(
     admin: User = Depends(require_admin)
 ):
     """
-    Reset user password as admin.
+    Reset user password (Admin).
     
     - Generates temporary password
     - Sends email to user with temporary password
     - Returns temporary password in response
     
-    **Requires:** Admin role
+    🔒 **Requires**: Admin role
     """
     return await service.admin_reset_password(user_id)

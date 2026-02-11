@@ -40,19 +40,10 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return encoded_jwt
 
 
-async def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    db: AsyncSession = Depends(None)  # Will be injected properly in router
-):
+async def get_current_user(token: str = Depends(oauth2_scheme)):
     """Get current authenticated user from JWT token."""
     from app.modules.users.models import User
     from app.db.session import get_db
-    
-    # Handle dependency injection
-    if db is None:
-        async for session in get_db():
-            db = session
-            break
     
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -68,16 +59,18 @@ async def get_current_user(
     except JWTError:
         raise credentials_exception
 
-    result = await db.execute(select(User).filter(User.email == email))
-    user = result.scalar_one_or_none()
-    if user is None:
-        raise credentials_exception
-    
-    # Check if account is locked
-    if user.is_locked():
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Account is locked until {user.locked_until.strftime('%Y-%m-%d %H:%M:%S UTC')}"
-        )
-    
-    return user
+    # Get database session
+    async for db in get_db():
+        result = await db.execute(select(User).filter(User.email == email))
+        user = result.scalar_one_or_none()
+        if user is None:
+            raise credentials_exception
+        
+        # Check if account is locked
+        if user.is_locked():
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Account is locked until {user.locked_until.strftime('%Y-%m-%d %H:%M:%S UTC')}"
+            )
+        
+        return user
