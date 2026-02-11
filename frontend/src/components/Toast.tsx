@@ -14,20 +14,20 @@ export function Toast({ message, type, onClose }: ToastProps) {
   }, [onClose]);
 
   return (
-    <div className={`fixed top-4 right-4 z-50 flex items-center gap-3 px-6 py-4 rounded-lg shadow-lg ${
-      type === 'success' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
+    <div className={`fixed top-4 right-4 z-50 flex items-center gap-3 px-6 py-4 rounded-lg shadow-xl border ${
+      type === 'success' ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'
     }`}>
       {type === 'success' ? (
-        <CheckCircle className="w-5 h-5 text-green-600" />
+        <CheckCircle className="w-5 h-5 text-green-500" />
       ) : (
-        <XCircle className="w-5 h-5 text-red-600" />
+        <XCircle className="w-5 h-5 text-red-500" />
       )}
-      <p className={`font-medium ${type === 'success' ? 'text-green-800' : 'text-red-800'}`}>
+      <p className={`font-medium ${type === 'success' ? 'text-green-500' : 'text-red-500'}`}>
         {message}
       </p>
       <button
         onClick={onClose}
-        className="ml-4 p-1 hover:bg-white/50 rounded transition-colors cursor-pointer"
+        className="ml-4 p-1 hover:bg-muted rounded transition-colors cursor-pointer text-muted-foreground"
       >
         <X className="w-4 h-4" />
       </button>

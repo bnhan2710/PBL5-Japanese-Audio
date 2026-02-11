@@ -20,36 +20,36 @@ export function LockUserDialog({ isOpen, user, onClose, onConfirm }: LockUserDia
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 relative">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-card rounded-2xl shadow-2xl max-w-md w-full p-8 relative border border-border">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+          className="absolute top-4 right-4 p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer text-muted-foreground"
         >
           <X className="w-5 h-5" />
         </button>
 
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-3 bg-orange-100 rounded-lg">
-            <Lock className="w-6 h-6 text-orange-600" />
+          <div className="p-3 bg-orange-500/10 rounded-lg">
+            <Lock className="w-6 h-6 text-orange-500" />
           </div>
-          <h2 className="text-2xl font-bold text-slate-900" style={{ fontFamily: 'Fira Code, monospace' }}>
+          <h2 className="text-2xl font-bold text-foreground" style={{ fontFamily: 'Fira Code, monospace' }}>
             Lock User Account
           </h2>
         </div>
 
-        <p className="text-slate-600 mb-6">
+        <p className="text-muted-foreground mb-6">
           Lock account for <strong>{user.email}</strong>? User will not be able to login until the lock expires.
         </p>
 
         <div className="mb-6">
-          <label className="block text-sm font-medium text-slate-700 mb-2">
+          <label className="block text-sm font-medium text-muted-foreground mb-2">
             Lock Duration
           </label>
           <select
             value={duration}
             onChange={(e) => setDuration(Number(e.target.value))}
-            className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent cursor-pointer transition-all"
+            className="w-full px-4 py-3 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent cursor-pointer transition-all"
           >
             <option value={1}>1 Hour</option>
             <option value={24}>24 Hours (1 Day)</option>
@@ -61,7 +61,7 @@ export function LockUserDialog({ isOpen, user, onClose, onConfirm }: LockUserDia
         <div className="flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 px-6 py-3 border-2 border-purple-600 text-purple-600 rounded-lg font-semibold hover:bg-purple-50 transition-colors cursor-pointer"
+            className="flex-1 px-6 py-3 border-2 border-primary text-primary rounded-lg font-semibold hover:bg-primary/10 transition-colors cursor-pointer"
           >
             Cancel
           </button>

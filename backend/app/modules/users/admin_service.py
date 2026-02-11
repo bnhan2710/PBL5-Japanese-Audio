@@ -22,6 +22,7 @@ from app.shared.email import (
     send_update_notification,
     send_password_reset_by_admin
 )
+from app.shared.webhook import trigger_n8n_webhook
 from app.shared.utils import setup_logger
 
 logger = setup_logger(__name__)
@@ -121,6 +122,15 @@ class AdminUserService:
         except Exception as e:
             logger.error(f"Failed to send verification email: {str(e)}")
 
+        # Trigger n8n automation
+        await trigger_n8n_webhook("user.created", {
+            "user_id": user.id,
+            "email": user.email,
+            "username": user.username,
+            "role": user.role,
+            "created_by": "admin"
+        })
+
         return user
 
     async def get_user_by_id(self, user_id: int) -> User:
@@ -187,6 +197,13 @@ class AdminUserService:
             except Exception as e:
                 logger.error(f"Failed to send update notification: {str(e)}")
 
+        # Trigger n8n automation
+        await trigger_n8n_webhook("user.updated", {
+            "user_id": user.id,
+            "email": user.email,
+            "changes": changes
+        })
+
         return user
 
     async def lock_user(self, user_id: int, duration_hours: int) -> User:
@@ -206,6 +223,15 @@ class AdminUserService:
         user = await self.repository.update(user)
         
         logger.info(f"User {user.email} locked until {user.locked_until}")
+
+        # Trigger n8n automation
+        await trigger_n8n_webhook("user.locked", {
+            "user_id": user.id,
+            "email": user.email,
+            "locked_until": user.locked_until.isoformat() if user.locked_until else None,
+            "duration_hours": duration_hours
+        })
+
         return user
 
     async def unlock_user(self, user_id: int) -> User:
@@ -224,6 +250,13 @@ class AdminUserService:
         user = await self.repository.update(user)
         
         logger.info(f"User {user.email} unlocked")
+
+        # Trigger n8n automation
+        await trigger_n8n_webhook("user.unlocked", {
+            "user_id": user.id,
+            "email": user.email
+        })
+
         return user
 
     async def admin_reset_password(self, user_id: int) -> AdminResetPasswordResponse:
@@ -251,6 +284,13 @@ class AdminUserService:
             logger.info(f"Password reset email sent to {user.email}")
         except Exception as e:
             logger.error(f"Failed to send password reset email: {str(e)}")
+        
+        # Trigger n8n automation
+        await trigger_n8n_webhook("user.password_reset", {
+            "user_id": user.id,
+            "email": user.email,
+            "reset_by": "admin"
+        })
         
         return AdminResetPasswordResponse(
             message="Password has been reset successfully. Temporary password sent to user's email.",

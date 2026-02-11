@@ -17,7 +17,7 @@ function Navigation() {
   const navigate = useNavigate()
   const location = useLocation()
   const { t } = useTranslation()
-  const { isAuthenticated, logout } = useAuth()
+  const { isAuthenticated, user, logout } = useAuth()
   const linkBase =
     'text-foreground hover:text-primary px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-accent/10'
   const activeLink = 'text-primary bg-accent/20 font-semibold'
@@ -61,6 +61,16 @@ function Navigation() {
                     {t('nav.dashboard')}
                   </Link>
                 ))}
+              {isAuthenticated && user?.role === 'admin' && (
+                <Link
+                  to="/admin/users"
+                  className={
+                    location.pathname === '/admin/users' ? `${linkBase} ${activeLink}` : linkBase
+                  }
+                >
+                  {t('nav.users', 'Users')}
+                </Link>
+              )}
             </div>
           </div>
           

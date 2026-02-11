@@ -7,7 +7,7 @@ interface ApiError {
 
 class AdminApiClient {
   private getAuthHeader(): HeadersInit {
-    const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem('token');
     if (!token) {
       throw new Error('No authentication token found');
     }
