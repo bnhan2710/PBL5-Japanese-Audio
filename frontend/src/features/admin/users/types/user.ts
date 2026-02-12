@@ -8,6 +8,9 @@ export interface User {
   locked_until: string | null;
   created_at: string;
   updated_at: string;
+  first_name?: string;
+  last_name?: string;
+  avatar_url?: string;
 }
 
 export interface UserListResponse {
@@ -23,6 +26,9 @@ export interface CreateUserData {
   username: string;
   role: string;
   password?: string;
+  first_name?: string;
+  last_name?: string;
+  avatar_url?: string;
 }
 
 export interface UpdateUserData {
@@ -30,6 +36,9 @@ export interface UpdateUserData {
   username?: string;
   role?: string;
   is_active?: boolean;
+  first_name?: string;
+  last_name?: string;
+  avatar_url?: string;
 }
 
 export interface ResetPasswordResponse {

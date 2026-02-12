@@ -3,52 +3,8 @@ from typing import Optional, List
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
 
 
-class Token(BaseModel):
-    access_token: str = Field(..., description="JWT access token")
-    token_type: str = Field(default="bearer", description="Token type")
-    
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-                "token_type": "bearer"
-            }
-        }
-    )
+# User management schemas are below
 
-
-class TokenData(BaseModel):
-    email: Optional[str] = None
-
-
-class UserCreate(BaseModel):
-    email: EmailStr = Field(..., description="User email")
-    username: str = Field(..., min_length=3, max_length=50, description="Username (3-50 characters)")
-    password: str = Field(..., min_length=8, description="Password (minimum 8 characters)")
-    
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "email": "user@example.com",
-                "username": "username123",
-                "password": "password123456"
-            }
-        }
-    )
-
-
-class LoginRequest(BaseModel):
-    email: EmailStr = Field(..., description="Registered email")
-    password: str = Field(..., description="Password")
-    
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "email": "user@example.com",
-                "password": "password123456"
-            }
-        }
-    )
 
 
 class UserResponse(BaseModel):
@@ -58,6 +14,9 @@ class UserResponse(BaseModel):
     is_active: bool = Field(..., description="Active status")
     email_verified: bool = Field(..., description="Email verified status")
     role: str = Field(..., description="Role (admin/user/guest)")
+    first_name: Optional[str] = Field(None, description="First name")
+    last_name: Optional[str] = Field(None, description="Last name")
+    avatar_url: Optional[str] = Field(None, description="Avatar URL")
     created_at: datetime = Field(..., description="Account creation date")
     updated_at: datetime = Field(..., description="Last update date")
     locked_until: Optional[datetime] = Field(None, description="Locked until date (if locked)")
@@ -105,6 +64,9 @@ class UserCreateByAdmin(BaseModel):
     username: str = Field(..., min_length=3, max_length=50, description="Username")
     role: str = Field("user", pattern="^(admin|user|guest)$", description="Role")
     password: Optional[str] = Field(None, min_length=8, description="Password (leave empty to auto-generate)")
+    first_name: Optional[str] = Field(None, description="First name")
+    last_name: Optional[str] = Field(None, description="Last name")
+    avatar_url: Optional[str] = Field(None, description="Avatar URL")
     
     model_config = ConfigDict(
         json_schema_extra={
@@ -124,6 +86,9 @@ class UserUpdate(BaseModel):
     username: Optional[str] = Field(None, min_length=3, max_length=50, description="New username")
     role: Optional[str] = Field(None, pattern="^(admin|user|guest)$", description="New role")
     is_active: Optional[bool] = Field(None, description="Active status")
+    first_name: Optional[str] = Field(None, description="New first name")
+    last_name: Optional[str] = Field(None, description="New last name")
+    avatar_url: Optional[str] = Field(None, description="New avatar URL")
     
     model_config = ConfigDict(
         json_schema_extra={

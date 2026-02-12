@@ -6,7 +6,7 @@ interface EditUserModalProps {
   isOpen: boolean;
   user: User | null;
   onClose: () => void;
-  onSubmit: (userId: number, data: { email?: string; username?: string; role?: string; is_active?: boolean }) => void;
+  onSubmit: (userId: number, data: { email?: string; username?: string; role?: string; is_active?: boolean; first_name?: string; last_name?: string; avatar_url?: string }) => void;
 }
 
 export function EditUserModal({ isOpen, user, onClose, onSubmit }: EditUserModalProps) {
@@ -15,6 +15,9 @@ export function EditUserModal({ isOpen, user, onClose, onSubmit }: EditUserModal
     username: '',
     role: 'user',
     is_active: true,
+    first_name: '',
+    last_name: '',
+    avatar_url: '',
   });
 
   useEffect(() => {
@@ -24,6 +27,9 @@ export function EditUserModal({ isOpen, user, onClose, onSubmit }: EditUserModal
         username: user.username,
         role: user.role,
         is_active: user.is_active,
+        first_name: user.first_name || '',
+        last_name: user.last_name || '',
+        avatar_url: user.avatar_url || '',
       });
     }
   }, [user]);
@@ -73,6 +79,46 @@ export function EditUserModal({ isOpen, user, onClose, onSubmit }: EditUserModal
               value={formData.username}
               onChange={(e) => setFormData({ ...formData, username: e.target.value })}
               className="w-full px-4 py-3 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
+                First Name
+              </label>
+              <input
+                type="text"
+                value={formData.first_name}
+                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                className="w-full px-4 py-3 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                placeholder="John"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
+                Last Name
+              </label>
+              <input
+                type="text"
+                value={formData.last_name}
+                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                className="w-full px-4 py-3 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                placeholder="Doe"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
+              Avatar URL
+            </label>
+            <input
+              type="url"
+              value={formData.avatar_url}
+              onChange={(e) => setFormData({ ...formData, avatar_url: e.target.value })}
+              className="w-full px-4 py-3 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+              placeholder="https://example.com/avatar.jpg"
             />
           </div>
 

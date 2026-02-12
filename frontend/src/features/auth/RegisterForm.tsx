@@ -81,7 +81,7 @@ function RegisterFormContent() {
               id="username"
               name="username"
               type="text"
-              placeholder="Choose a username"
+              placeholder="Enter your username"
               required
               disabled={state.isLoading}
               className="w-full"

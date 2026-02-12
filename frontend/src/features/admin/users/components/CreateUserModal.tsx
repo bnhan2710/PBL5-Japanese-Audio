@@ -4,7 +4,7 @@ import { useState } from 'react';
 interface CreateUserModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: { email: string; username: string; role: string; password?: string }) => void;
+  onSubmit: (data: { email: string; username: string; role: string; password?: string; first_name?: string; last_name?: string; avatar_url?: string }) => void;
 }
 
 export function CreateUserModal({ isOpen, onClose, onSubmit }: CreateUserModalProps) {
@@ -13,6 +13,9 @@ export function CreateUserModal({ isOpen, onClose, onSubmit }: CreateUserModalPr
     username: '',
     role: 'user',
     password: '',
+    first_name: '',
+    last_name: '',
+    avatar_url: '',
   });
 
   if (!isOpen) return null;
@@ -21,9 +24,10 @@ export function CreateUserModal({ isOpen, onClose, onSubmit }: CreateUserModalPr
     e.preventDefault();
     onSubmit({
       ...formData,
+      ...formData,
       password: formData.password || undefined,
     });
-    setFormData({ email: '', username: '', role: 'user', password: '' });
+    setFormData({ email: '', username: '', role: 'user', password: '', first_name: '', last_name: '', avatar_url: '' });
   };
 
   return (
@@ -66,6 +70,46 @@ export function CreateUserModal({ isOpen, onClose, onSubmit }: CreateUserModalPr
               onChange={(e) => setFormData({ ...formData, username: e.target.value })}
               className="w-full px-4 py-3 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
               placeholder="username"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
+                First Name
+              </label>
+              <input
+                type="text"
+                value={formData.first_name}
+                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                className="w-full px-4 py-3 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                placeholder="John"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
+                Last Name
+              </label>
+              <input
+                type="text"
+                value={formData.last_name}
+                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                className="w-full px-4 py-3 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                placeholder="Doe"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
+              Avatar URL
+            </label>
+            <input
+              type="url"
+              value={formData.avatar_url}
+              onChange={(e) => setFormData({ ...formData, avatar_url: e.target.value })}
+              className="w-full px-4 py-3 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+              placeholder="https://example.com/avatar.jpg"
             />
           </div>
 

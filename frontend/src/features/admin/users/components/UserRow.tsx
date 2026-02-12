@@ -30,8 +30,27 @@ export function UserRow({ user, onEdit, onLock, onUnlock, onResetPassword }: Use
   return (
     <tr className="border-b border-border hover:bg-muted/30 transition-colors">
       <td className="px-6 py-4">
-        <div className="font-medium text-foreground">{user.email}</div>
-        <div className="text-sm text-muted-foreground">{user.username}</div>
+        <div className="flex items-center gap-3">
+          {user.avatar_url ? (
+            <img 
+              src={user.avatar_url} 
+              alt={user.username} 
+              className="w-10 h-10 rounded-full object-cover border border-border" 
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold border border-border">
+              {(user.first_name?.[0] || user.username[0]).toUpperCase()}
+            </div>
+          )}
+          <div>
+            <div className="font-medium text-foreground">
+              {user.first_name && user.last_name 
+                ? `${user.first_name} ${user.last_name}` 
+                : user.username}
+            </div>
+            <div className="text-sm text-muted-foreground">{user.email}</div>
+          </div>
+        </div>
       </td>
 
       <td className="px-6 py-4">
