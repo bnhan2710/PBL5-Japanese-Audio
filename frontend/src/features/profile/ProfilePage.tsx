@@ -10,7 +10,6 @@ export default function ProfilePage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   
   const [formData, setFormData] = useState({
-    username: '',
     first_name: '',
     last_name: '',
     avatar_url: ''
@@ -25,7 +24,6 @@ export default function ProfilePage() {
   useEffect(() => {
     if (user) {
       setFormData({
-        username: user.username || '',
         first_name: user.first_name || '',
         last_name: user.last_name || '',
         avatar_url: user.avatar_url || ''
@@ -132,44 +130,36 @@ export default function ProfilePage() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Username</label>
-                <input 
-                  name="username" 
-                  value={formData.username} 
-                  onChange={handleChange}
-                  className="w-full p-2 bg-background border border-input rounded-md focus:ring-2 focus:ring-primary focus:outline-none"
-                  placeholder="Username"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Email</label>
                 <input 
                   value={user?.email || ''} 
                   disabled
                   className="w-full p-2 bg-muted border border-input rounded-md text-muted-foreground cursor-not-allowed"
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">First Name</label>
-                <input 
-                  name="first_name" 
-                  value={formData.first_name} 
-                  onChange={handleChange}
-                  className="w-full p-2 bg-background border border-input rounded-md focus:ring-2 focus:ring-primary focus:outline-none"
-                  placeholder="First name"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Last Name</label>
-                <input 
-                  name="last_name" 
-                  value={formData.last_name} 
-                  onChange={handleChange}
-                  className="w-full p-2 bg-background border border-input rounded-md focus:ring-2 focus:ring-primary focus:outline-none"
-                  placeholder="Last name"
-                />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">First Name</label>
+                  <input 
+                    name="first_name" 
+                    value={formData.first_name} 
+                    onChange={handleChange}
+                    className="w-full p-2 bg-background border border-input rounded-md focus:ring-2 focus:ring-primary focus:outline-none"
+                    placeholder="First name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Last Name</label>
+                  <input 
+                    name="last_name" 
+                    value={formData.last_name} 
+                    onChange={handleChange}
+                    className="w-full p-2 bg-background border border-input rounded-md focus:ring-2 focus:ring-primary focus:outline-none"
+                    placeholder="Last name"
+                  />
+                </div>
               </div>
             </div>
 
