@@ -9,6 +9,9 @@ const Dashboard = lazy(() => import('../pages/Dashboard'))
 const Login = lazy(() => import('../pages/Login'))
 const Register = lazy(() => import('../pages/Register'))
 const UsersPage = lazy(() => import('../features/admin/users/UsersPage'))
+const ProfilePage = lazy(() => import('../features/profile/ProfilePage'))
+const ForgotPasswordPage = lazy(() => import('../pages/ForgotPasswordPage'))
+const ResetPasswordPage = lazy(() => import('../pages/ResetPasswordPage'))
 
 // Error boundary component
 function ErrorBoundary() {
@@ -43,6 +46,14 @@ const routes = {
       path: 'register',
       element: <Register />,
     },
+    {
+      path: 'forgot-password',
+      element: <ForgotPasswordPage />,
+    },
+    {
+      path: 'reset-password',
+      element: <ResetPasswordPage />,
+    },
   ],
   protected: [
     {
@@ -52,6 +63,10 @@ const routes = {
     {
       path: 'admin/users',
       element: <UsersPage />,
+    },
+    {
+      path: 'profile',
+      element: <ProfilePage />,
     },
   ],
 }

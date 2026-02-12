@@ -47,3 +47,16 @@ class LoginRequest(BaseModel):
             }
         }
     )
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str = Field(..., description="Current password")
+    new_password: str = Field(..., min_length=8, description="New password (min 8 chars)")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "old_password": "oldpassword123",
+                "new_password": "newpassword123"
+            }
+        }
+    )

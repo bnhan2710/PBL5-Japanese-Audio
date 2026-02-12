@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import EmailStr
 
 from app.modules.users.models import User
-from app.modules.auth.schemas import UserCreate, LoginRequest
+from app.modules.auth.schemas import UserCreate, LoginRequest, ChangePasswordRequest
 from app.modules.users.repository import UserRepository
 from app.core.security import verify_password, get_password_hash, create_access_token
 from app.shared.exceptions import (
@@ -76,3 +76,15 @@ class AuthService:
         await self.repository.update(user)
 
         return {"message": "Password has been reset successfully"}
+
+    async def change_password(self, user: User, password_data: ChangePasswordRequest) -> dict:
+        """Change user password."""
+        # Verify old password
+        if not verify_password(password_data.old_password, user.hashed_password):
+            raise InvalidCredentialsException(detail="Incorrect old password")
+
+        # Update password
+        user.hashed_password = get_password_hash(password_data.new_password)
+        await self.repository.update(user)
+
+        return {"message": "Password changed successfully"}

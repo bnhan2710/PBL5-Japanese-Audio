@@ -80,6 +80,16 @@ function LoginFormContent() {
             />
           </div>
           {state.error && <div className="text-sm text-destructive">{state.error}</div>}
+          <div className="text-right">
+            <button
+              type="button"
+              onClick={() => navigate('/forgot-password')}
+              className="text-sm font-medium text-primary hover:text-primary/80"
+              disabled={state.isLoading}
+            >
+              Forgot password?
+            </button>
+          </div>
         </CardContent>
         <CardFooter className="flex justify-between">
           <Button

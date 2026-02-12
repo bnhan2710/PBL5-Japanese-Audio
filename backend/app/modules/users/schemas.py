@@ -127,3 +127,19 @@ class AdminResetPasswordResponse(BaseModel):
             }
         }
     )
+class UserMeUpdate(BaseModel):
+    """Schema for users to update their own profile information."""
+    username: Optional[str] = Field(None, min_length=3, max_length=50, description="New username")
+    first_name: Optional[str] = Field(None, description="New first name")
+    last_name: Optional[str] = Field(None, description="New last name")
+    avatar_url: Optional[str] = Field(None, description="New avatar URL")
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "username": "updated_username",
+                "first_name": "New",
+                "last_name": "Name"
+            }
+        }
+    )

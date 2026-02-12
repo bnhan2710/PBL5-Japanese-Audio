@@ -22,6 +22,7 @@ from app.shared.utils import setup_logger
 from app.modules.users.schemas import (
     UserCreateByAdmin,
     UserUpdate,
+    UserMeUpdate,
     UserListResponse,
     UserResponse,
     AdminResetPasswordResponse
@@ -309,8 +310,38 @@ class UserService:
         })
         
         return AdminResetPasswordResponse(
-            message="Password has been reset successfully. Temporary password sent to user's email.",
             temporary_password=temp_password
         )
+
+    async def update_me(self, user: User, update_data: UserMeUpdate) -> User:
+        """
+        Update current user profile information.
+        """
+        # Get user from current session to avoid session detachment issues
+        db_user = await self.repository.get_by_id(user.id)
+        if not db_user:
+            raise UserNotFoundException(f"User with ID {user.id} not found")
+
+        # Update fields
+        if update_data.username and update_data.username != db_user.username:
+            # Check if new username already exists
+            existing = await self.repository.get_by_username(update_data.username)
+            if existing and existing.id != db_user.id:
+                raise UserAlreadyExistsException("Username already taken")
+            db_user.username = update_data.username
+
+        if update_data.first_name is not None:
+            db_user.first_name = update_data.first_name
+
+        if update_data.last_name is not None:
+            db_user.last_name = update_data.last_name
+
+        if update_data.avatar_url is not None:
+            db_user.avatar_url = update_data.avatar_url
+
+        # Save changes
+        db_user = await self.repository.update(db_user)
+        return db_user
+
 
 
