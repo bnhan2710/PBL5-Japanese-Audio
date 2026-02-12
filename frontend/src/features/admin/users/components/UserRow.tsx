@@ -17,21 +17,40 @@ export function UserRow({ user, onEdit, onLock, onUnlock, onResetPassword }: Use
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case 'admin':
-        return 'bg-purple-100 text-purple-700';
+        return 'bg-purple-500/10 text-purple-500';
       case 'user':
-        return 'bg-blue-100 text-blue-700';
+        return 'bg-blue-500/10 text-blue-500';
       case 'guest':
-        return 'bg-gray-100 text-gray-700';
+        return 'bg-slate-500/10 text-slate-500';
       default:
-        return 'bg-gray-100 text-gray-700';
+        return 'bg-slate-500/10 text-slate-500';
     }
   };
 
   return (
-    <tr className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+    <tr className="border-b border-border hover:bg-muted/30 transition-colors">
       <td className="px-6 py-4">
-        <div className="font-medium text-slate-900">{user.email}</div>
-        <div className="text-sm text-slate-500">{user.username}</div>
+        <div className="flex items-center gap-3">
+          {user.avatar_url ? (
+            <img 
+              src={user.avatar_url} 
+              alt={user.username} 
+              className="w-10 h-10 rounded-full object-cover border border-border" 
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold border border-border">
+              {(user.first_name?.[0] || user.username[0]).toUpperCase()}
+            </div>
+          )}
+          <div>
+            <div className="font-medium text-foreground">
+              {user.first_name && user.last_name 
+                ? `${user.first_name} ${user.last_name}` 
+                : user.username}
+            </div>
+            <div className="text-sm text-muted-foreground">{user.email}</div>
+          </div>
+        </div>
       </td>
 
       <td className="px-6 py-4">
@@ -42,7 +61,7 @@ export function UserRow({ user, onEdit, onLock, onUnlock, onResetPassword }: Use
 
       <td className="px-6 py-4">
         <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-          user.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+          user.is_active ? 'bg-green-100/10 text-green-500' : 'bg-red-100/10 text-red-500'
         }`}>
           {user.is_active ? 'Active' : 'Inactive'}
         </span>
@@ -50,15 +69,15 @@ export function UserRow({ user, onEdit, onLock, onUnlock, onResetPassword }: Use
 
       <td className="px-6 py-4">
         {isLocked ? (
-          <span className="px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
+          <span className="px-3 py-1 rounded-full text-xs font-medium bg-orange-100/10 text-orange-500">
             Locked
           </span>
         ) : (
-          <span className="text-sm text-slate-500">-</span>
+          <span className="text-sm text-muted-foreground">-</span>
         )}
       </td>
 
-      <td className="px-6 py-4 text-sm text-slate-500">
+      <td className="px-6 py-4 text-sm text-muted-foreground">
         {new Date(user.created_at).toLocaleDateString()}
       </td>
 
@@ -66,16 +85,16 @@ export function UserRow({ user, onEdit, onLock, onUnlock, onResetPassword }: Use
         <div className="relative">
           <button
             onClick={() => setShowActions(!showActions)}
-            className="p-2 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+            className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
           >
-            <MoreVertical className="w-5 h-5 text-slate-600" />
+            <MoreVertical className="w-5 h-5 text-muted-foreground" />
           </button>
 
           {showActions && (
-            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-10">
+            <div className="absolute right-0 mt-2 w-48 bg-card rounded-lg shadow-xl border border-border py-1 z-50">
               <button
                 onClick={() => { onEdit(user); setShowActions(false); }}
-                className="w-full px-4 py-2 text-left hover:bg-slate-50 flex items-center gap-2 transition-colors cursor-pointer"
+                className="w-full px-4 py-2 text-left hover:bg-muted/50 flex items-center gap-2 transition-colors cursor-pointer text-sm"
               >
                 <Edit className="w-4 h-4" />
                 Edit
@@ -84,7 +103,7 @@ export function UserRow({ user, onEdit, onLock, onUnlock, onResetPassword }: Use
               {isLocked ? (
                 <button
                   onClick={() => { onUnlock(user); setShowActions(false); }}
-                  className="w-full px-4 py-2 text-left hover:bg-slate-50 flex items-center gap-2 transition-colors cursor-pointer"
+                  className="w-full px-4 py-2 text-left hover:bg-muted/50 flex items-center gap-2 transition-colors cursor-pointer text-sm"
                 >
                   <Unlock className="w-4 h-4" />
                   Unlock
@@ -92,7 +111,7 @@ export function UserRow({ user, onEdit, onLock, onUnlock, onResetPassword }: Use
               ) : (
                 <button
                   onClick={() => { onLock(user); setShowActions(false); }}
-                  className="w-full px-4 py-2 text-left hover:bg-slate-50 flex items-center gap-2 transition-colors cursor-pointer"
+                  className="w-full px-4 py-2 text-left hover:bg-muted/50 flex items-center gap-2 transition-colors cursor-pointer text-sm"
                 >
                   <Lock className="w-4 h-4" />
                   Lock Account
@@ -101,7 +120,7 @@ export function UserRow({ user, onEdit, onLock, onUnlock, onResetPassword }: Use
 
               <button
                 onClick={() => { onResetPassword(user); setShowActions(false); }}
-                className="w-full px-4 py-2 text-left hover:bg-slate-50 flex items-center gap-2 transition-colors cursor-pointer"
+                className="w-full px-4 py-2 text-left hover:bg-muted/50 flex items-center gap-2 transition-colors cursor-pointer text-sm"
               >
                 <KeyRound className="w-4 h-4" />
                 Reset Password

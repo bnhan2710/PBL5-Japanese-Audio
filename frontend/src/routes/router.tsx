@@ -2,6 +2,7 @@ import { createBrowserRouter, redirect } from 'react-router-dom'
 import { lazy, Suspense } from 'react'
 import RootLayout from '../layouts/RootLayout'
 import { ProtectedRoute } from '../components/ProtectedRoute'
+import { GuestRoute } from '../components/GuestRoute'
 
 // Lazy load components
 const Home = lazy(() => import('../pages/Home'))
@@ -9,6 +10,9 @@ const Dashboard = lazy(() => import('../pages/Dashboard'))
 const Login = lazy(() => import('../pages/Login'))
 const Register = lazy(() => import('../pages/Register'))
 const UsersPage = lazy(() => import('../features/admin/users/UsersPage'))
+const ProfilePage = lazy(() => import('../features/profile/ProfilePage'))
+const ForgotPasswordPage = lazy(() => import('../pages/ForgotPasswordPage'))
+const ResetPasswordPage = lazy(() => import('../pages/ResetPasswordPage'))
 
 // Error boundary component
 function ErrorBoundary() {
@@ -35,6 +39,8 @@ const routes = {
       index: true,
       element: <Home />,
     },
+  ],
+  guestOnly: [
     {
       path: 'login',
       element: <Login />,
@@ -42,6 +48,14 @@ const routes = {
     {
       path: 'register',
       element: <Register />,
+    },
+    {
+      path: 'forgot-password',
+      element: <ForgotPasswordPage />,
+    },
+    {
+      path: 'reset-password',
+      element: <ResetPasswordPage />,
     },
   ],
   protected: [
@@ -52,6 +66,10 @@ const routes = {
     {
       path: 'admin/users',
       element: <UsersPage />,
+    },
+    {
+      path: 'profile',
+      element: <ProfilePage />,
     },
   ],
 }
@@ -64,6 +82,10 @@ const withProtection = (element: React.ReactNode) => (
   <ProtectedRoute>{withSuspense(element)}</ProtectedRoute>
 )
 
+const withGuestOnly = (element: React.ReactNode) => (
+  <GuestRoute>{withSuspense(element)}</GuestRoute>
+)
+
 export const router = createBrowserRouter([
   {
     path: '/',
@@ -74,6 +96,12 @@ export const router = createBrowserRouter([
       ...routes.public.map((route) => ({
         ...route,
         element: withSuspense(route.element),
+      })),
+
+      // Guest-only routes (redirects to dashboard if authenticated)
+      ...routes.guestOnly.map((route) => ({
+        ...route,
+        element: withGuestOnly(route.element),
       })),
 
       // Protected routes

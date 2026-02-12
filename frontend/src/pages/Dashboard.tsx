@@ -1,13 +1,14 @@
 import { Suspense } from 'react'
-import { ChartColumnIncreasing, Clock1, Zap } from 'lucide-react'
-import { useAppDispatch } from '../context/AppContext'
-import { showNotification } from '../context/AppContext'
+import { useAuth } from '../context/AuthContext'
+import { useNavigate } from 'react-router-dom'
+import { Users } from 'lucide-react'
 
 export default function Dashboard() {
-  const dispatch = useAppDispatch()
+  const navigate = useNavigate()
+  const { user } = useAuth()
 
-  const handleCardClick = (title: string) => {
-    showNotification(dispatch, `Clicked ${title} card`, 'info')
+  const handleCardClick = (path: string) => {
+    navigate(path)
   }
 
   return (
@@ -15,7 +16,7 @@ export default function Dashboard() {
       <div className="text-center">
         <h1 className="text-4xl font-bold mb-4 text-foreground">Dashboard</h1>
         <p className="text-lg text-muted-foreground">
-          Monitor your application metrics and performance
+          Welcome back, {user?.email}
         </p>
       </div>
 
@@ -23,29 +24,23 @@ export default function Dashboard() {
         fallback={
           <div className="text-center py-8 text-muted-foreground">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
-            Loading dashboard data...
+            Loading dashboard...
           </div>
         }
       >
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <DashboardCard
-            title="Statistics"
-            description="View key metrics and analytics"
-            icon={<ChartColumnIncreasing />}
-            onClick={handleCardClick}
-          />
-          <DashboardCard
-            title="Recent Activity"
-            description="Track the latest updates and changes"
-            icon={<Clock1 />}
-            onClick={handleCardClick}
-          />
-          <DashboardCard
-            title="Performance"
-            description="Monitor system performance metrics"
-            icon={<Zap />}
-            onClick={handleCardClick}
-          />
+          {user?.role === 'admin' ? (
+            <DashboardCard
+              title="User Management"
+              description="Manage users, roles, and permissions"
+              icon={<Users />}
+              onClick={() => handleCardClick('/admin/users')}
+            />
+          ) : (
+             <div className="col-span-full text-center p-8 bg-card rounded-lg border border-border">
+               <p className="text-muted-foreground">Welcome to the Japanese Audio Application. Select an option from the menu to get started.</p>
+             </div>
+          )}
         </div>
       </Suspense>
     </div>
@@ -61,14 +56,14 @@ function DashboardCard({
   title: string
   description: string
   icon: React.ReactNode
-  onClick: (title: string) => void
+  onClick: () => void
 }) {
   return (
     <div
       className="p-6 rounded-lg border border-border
         bg-card text-card-foreground shadow-sm hover:shadow-md transition-all
         cursor-pointer group"
-      onClick={() => onClick(title)}
+      onClick={onClick}
     >
       <div className="flex items-start space-x-4">
         <div

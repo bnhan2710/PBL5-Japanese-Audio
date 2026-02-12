@@ -91,14 +91,7 @@ fastapi-react-starter/
 
 ### Using Docker (Recommended)
 
-1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/raythurman2386/fastapi-react-starter.git
-   cd fastapi-react-starter
-   ```
-
-2. Create environment files:
+1. Create environment files:
 
    Create `.env` file in the root directory:
 
@@ -109,7 +102,7 @@ fastapi-react-starter/
    DB_NAME=fastapi_db
    ```
 
-3. Start the application with Docker:
+2. Start the application with Docker:
 
    ```bash
    docker compose up --build

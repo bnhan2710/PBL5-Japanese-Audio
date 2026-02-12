@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, List
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
@@ -40,19 +41,10 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return encoded_jwt
 
 
-async def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    db: AsyncSession = Depends(None)  # Will be injected properly in router
-):
+async def get_current_user(token: str = Depends(oauth2_scheme)):
     """Get current authenticated user from JWT token."""
     from app.modules.users.models import User
     from app.db.session import get_db
-    
-    # Handle dependency injection
-    if db is None:
-        async for session in get_db():
-            db = session
-            break
     
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -68,16 +60,39 @@ async def get_current_user(
     except JWTError:
         raise credentials_exception
 
-    result = await db.execute(select(User).filter(User.email == email))
-    user = result.scalar_one_or_none()
-    if user is None:
-        raise credentials_exception
+    # Get database session
+    async for db in get_db():
+        result = await db.execute(select(User).filter(User.email == email))
+        user = result.scalar_one_or_none()
+        if user is None:
+            raise credentials_exception
+        
+        # Check if account is locked
+        if user.is_locked():
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Account is locked until {user.locked_until.strftime('%Y-%m-%d %H:%M:%S UTC')}"
+            )
+        
+        
+        return user
+
+
+class RoleChecker:
+    """
+    Dependency for checking user roles.
     
-    # Check if account is locked
-    if user.is_locked():
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Account is locked until {user.locked_until.strftime('%Y-%m-%d %H:%M:%S UTC')}"
-        )
-    
-    return user
+    Usage:
+        Depends(RoleChecker(["admin"]))
+        Depends(RoleChecker(["admin", "user"]))
+    """
+    def __init__(self, allowed_roles: List[str]):
+        self.allowed_roles = allowed_roles
+
+    def __call__(self, user=Depends(get_current_user)):
+        if user.role not in self.allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Role '{user.role}' not authorized. Allowed: {self.allowed_roles}"
+            )
+        return user

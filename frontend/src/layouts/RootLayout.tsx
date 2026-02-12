@@ -1,4 +1,4 @@
-import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { AppProvider } from '../context/AppContext'
 import { Notification } from '../components/ui/Notification'
@@ -6,6 +6,7 @@ import { ThemeToggle } from '../components/ui/ThemeToggle'
 import { LanguageSwitcher } from '../components/ui/LanguageSwitcher'
 import { useAuth } from '../context/AuthContext'
 import { Button } from '../components/ui/Button'
+import { UserMenu } from '../components/ui/UserMenu'
 
 const publicNavLinks = [
   { to: '/', label: 'Home' },
@@ -14,18 +15,12 @@ const publicNavLinks = [
 const privateNavLinks = [{ to: '/dashboard', label: 'Dashboard' }] as const
 
 function Navigation() {
-  const navigate = useNavigate()
   const location = useLocation()
   const { t } = useTranslation()
-  const { isAuthenticated, logout } = useAuth()
+  const { isAuthenticated, user } = useAuth()
   const linkBase =
     'text-foreground hover:text-primary px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-accent/10'
   const activeLink = 'text-primary bg-accent/20 font-semibold'
-
-  const handleLogout = () => {
-    logout()
-    navigate('/login')
-  }
 
   return (
     <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border shadow-sm">
@@ -61,6 +56,16 @@ function Navigation() {
                     {t('nav.dashboard')}
                   </Link>
                 ))}
+              {isAuthenticated && user?.role === 'admin' && (
+                <Link
+                  to="/admin/users"
+                  className={
+                    location.pathname === '/admin/users' ? `${linkBase} ${activeLink}` : linkBase
+                  }
+                >
+                  {t('nav.users', 'Users')}
+                </Link>
+              )}
             </div>
           </div>
           
@@ -68,13 +73,7 @@ function Navigation() {
             <LanguageSwitcher />
             <ThemeToggle />
             {isAuthenticated ? (
-              <Button
-                variant="ghost"
-                onClick={handleLogout}
-                className="text-foreground hover:text-primary"
-              >
-                {t('nav.logout')}
-              </Button>
+              <UserMenu />
             ) : (
               <>
                 <Link to="/login">

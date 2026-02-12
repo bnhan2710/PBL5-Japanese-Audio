@@ -4,7 +4,7 @@ import { useState } from 'react';
 interface CreateUserModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: { email: string; username: string; role: string; password?: string }) => void;
+  onSubmit: (data: { email: string; username: string; role: string; password?: string; first_name?: string; last_name?: string; avatar_url?: string }) => void;
 }
 
 export function CreateUserModal({ isOpen, onClose, onSubmit }: CreateUserModalProps) {
@@ -13,6 +13,9 @@ export function CreateUserModal({ isOpen, onClose, onSubmit }: CreateUserModalPr
     username: '',
     role: 'user',
     password: '',
+    first_name: '',
+    last_name: '',
+    avatar_url: '',
   });
 
   if (!isOpen) return null;
@@ -21,28 +24,29 @@ export function CreateUserModal({ isOpen, onClose, onSubmit }: CreateUserModalPr
     e.preventDefault();
     onSubmit({
       ...formData,
+      ...formData,
       password: formData.password || undefined,
     });
-    setFormData({ email: '', username: '', role: 'user', password: '' });
+    setFormData({ email: '', username: '', role: 'user', password: '', first_name: '', last_name: '', avatar_url: '' });
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 relative">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-card rounded-2xl shadow-2xl max-w-md w-full p-8 relative border border-border">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+          className="absolute top-4 right-4 p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer text-muted-foreground"
         >
           <X className="w-5 h-5" />
         </button>
 
-        <h2 className="text-2xl font-bold text-slate-900 mb-6" style={{ fontFamily: 'Fira Code, monospace' }}>
+        <h2 className="text-2xl font-bold text-foreground mb-6" style={{ fontFamily: 'Fira Code, monospace' }}>
           Create New User
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
               Email
             </label>
             <input
@@ -50,13 +54,13 @@ export function CreateUserModal({ isOpen, onClose, onSubmit }: CreateUserModalPr
               required
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent transition-all"
+              className="w-full px-4 py-3 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
               placeholder="user@example.com"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
               Username
             </label>
             <input
@@ -64,19 +68,59 @@ export function CreateUserModal({ isOpen, onClose, onSubmit }: CreateUserModalPr
               required
               value={formData.username}
               onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-              className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent transition-all"
+              className="w-full px-4 py-3 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
               placeholder="username"
             />
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
+                First Name
+              </label>
+              <input
+                type="text"
+                value={formData.first_name}
+                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                className="w-full px-4 py-3 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                placeholder="John"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
+                Last Name
+              </label>
+              <input
+                type="text"
+                value={formData.last_name}
+                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                className="w-full px-4 py-3 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                placeholder="Doe"
+              />
+            </div>
+          </div>
+
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
+              Avatar URL
+            </label>
+            <input
+              type="url"
+              value={formData.avatar_url}
+              onChange={(e) => setFormData({ ...formData, avatar_url: e.target.value })}
+              className="w-full px-4 py-3 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+              placeholder="https://example.com/avatar.jpg"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
               Role
             </label>
             <select
               value={formData.role}
               onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-              className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent cursor-pointer transition-all"
+              className="w-full px-4 py-3 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent cursor-pointer transition-all"
             >
               <option value="user">User</option>
               <option value="admin">Admin</option>
@@ -85,17 +129,17 @@ export function CreateUserModal({ isOpen, onClose, onSubmit }: CreateUserModalPr
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
               Password (optional)
             </label>
             <input
               type="password"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent transition-all"
+              className="w-full px-4 py-3 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
               placeholder="Leave empty for auto-generated"
             />
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               If empty, a random password will be generated and sent via email
             </p>
           </div>
@@ -104,7 +148,7 @@ export function CreateUserModal({ isOpen, onClose, onSubmit }: CreateUserModalPr
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-6 py-3 border-2 border-purple-600 text-purple-600 rounded-lg font-semibold hover:bg-purple-50 transition-colors cursor-pointer"
+              className="flex-1 px-6 py-3 border-2 border-primary text-primary rounded-lg font-semibold hover:bg-primary/10 transition-colors cursor-pointer"
             >
               Cancel
             </button>

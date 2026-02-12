@@ -7,7 +7,7 @@ interface ApiError {
 
 class AdminApiClient {
   private getAuthHeader(): HeadersInit {
-    const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem('token');
     if (!token) {
       throw new Error('No authentication token found');
     }
@@ -42,7 +42,7 @@ class AdminApiClient {
     });
 
     const response = await fetch(
-      `${API_BASE_URL}/api/admin/users?${queryParams}`,
+      `${API_BASE_URL}/api/users?${queryParams}`,
       { headers: this.getAuthHeader() }
     );
     return this.handleResponse(response);
@@ -51,7 +51,7 @@ class AdminApiClient {
   // Get user by ID
   async getUser(userId: number) {
     const response = await fetch(
-      `${API_BASE_URL}/api/admin/users/${userId}`,
+      `${API_BASE_URL}/api/users/${userId}`,
       { headers: this.getAuthHeader() }
     );
     return this.handleResponse(response);
@@ -62,10 +62,14 @@ class AdminApiClient {
     email: string;
     username: string;
     role: string;
+
     password?: string;
+    first_name?: string;
+    last_name?: string;
+    avatar_url?: string;
   }) {
     const response = await fetch(
-      `${API_BASE_URL}/api/admin/users`,
+      `${API_BASE_URL}/api/users`,
       {
         method: 'POST',
         headers: this.getAuthHeader(),
@@ -80,10 +84,14 @@ class AdminApiClient {
     email?: string;
     username?: string;
     role?: string;
+
     is_active?: boolean;
+    first_name?: string;
+    last_name?: string;
+    avatar_url?: string;
   }) {
     const response = await fetch(
-      `${API_BASE_URL}/api/admin/users/${userId}`,
+      `${API_BASE_URL}/api/users/${userId}`,
       {
         method: 'PUT',
         headers: this.getAuthHeader(),
@@ -96,7 +104,7 @@ class AdminApiClient {
   // Lock user
   async lockUser(userId: number, durationHours: number) {
     const response = await fetch(
-      `${API_BASE_URL}/api/admin/users/${userId}/lock`,
+      `${API_BASE_URL}/api/users/${userId}/lock`,
       {
         method: 'POST',
         headers: this.getAuthHeader(),
@@ -109,7 +117,7 @@ class AdminApiClient {
   // Unlock user
   async unlockUser(userId: number) {
     const response = await fetch(
-      `${API_BASE_URL}/api/admin/users/${userId}/unlock`,
+      `${API_BASE_URL}/api/users/${userId}/unlock`,
       {
         method: 'POST',
         headers: this.getAuthHeader(),
@@ -121,7 +129,7 @@ class AdminApiClient {
   // Reset password
   async resetPassword(userId: number) {
     const response = await fetch(
-      `${API_BASE_URL}/api/admin/users/${userId}/reset-password`,
+      `${API_BASE_URL}/api/users/${userId}/reset-password`,
       {
         method: 'POST',
         headers: this.getAuthHeader(),

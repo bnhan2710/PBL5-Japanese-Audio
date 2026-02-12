@@ -1,5 +1,5 @@
-import { createContext, useContext, useReducer, ReactNode, useCallback } from 'react'
-import { AuthState, LoginCredentials, RegisterCredentials, AuthResult } from '@/types/auth'
+import { createContext, useContext, useReducer, ReactNode, useCallback, useEffect } from 'react'
+import { AuthState, LoginCredentials, RegisterCredentials, AuthResult, User } from '@/types/auth'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -8,24 +8,27 @@ export const AUTH_ACTIONS = {
   LOGIN_SUCCESS: 'LOGIN_SUCCESS',
   LOGOUT: 'LOGOUT',
   SET_LOADING: 'SET_LOADING',
+  SET_USER: 'SET_USER',
 } as const
 
 type AuthAction =
   | { type: typeof AUTH_ACTIONS.LOGIN_SUCCESS; payload: { token: string } }
   | { type: typeof AUTH_ACTIONS.LOGOUT }
   | { type: typeof AUTH_ACTIONS.SET_LOADING; payload: boolean }
+  | { type: typeof AUTH_ACTIONS.SET_USER; payload: User }
 
 const AuthStateContext = createContext<AuthState | null>(null)
 const AuthDispatchContext = createContext<{
   login: (credentials: LoginCredentials) => Promise<AuthResult>
   register: (credentials: RegisterCredentials) => Promise<AuthResult>
   logout: () => void
+  fetchUserProfile: () => Promise<void>
 } | null>(null)
 
 const getInitialState = (): AuthState => ({
   isAuthenticated: !!localStorage.getItem('token'),
   token: localStorage.getItem('token'),
-  isLoading: false,
+  isLoading: true, // Start loading to check token validity
   user: null,
 })
 
@@ -44,11 +47,17 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
         isAuthenticated: false,
         token: null,
         user: null,
+        isLoading: false,
       }
     case AUTH_ACTIONS.SET_LOADING:
       return {
         ...state,
         isLoading: action.payload,
+      }
+    case AUTH_ACTIONS.SET_USER:
+      return {
+        ...state,
+        user: action.payload,
       }
     default:
       return state
@@ -61,6 +70,43 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [state, dispatch] = useReducer(authReducer, getInitialState())
+
+  const fetchUserProfile = useCallback(async () => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+
+    try {
+      const response = await fetch(`${API_URL}/api/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok) {
+        const user = await response.json()
+        dispatch({ type: AUTH_ACTIONS.SET_USER, payload: user })
+      } else {
+        // Token invalid or expired
+        localStorage.removeItem('token')
+        dispatch({ type: AUTH_ACTIONS.LOGOUT })
+      }
+    } catch (error) {
+      console.error('Failed to fetch user profile:', error)
+      localStorage.removeItem('token')
+      dispatch({ type: AUTH_ACTIONS.LOGOUT })
+    } finally {
+      dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false })
+    }
+  }, [])
+
+  // Check auth status on mount
+  useEffect(() => {
+    if (localStorage.getItem('token')) {
+      fetchUserProfile()
+    } else {
+      dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false })
+    }
+  }, [fetchUserProfile])
 
   const login = useCallback(async (credentials: LoginCredentials): Promise<AuthResult> => {
     dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true })
@@ -89,6 +135,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         type: AUTH_ACTIONS.LOGIN_SUCCESS,
         payload: { token: data.access_token },
       })
+      
+      // Fetch user profile immediately after login
+      await fetchUserProfile()
 
       return { success: true, error: null }
     } catch (error) {
@@ -98,7 +147,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         error: error instanceof Error ? error.message : 'Login failed',
       }
     }
-  }, [])
+  }, [fetchUserProfile])
 
   const register = useCallback(
     async (credentials: RegisterCredentials): Promise<AuthResult> => {
@@ -149,6 +198,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     login,
     register,
     logout,
+    fetchUserProfile,
   }
 
   return (

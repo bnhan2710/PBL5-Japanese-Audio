@@ -20,37 +20,37 @@ export function ResetPasswordDialog({ isOpen, tempPassword, userEmail, onClose }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 relative">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-card rounded-2xl shadow-2xl max-w-md w-full p-8 relative border border-border">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+          className="absolute top-4 right-4 p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer text-muted-foreground"
         >
           <X className="w-5 h-5" />
         </button>
 
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-3 bg-green-100 rounded-lg">
-            <KeyRound className="w-6 h-6 text-green-600" />
+          <div className="p-3 bg-green-500/10 rounded-lg">
+            <KeyRound className="w-6 h-6 text-green-500" />
           </div>
-          <h2 className="text-2xl font-bold text-slate-900" style={{ fontFamily: 'Fira Code, monospace' }}>
+          <h2 className="text-2xl font-bold text-foreground" style={{ fontFamily: 'Fira Code, monospace' }}>
             Password Reset
           </h2>
         </div>
 
-        <p className="text-slate-600 mb-4">
+        <p className="text-muted-foreground mb-4">
           Password has been reset for <strong>{userEmail}</strong>
         </p>
 
-        <div className="bg-slate-50 rounded-lg p-4 mb-6">
-          <p className="text-sm text-slate-600 mb-2">Temporary Password:</p>
+        <div className="bg-muted/50 rounded-lg p-4 mb-6">
+          <p className="text-sm text-muted-foreground mb-2">Temporary Password:</p>
           <div className="flex items-center gap-2">
-            <code className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-lg font-mono text-sm">
+            <code className="flex-1 px-4 py-3 bg-background border border-border rounded-lg font-mono text-sm text-foreground">
               {tempPassword}
             </code>
             <button
               onClick={handleCopy}
-              className="p-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors cursor-pointer"
+              className="p-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors cursor-pointer"
               title="Copy to clipboard"
             >
               {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
@@ -58,8 +58,8 @@ export function ResetPasswordDialog({ isOpen, tempPassword, userEmail, onClose }
           </div>
         </div>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <p className="text-sm text-blue-800">
+        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mb-6">
+          <p className="text-sm text-blue-500">
             ℹ️ This password has also been sent to the user's email address.
           </p>
         </div>
