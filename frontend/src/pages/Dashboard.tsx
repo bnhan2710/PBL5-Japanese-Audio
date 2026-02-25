@@ -1,86 +1,103 @@
-import { Suspense } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
-import { Users } from 'lucide-react'
+import { Users, BookOpen, BarChart2, Plus } from 'lucide-react'
+
+const ADMIN_SHORTCUTS = [
+  {
+    title: 'Quản lý người dùng',
+    description: 'Quản lý tài khoản, vai trò và trạng thái người dùng',
+    icon: Users,
+    path: '/admin/users',
+    color: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400',
+  },
+  {
+    title: 'Ngân hàng câu hỏi',
+    description: 'Xem và quản lý toàn bộ câu hỏi luyện nghe',
+    icon: BookOpen,
+    path: '/question-bank',
+    color: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400',
+  },
+  {
+    title: 'Tạo đề mới',
+    description: 'Tạo câu hỏi luyện nghe tiếng Nhật mới',
+    icon: Plus,
+    path: '/create',
+    color: 'bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400',
+  },
+  {
+    title: 'Phân tích học tập',
+    description: 'Thống kê và báo cáo kết quả học tập',
+    icon: BarChart2,
+    path: '/analytics',
+    color: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400',
+  },
+]
+
+const USER_SHORTCUTS = [
+  {
+    title: 'Ngân hàng câu hỏi',
+    description: 'Xem và luyện tập với các câu hỏi nghe',
+    icon: BookOpen,
+    path: '/question-bank',
+    color: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400',
+  },
+  {
+    title: 'Phân tích học tập',
+    description: 'Xem tiến độ và kết quả luyện tập của bạn',
+    icon: BarChart2,
+    path: '/analytics',
+    color: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400',
+  },
+]
 
 export default function Dashboard() {
   const navigate = useNavigate()
   const { user } = useAuth()
 
-  const handleCardClick = (path: string) => {
-    navigate(path)
-  }
+  const isAdmin = user?.role === 'admin'
+  const shortcuts = isAdmin ? ADMIN_SHORTCUTS : USER_SHORTCUTS
+  const displayName =
+    user?.first_name && user?.last_name
+      ? `${user.first_name} ${user.last_name}`
+      : user?.username ?? user?.email ?? 'bạn'
 
   return (
-    <div className="space-y-8">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4 text-foreground">Dashboard</h1>
-        <p className="text-lg text-muted-foreground">
-          Welcome back, {user?.email}
+    <div className="p-8">
+      {/* Welcome header */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-foreground">
+          Xin chào, {displayName} 👋
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          {isAdmin
+            ? 'Bảng điều khiển dành cho quản trị viên'
+            : 'Chào mừng bạn quay lại hệ thống Chokai AI'}
         </p>
       </div>
 
-      <Suspense
-        fallback={
-          <div className="text-center py-8 text-muted-foreground">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
-            Loading dashboard...
-          </div>
-        }
-      >
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {user?.role === 'admin' ? (
-            <DashboardCard
-              title="User Management"
-              description="Manage users, roles, and permissions"
-              icon={<Users />}
-              onClick={() => handleCardClick('/admin/users')}
-            />
-          ) : (
-             <div className="col-span-full text-center p-8 bg-card rounded-lg border border-border">
-               <p className="text-muted-foreground">Welcome to the Japanese Audio Application. Select an option from the menu to get started.</p>
-             </div>
-          )}
-        </div>
-      </Suspense>
-    </div>
-  )
-}
-
-function DashboardCard({
-  title,
-  description,
-  icon,
-  onClick,
-}: {
-  title: string
-  description: string
-  icon: React.ReactNode
-  onClick: () => void
-}) {
-  return (
-    <div
-      className="p-6 rounded-lg border border-border
-        bg-card text-card-foreground shadow-sm hover:shadow-md transition-all
-        cursor-pointer group"
-      onClick={onClick}
-    >
-      <div className="flex items-start space-x-4">
-        <div
-          className="flex-shrink-0 p-2 rounded-lg bg-accent text-accent-foreground
-          group-hover:bg-accent/80 dark:group-hover:bg-accent/80 transition-colors"
-        >
-          {icon}
-        </div>
-        <div>
-          <h2
-            className="text-xl font-semibold mb-2 text-card-foreground group-hover:text-primary
-            transition-colors"
+      {/* Shortcuts grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {shortcuts.map((item) => (
+          <button
+            key={item.path}
+            onClick={() => navigate(item.path)}
+            className="group text-left p-5 bg-card rounded-xl border border-border hover:shadow-md hover:border-border/60 transition-all cursor-pointer"
           >
-            {title}
-          </h2>
-          <p className="text-muted-foreground">{description}</p>
-        </div>
+            <div className="flex items-start gap-4">
+              <div className={`p-2.5 rounded-lg shrink-0 ${item.color}`}>
+                <item.icon className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="font-semibold text-foreground text-sm group-hover:text-primary transition-colors">
+                  {item.title}
+                </h2>
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                  {item.description}
+                </p>
+              </div>
+            </div>
+          </button>
+        ))}
       </div>
     </div>
   )

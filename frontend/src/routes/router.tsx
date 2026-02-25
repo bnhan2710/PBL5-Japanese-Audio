@@ -1,6 +1,7 @@
 import { createBrowserRouter, redirect } from 'react-router-dom'
 import { lazy, Suspense } from 'react'
 import RootLayout from '../layouts/RootLayout'
+import AdminLayout from '../layouts/AdminLayout'
 import { ProtectedRoute } from '../components/ProtectedRoute'
 import { GuestRoute } from '../components/GuestRoute'
 
@@ -13,6 +14,7 @@ const UsersPage = lazy(() => import('../features/admin/users/UsersPage'))
 const ProfilePage = lazy(() => import('../features/profile/ProfilePage'))
 const ForgotPasswordPage = lazy(() => import('../pages/ForgotPasswordPage'))
 const ResetPasswordPage = lazy(() => import('../pages/ResetPasswordPage'))
+const QuestionBankPage = lazy(() => import('../features/questionbank/QuestionBankPage'))
 
 // Error boundary component
 function ErrorBoundary() {
@@ -33,53 +35,8 @@ function PageLoader() {
   )
 }
 
-const routes = {
-  public: [
-    {
-      index: true,
-      element: <Home />,
-    },
-  ],
-  guestOnly: [
-    {
-      path: 'login',
-      element: <Login />,
-    },
-    {
-      path: 'register',
-      element: <Register />,
-    },
-    {
-      path: 'forgot-password',
-      element: <ForgotPasswordPage />,
-    },
-    {
-      path: 'reset-password',
-      element: <ResetPasswordPage />,
-    },
-  ],
-  protected: [
-    {
-      path: 'dashboard',
-      element: <Dashboard />,
-    },
-    {
-      path: 'admin/users',
-      element: <UsersPage />,
-    },
-    {
-      path: 'profile',
-      element: <ProfilePage />,
-    },
-  ],
-}
-
 const withSuspense = (element: React.ReactNode) => (
   <Suspense fallback={<PageLoader />}>{element}</Suspense>
-)
-
-const withProtection = (element: React.ReactNode) => (
-  <ProtectedRoute>{withSuspense(element)}</ProtectedRoute>
 )
 
 const withGuestOnly = (element: React.ReactNode) => (
@@ -87,34 +44,64 @@ const withGuestOnly = (element: React.ReactNode) => (
 )
 
 export const router = createBrowserRouter([
+  // Public + guest routes (RootLayout with top navbar)
   {
     path: '/',
     element: <RootLayout />,
     errorElement: <ErrorBoundary />,
     children: [
-      // Public routes
-      ...routes.public.map((route) => ({
-        ...route,
-        element: withSuspense(route.element),
-      })),
-
-      // Guest-only routes (redirects to dashboard if authenticated)
-      ...routes.guestOnly.map((route) => ({
-        ...route,
-        element: withGuestOnly(route.element),
-      })),
-
-      // Protected routes
-      ...routes.protected.map((route) => ({
-        ...route,
-        element: withProtection(route.element),
-      })),
-
-      // Catch-all route
       {
-        path: '*',
-        loader: () => redirect('/'),
+        index: true,
+        element: withSuspense(<Home />),
+      },
+      {
+        path: 'login',
+        element: withGuestOnly(<Login />),
+      },
+      {
+        path: 'register',
+        element: withGuestOnly(<Register />),
+      },
+      {
+        path: 'forgot-password',
+        element: withGuestOnly(<ForgotPasswordPage />),
+      },
+      {
+        path: 'reset-password',
+        element: withGuestOnly(<ResetPasswordPage />),
       },
     ],
+  },
+  // Protected routes (AdminLayout with left sidebar)
+  {
+    element: (
+      <ProtectedRoute>
+        <AdminLayout />
+      </ProtectedRoute>
+    ),
+    errorElement: <ErrorBoundary />,
+    children: [
+      {
+        path: 'dashboard',
+        element: withSuspense(<Dashboard />),
+      },
+      {
+        path: 'admin/users',
+        element: withSuspense(<UsersPage />),
+      },
+      {
+        path: 'profile',
+        element: withSuspense(<ProfilePage />),
+      },
+      {
+        path: 'question-bank',
+        element: withSuspense(<QuestionBankPage />),
+      },
+    ],
+  },
+  // Catch-all route
+  {
+    path: '*',
+    loader: () => redirect('/'),
   },
 ])

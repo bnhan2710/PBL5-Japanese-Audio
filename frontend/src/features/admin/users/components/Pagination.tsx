@@ -8,26 +8,26 @@ interface PaginationProps {
 
 export function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) {
   return (
-    <div className="flex items-center justify-between mt-6">
-      <p className="text-sm text-muted-foreground">
-        Page {currentPage} of {totalPages}
+    <div className="flex items-center justify-between">
+      <p className="text-xs text-muted-foreground">
+        Trang <span className="font-medium">{currentPage}</span> / <span className="font-medium">{totalPages}</span>
       </p>
 
-      <div className="flex gap-2">
+      <div className="flex items-center gap-1">
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="p-2 border border-border rounded-lg bg-card hover:bg-muted text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+          className="p-1.5 rounded-md border border-border text-muted-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
-          <ChevronLeft className="w-5 h-5" />
+          <ChevronLeft className="w-3.5 h-3.5" />
         </button>
 
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="p-2 border border-border rounded-lg bg-card hover:bg-muted text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+          className="p-1.5 rounded-md border border-border text-muted-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
-          <ChevronRight className="w-5 h-5" />
+          <ChevronRight className="w-3.5 h-3.5" />
         </button>
       </div>
     </div>

@@ -1,6 +1,6 @@
 import { Edit, Lock, Unlock, KeyRound, MoreVertical } from 'lucide-react';
 import type { User } from '../types/user';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 interface UserRowProps {
   user: User;
@@ -12,118 +12,138 @@ interface UserRowProps {
 
 export function UserRow({ user, onEdit, onLock, onUnlock, onResetPassword }: UserRowProps) {
   const [showActions, setShowActions] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const isLocked = user.locked_until && new Date(user.locked_until) > new Date();
 
-  const getRoleBadgeColor = (role: string) => {
+  // Close menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowActions(false);
+      }
+    }
+    if (showActions) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showActions]);
+
+  const roleBadge = (role: string) => {
     switch (role) {
       case 'admin':
-        return 'bg-purple-500/10 text-purple-500';
+        return 'bg-violet-100 text-violet-900 border border-violet-200 dark:bg-violet-900/50 dark:text-violet-200 dark:border-violet-700';
       case 'user':
-        return 'bg-blue-500/10 text-blue-500';
-      case 'guest':
-        return 'bg-slate-500/10 text-slate-500';
+        return 'bg-blue-100 text-blue-900 border border-blue-200 dark:bg-blue-900/50 dark:text-blue-200 dark:border-blue-700';
       default:
-        return 'bg-slate-500/10 text-slate-500';
+        return 'bg-muted text-muted-foreground border border-border';
     }
   };
 
   return (
-    <tr className="border-b border-border hover:bg-muted/30 transition-colors">
+    <tr className="hover:bg-muted/30 transition-colors group">
+      {/* User info */}
       <td className="px-6 py-4">
         <div className="flex items-center gap-3">
           {user.avatar_url ? (
-            <img 
-              src={user.avatar_url} 
-              alt={user.username} 
-              className="w-10 h-10 rounded-full object-cover border border-border" 
+            <img
+              src={user.avatar_url}
+              alt={user.username}
+              className="w-9 h-9 rounded-full object-cover border border-border"
             />
           ) : (
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold border border-border">
+            <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm border border-border">
               {(user.first_name?.[0] || user.username[0]).toUpperCase()}
             </div>
           )}
           <div>
-            <div className="font-medium text-foreground">
-              {user.first_name && user.last_name 
-                ? `${user.first_name} ${user.last_name}` 
+            <p className="font-semibold text-foreground leading-tight">
+              {user.first_name && user.last_name
+                ? `${user.first_name} ${user.last_name}`
                 : user.username}
-            </div>
-            <div className="text-sm text-muted-foreground">{user.email}</div>
+            </p>
+            <p className="text-[11px] text-muted-foreground/90 mt-0.5 font-medium">{user.email}</p>
           </div>
         </div>
       </td>
 
+      {/* Role */}
       <td className="px-6 py-4">
-        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getRoleBadgeColor(user.role)}`}>
+        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${roleBadge(user.role)}`}>
           {user.role}
         </span>
       </td>
 
+      {/* Active status */}
       <td className="px-6 py-4">
-        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-          user.is_active ? 'bg-green-100/10 text-green-500' : 'bg-red-100/10 text-red-500'
+        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
+          user.is_active
+            ? 'bg-emerald-100 text-emerald-900 border-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-200 dark:border-emerald-800'
+            : 'bg-rose-100 text-rose-900 border-rose-200 dark:bg-rose-900/50 dark:text-rose-200 dark:border-rose-800'
         }`}>
-          {user.is_active ? 'Active' : 'Inactive'}
+          <span className="w-1.5 h-1.5 rounded-full bg-current" />
+          {user.is_active ? 'Hoạt động' : 'Vô hiệu'}
         </span>
       </td>
 
+      {/* Lock status */}
       <td className="px-6 py-4">
         {isLocked ? (
-          <span className="px-3 py-1 rounded-full text-xs font-medium bg-orange-100/10 text-orange-500">
-            Locked
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-200 dark:bg-amber-900/50 dark:text-amber-200 dark:border-amber-800">
+            <span className="w-1.5 h-1.5 rounded-full bg-current" />
+            Đang bị khoá
           </span>
         ) : (
-          <span className="text-sm text-muted-foreground">-</span>
+          <span className="text-sm text-muted-foreground">—</span>
         )}
       </td>
 
+      {/* Created */}
       <td className="px-6 py-4 text-sm text-muted-foreground">
-        {new Date(user.created_at).toLocaleDateString()}
+        {new Date(user.created_at).toLocaleDateString('vi-VN')}
       </td>
 
-      <td className="px-6 py-4">
-        <div className="relative">
+      {/* Actions */}
+      <td className="px-6 py-4 text-right">
+        <div className="relative inline-block" ref={menuRef}>
           <button
             onClick={() => setShowActions(!showActions)}
-            className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
+            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors opacity-0 group-hover:opacity-100"
           >
-            <MoreVertical className="w-5 h-5 text-muted-foreground" />
+            <MoreVertical className="w-4 h-4" />
           </button>
 
           {showActions && (
-            <div className="absolute right-0 mt-2 w-48 bg-card rounded-lg shadow-xl border border-border py-1 z-50">
+            <div className="absolute right-0 top-full mt-1 w-44 bg-card rounded-lg shadow-lg border border-border py-1 z-50">
               <button
                 onClick={() => { onEdit(user); setShowActions(false); }}
-                className="w-full px-4 py-2 text-left hover:bg-muted/50 flex items-center gap-2 transition-colors cursor-pointer text-sm"
+                className="w-full px-3 py-2 text-left text-sm hover:bg-muted flex items-center gap-2 transition-colors text-foreground"
               >
-                <Edit className="w-4 h-4" />
-                Edit
+                <Edit className="w-3.5 h-3.5 text-muted-foreground" />
+                Chỉnh sửa
               </button>
 
               {isLocked ? (
                 <button
                   onClick={() => { onUnlock(user); setShowActions(false); }}
-                  className="w-full px-4 py-2 text-left hover:bg-muted/50 flex items-center gap-2 transition-colors cursor-pointer text-sm"
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-muted flex items-center gap-2 transition-colors text-foreground"
                 >
-                  <Unlock className="w-4 h-4" />
-                  Unlock
+                  <Unlock className="w-3.5 h-3.5 text-muted-foreground" />
+                  Mở khoá
                 </button>
               ) : (
                 <button
                   onClick={() => { onLock(user); setShowActions(false); }}
-                  className="w-full px-4 py-2 text-left hover:bg-muted/50 flex items-center gap-2 transition-colors cursor-pointer text-sm"
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-muted flex items-center gap-2 transition-colors text-foreground"
                 >
-                  <Lock className="w-4 h-4" />
-                  Lock Account
+                  <Lock className="w-3.5 h-3.5 text-muted-foreground" />
+                  Khoá tài khoản
                 </button>
               )}
 
               <button
                 onClick={() => { onResetPassword(user); setShowActions(false); }}
-                className="w-full px-4 py-2 text-left hover:bg-muted/50 flex items-center gap-2 transition-colors cursor-pointer text-sm"
+                className="w-full px-3 py-2 text-left text-sm hover:bg-muted flex items-center gap-2 transition-colors text-foreground"
               >
-                <KeyRound className="w-4 h-4" />
-                Reset Password
+                <KeyRound className="w-3.5 h-3.5 text-muted-foreground" />
+                Đặt lại mật khẩu
               </button>
             </div>
           )}

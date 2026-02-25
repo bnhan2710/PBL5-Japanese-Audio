@@ -1,6 +1,5 @@
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { AppProvider } from '../context/AppContext'
 import { Notification } from '../components/ui/Notification'
 import { ThemeToggle } from '../components/ui/ThemeToggle'
 import { LanguageSwitcher } from '../components/ui/LanguageSwitcher'
@@ -103,21 +102,19 @@ export default function RootLayout() {
   const { t } = useTranslation()
 
   return (
-    <AppProvider>
-      <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors">
-        <Navigation />
-        <main className="flex-1 container mx-auto px-6 py-8">
-          <Outlet />
-        </main>
-        <footer className="bg-card text-card-foreground shadow-sm transition-colors mt-auto border-t border-border">
-          <div className="container mx-auto px-6 py-6">
-            <p className="text-center text-sm text-muted-foreground">
-              © {currentYear} {t('footer.copyright')}
-            </p>
-          </div>
-        </footer>
-        <Notification />
-      </div>
-    </AppProvider>
+    <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors">
+      <Navigation />
+      <main className="flex-1 container mx-auto px-6 py-8">
+        <Outlet />
+      </main>
+      <footer className="bg-card text-card-foreground shadow-sm transition-colors mt-auto border-t border-border">
+        <div className="container mx-auto px-6 py-6">
+          <p className="text-center text-sm text-muted-foreground">
+            © {currentYear} {t('footer.copyright')}
+          </p>
+        </div>
+      </footer>
+      <Notification />
+    </div>
   )
 }

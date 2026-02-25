@@ -30,16 +30,16 @@ export function LockUserDialog({ isOpen, user, onClose, onConfirm }: LockUserDia
         </button>
 
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-3 bg-orange-500/10 rounded-lg">
-            <Lock className="w-6 h-6 text-orange-500" />
+          <div className="p-2.5 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+            <Lock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
           </div>
-          <h2 className="text-2xl font-bold text-foreground" style={{ fontFamily: 'Fira Code, monospace' }}>
-            Lock User Account
+          <h2 className="text-xl font-bold text-foreground">
+            Khoá tài khoản
           </h2>
         </div>
 
-        <p className="text-muted-foreground mb-6">
-          Lock account for <strong>{user.email}</strong>? User will not be able to login until the lock expires.
+        <p className="text-sm text-muted-foreground mb-6">
+          Khoá tài khoản <strong className="text-foreground">{user.email}</strong>? Người dùng sẽ không thể đăng nhập cho đến khi khoá hết hạn.
         </p>
 
         <div className="mb-6">
@@ -49,27 +49,27 @@ export function LockUserDialog({ isOpen, user, onClose, onConfirm }: LockUserDia
           <select
             value={duration}
             onChange={(e) => setDuration(Number(e.target.value))}
-            className="w-full px-4 py-3 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent cursor-pointer transition-all"
+            className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer transition-all"
           >
-            <option value={1}>1 Hour</option>
-            <option value={24}>24 Hours (1 Day)</option>
-            <option value={168}>7 Days</option>
-            <option value={720}>30 Days</option>
+            <option value={1}>1 giờ</option>
+            <option value={24}>24 giờ (1 ngày)</option>
+            <option value={168}>7 ngày</option>
+            <option value={720}>30 ngày</option>
           </select>
         </div>
 
         <div className="flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 px-6 py-3 border-2 border-primary text-primary rounded-lg font-semibold hover:bg-primary/10 transition-colors cursor-pointer"
+            className="flex-1 px-4 py-2.5 border border-border rounded-lg text-sm text-foreground hover:bg-muted transition-colors cursor-pointer"
           >
-            Cancel
+            Huỷ
           </button>
           <button
             onClick={handleConfirm}
-            className="flex-1 px-6 py-3 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition-colors cursor-pointer"
+            className="flex-1 px-4 py-2.5 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors cursor-pointer"
           >
-            Lock Account
+            Khoá tài khoản
           </button>
         </div>
       </div>

@@ -41,7 +41,6 @@ export function UsersPage() {
     page_size: pageSize,
   });
 
-  // Handlers
   const handleCreateUser = async (userData: any) => {
     try {
       await adminApi.createUser(userData);
@@ -98,114 +97,103 @@ export function UsersPage() {
   };
 
   return (
-    <div className="p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-4xl font-bold text-foreground mb-2" style={{ fontFamily: 'Fira Code, monospace' }}>
-              User Management
-            </h1>
-            <p className="text-muted-foreground">Manage users, roles, and permissions</p>
-          </div>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition-colors cursor-pointer shadow-md"
-          >
-            <UserPlus className="w-5 h-5" />
-            Create User
-          </button>
+    <div className="p-8">
+      {/* Header */}
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Quản lý người dùng</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Quản lý tài khoản, phân quyền và trạng thái người dùng.
+          </p>
         </div>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+        >
+          <UserPlus className="w-4 h-4" />
+          Tạo người dùng
+        </button>
+      </div>
 
+      {/* Error State */}
+      {error && (
+        <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive">
+          {error}
+        </div>
+      )}
+
+      {/* Filters + Table card */}
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
         {/* Filters */}
-        <UserFilters
-          searchValue={searchValue}
-          roleValue={roleFilter}
-          statusValue={statusFilter}
-          onSearchChange={setSearchValue}
-          onRoleChange={setRoleFilter}
-          onStatusChange={setStatusFilter}
-        />
-
-        {/* Error State */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <p className="text-red-800">{error}</p>
-          </div>
-        )}
+        <div className="p-4 border-b border-border">
+          <UserFilters
+            searchValue={searchValue}
+            roleValue={roleFilter}
+            statusValue={statusFilter}
+            onSearchChange={setSearchValue}
+            onRoleChange={setRoleFilter}
+            onStatusChange={setStatusFilter}
+          />
+        </div>
 
         {/* Table */}
         <UserTable
           users={data?.users || []}
           loading={loading}
-          onEdit={(user) => {
-            setSelectedUser(user);
-            setShowEditModal(true);
-          }}
-          onLock={(user) => {
-            setSelectedUser(user);
-            setShowLockDialog(true);
-          }}
+          onEdit={(user) => { setSelectedUser(user); setShowEditModal(true); }}
+          onLock={(user) => { setSelectedUser(user); setShowLockDialog(true); }}
           onUnlock={handleUnlockUser}
           onResetPassword={handleResetPassword}
         />
 
         {/* Pagination */}
         {data && data.total_pages > 1 && (
-          <Pagination
-            currentPage={currentPage}
-            totalPages={data.total_pages}
-            onPageChange={setCurrentPage}
-          />
-        )}
-
-        {/* Modals */}
-        <CreateUserModal
-          isOpen={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          onSubmit={handleCreateUser}
-        />
-
-        <EditUserModal
-          isOpen={showEditModal}
-          user={selectedUser}
-          onClose={() => {
-            setShowEditModal(false);
-            setSelectedUser(null);
-          }}
-          onSubmit={handleEditUser}
-        />
-
-        <LockUserDialog
-          isOpen={showLockDialog}
-          user={selectedUser}
-          onClose={() => {
-            setShowLockDialog(false);
-            setSelectedUser(null);
-          }}
-          onConfirm={handleLockUser}
-        />
-
-        <ResetPasswordDialog
-          isOpen={showResetDialog}
-          tempPassword={tempPassword}
-          userEmail={selectedUser?.email || null}
-          onClose={() => {
-            setShowResetDialog(false);
-            setTempPassword(null);
-            setSelectedUser(null);
-          }}
-        />
-
-        {/* Toast */}
-        {toast && (
-          <Toast
-            message={toast.message}
-            type={toast.type}
-            onClose={() => setToast(null)}
-          />
+          <div className="border-t border-border px-4 py-3 bg-muted/30">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={data.total_pages}
+              onPageChange={setCurrentPage}
+            />
+          </div>
         )}
       </div>
+
+      {/* Modals */}
+      <CreateUserModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSubmit={handleCreateUser}
+      />
+
+      <EditUserModal
+        isOpen={showEditModal}
+        user={selectedUser}
+        onClose={() => { setShowEditModal(false); setSelectedUser(null); }}
+        onSubmit={handleEditUser}
+      />
+
+      <LockUserDialog
+        isOpen={showLockDialog}
+        user={selectedUser}
+        onClose={() => { setShowLockDialog(false); setSelectedUser(null); }}
+        onConfirm={handleLockUser}
+      />
+
+      <ResetPasswordDialog
+        isOpen={showResetDialog}
+        tempPassword={tempPassword}
+        userEmail={selectedUser?.email || null}
+        onClose={() => { setShowResetDialog(false); setTempPassword(null); setSelectedUser(null); }}
+      />
+
+      {/* Toast */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }

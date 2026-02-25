@@ -30,45 +30,45 @@ export function ResetPasswordDialog({ isOpen, tempPassword, userEmail, onClose }
         </button>
 
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-3 bg-green-500/10 rounded-lg">
-            <KeyRound className="w-6 h-6 text-green-500" />
+          <div className="p-2.5 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+            <KeyRound className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
           </div>
-          <h2 className="text-2xl font-bold text-foreground" style={{ fontFamily: 'Fira Code, monospace' }}>
-            Password Reset
+          <h2 className="text-xl font-bold text-foreground">
+            Đặt lại mật khẩu
           </h2>
         </div>
 
-        <p className="text-muted-foreground mb-4">
-          Password has been reset for <strong>{userEmail}</strong>
+        <p className="text-sm text-muted-foreground mb-4">
+          Đã đặt lại mật khẩu cho <strong className="text-foreground">{userEmail}</strong>.
         </p>
 
         <div className="bg-muted/50 rounded-lg p-4 mb-6">
-          <p className="text-sm text-muted-foreground mb-2">Temporary Password:</p>
+          <p className="text-xs text-muted-foreground mb-2">Mật khẩu tạm thời:</p>
           <div className="flex items-center gap-2">
-            <code className="flex-1 px-4 py-3 bg-background border border-border rounded-lg font-mono text-sm text-foreground">
+            <code className="flex-1 px-3 py-2.5 bg-background border border-border rounded-lg font-mono text-sm text-foreground">
               {tempPassword}
             </code>
             <button
               onClick={handleCopy}
-              className="p-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors cursor-pointer"
+              className="p-2.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity cursor-pointer"
               title="Copy to clipboard"
             >
-              {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
             </button>
           </div>
         </div>
 
-        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mb-6">
-          <p className="text-sm text-blue-500">
-            ℹ️ This password has also been sent to the user's email address.
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/40 rounded-lg p-3 mb-6">
+          <p className="text-sm text-blue-700 dark:text-blue-400">
+            ℹ️ Mật khẩu này cũng đã được gửi đến email của người dùng.
           </p>
         </div>
 
         <button
           onClick={onClose}
-          className="w-full px-6 py-3 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition-colors cursor-pointer"
+          className="w-full px-4 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity cursor-pointer"
         >
-          Close
+          Đóng
         </button>
       </div>
     </div>

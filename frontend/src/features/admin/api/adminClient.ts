@@ -17,12 +17,32 @@ class AdminApiClient {
     };
   }
 
+  private getAuthToken(): string {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('No authentication token found');
+    return token;
+  }
+
   private async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
       const error: ApiError = await response.json();
       throw new Error(error.detail || 'API request failed');
     }
     return response.json();
+  }
+
+  // Upload avatar file — returns the public avatar URL
+  async uploadAvatar(file: File): Promise<string> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_BASE_URL}/api/auth/me/avatar`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${this.getAuthToken()}` },
+      body: formData,
+    });
+    const data = await this.handleResponse<{ avatar_url: string }>(response);
+    return data.avatar_url;
   }
 
   // List users with filters
@@ -62,7 +82,6 @@ class AdminApiClient {
     email: string;
     username: string;
     role: string;
-
     password?: string;
     first_name?: string;
     last_name?: string;
@@ -84,7 +103,6 @@ class AdminApiClient {
     email?: string;
     username?: string;
     role?: string;
-
     is_active?: boolean;
     first_name?: string;
     last_name?: string;
@@ -140,3 +158,4 @@ class AdminApiClient {
 }
 
 export const adminApi = new AdminApiClient();
+
