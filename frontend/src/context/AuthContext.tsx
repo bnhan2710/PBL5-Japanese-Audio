@@ -1,5 +1,6 @@
 import { createContext, useContext, useReducer, ReactNode, useCallback, useEffect } from 'react'
 import { AuthState, LoginCredentials, RegisterCredentials, AuthResult, User } from '@/types/auth'
+import { apiFetch, registerLogoutCallback } from '@/lib/apiClient'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -76,27 +77,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (!token) return
 
     try {
-      const response = await fetch(`${API_URL}/api/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
+      const response = await apiFetch(`${API_URL}/api/auth/me`)
 
       if (response.ok) {
         const user = await response.json()
         dispatch({ type: AUTH_ACTIONS.SET_USER, payload: user })
       } else {
-        // Token invalid or expired
+        // Token invalid or expired (and refresh also failed)
         localStorage.removeItem('token')
+        localStorage.removeItem('refresh_token')
         dispatch({ type: AUTH_ACTIONS.LOGOUT })
       }
     } catch (error) {
       console.error('Failed to fetch user profile:', error)
       localStorage.removeItem('token')
+      localStorage.removeItem('refresh_token')
       dispatch({ type: AUTH_ACTIONS.LOGOUT })
     } finally {
       dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false })
     }
+  }, [])
+
+  // Register logout callback for apiClient (auto-logout on failed refresh)
+  useEffect(() => {
+    registerLogoutCallback(() => {
+      dispatch({ type: AUTH_ACTIONS.LOGOUT })
+    })
   }, [])
 
   // Check auth status on mount
@@ -131,6 +137,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       localStorage.setItem('token', data.access_token)
+      if (data.refresh_token) {
+        localStorage.setItem('refresh_token', data.refresh_token)
+      }
       dispatch({
         type: AUTH_ACTIONS.LOGIN_SUCCESS,
         payload: { token: data.access_token },
@@ -191,6 +200,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const logout = useCallback(() => {
     localStorage.removeItem('token')
+    localStorage.removeItem('refresh_token')
     dispatch({ type: AUTH_ACTIONS.LOGOUT })
   }, [])
 
