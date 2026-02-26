@@ -41,7 +41,7 @@ class ExamResponse(ExamBase):
                 "exam_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
                 "creator_id": 1,
                 "audio_id": "1fa85f64-5717-4562-b3fc-2c963f66afb7",
-                "title": "JLPT N3 – 2023 Practice",
+                "title": "JLPT N3 – 2025 Practice",
                 "description": "Official style N3 listening exam",
                 "time_limit": 30,
                 "current_step": 1,

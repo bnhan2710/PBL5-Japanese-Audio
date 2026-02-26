@@ -19,6 +19,11 @@ class AnswerCreate(AnswerBase):
     question_id: UUID
 
 
+class AnswerInline(AnswerBase):
+    """Payload for creating an answer inline inside QuestionCreate (no question_id needed)."""
+    pass
+
+
 class AnswerUpdate(BaseModel):
     content: Optional[str] = None
     image_url: Optional[str] = None
@@ -61,7 +66,7 @@ class QuestionBase(BaseModel):
 class QuestionCreate(QuestionBase):
     """Payload for creating a question. exam_id supplied by the route."""
     exam_id: UUID
-    answers: Optional[List[AnswerCreate]] = Field(default_factory=list, description="Inline answers (optional)")
+    answers: Optional[List[AnswerInline]] = Field(default_factory=list, description="Inline answers (optional)")
 
 
 class QuestionUpdate(BaseModel):
