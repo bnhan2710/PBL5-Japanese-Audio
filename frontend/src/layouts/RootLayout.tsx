@@ -6,6 +6,7 @@ import { LanguageSwitcher } from '../components/ui/LanguageSwitcher'
 import { useAuth } from '../context/AuthContext'
 import { Button } from '../components/ui/Button'
 import { UserMenu } from '../components/ui/UserMenu'
+import { Toaster } from '../components/ui/toaster'
 
 const publicNavLinks = [
   { to: '/', label: 'Home' },
@@ -115,6 +116,7 @@ export default function RootLayout() {
         </div>
       </footer>
       <Notification />
+      <Toaster />
     </div>
   )
 }

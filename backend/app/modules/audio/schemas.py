@@ -38,8 +38,8 @@ class AudioResponse(AudioBase):
         json_schema_extra={
             "example": {
                 "audio_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-                "file_name": "jlpt_n3_2023.mp3",
-                "file_url": "https://cdn.example.com/audios/jlpt_n3_2023.mp3",
+                "file_name": "jlpt_n3_2025.mp3",
+                "file_url": "https://cdn.example.com/audios/jlpt_n3_2025.mp3",
                 "duration": 420,
                 "ai_status": "completed",
                 "ai_model": "whisper-v3",

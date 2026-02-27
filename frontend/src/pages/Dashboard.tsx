@@ -1,6 +1,6 @@
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
-import { Users, BookOpen, BarChart2, Plus } from 'lucide-react'
+import { Users, BookOpen, BarChart2, Plus, FileText } from 'lucide-react'
 
 const ADMIN_SHORTCUTS = [
   {
@@ -18,10 +18,17 @@ const ADMIN_SHORTCUTS = [
     color: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400',
   },
   {
-    title: 'Tạo đề mới',
-    description: 'Tạo câu hỏi luyện nghe tiếng Nhật mới',
+    title: 'Tạo đề thi mới',
+    description: 'Tạo đề thi nghe tiếng Nhật theo cấu trúc JLPT',
     icon: Plus,
-    path: '/create',
+    path: '/exam/create',
+    color: 'bg-sky-50 dark:bg-sky-900/20 text-sky-600 dark:text-sky-400',
+  },
+  {
+    title: 'Đề thi của tôi',
+    description: 'Xem lại các đề thi đã tạo và xuất bản',
+    icon: FileText,
+    path: '/exam',
     color: 'bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400',
   },
   {
@@ -40,6 +47,20 @@ const USER_SHORTCUTS = [
     icon: BookOpen,
     path: '/question-bank',
     color: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400',
+  },
+  {
+    title: 'Tạo đề thi mới',
+    description: 'Tạo đề thi nghe tiếng Nhật theo cấu trúc JLPT',
+    icon: Plus,
+    path: '/exam/create',
+    color: 'bg-sky-50 dark:bg-sky-900/20 text-sky-600 dark:text-sky-400',
+  },
+  {
+    title: 'Đề thi của tôi',
+    description: 'Xem lại các đề thi đã tạo và xuất bản',
+    icon: FileText,
+    path: '/exam',
+    color: 'bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400',
   },
   {
     title: 'Phân tích học tập',
@@ -71,7 +92,7 @@ export default function Dashboard() {
         <p className="text-sm text-muted-foreground mt-1">
           {isAdmin
             ? 'Bảng điều khiển dành cho quản trị viên'
-            : 'Chào mừng bạn quay lại hệ thống Chokai AI'}
+            : 'Chào mừng bạn quay lại hệ thống Japanese Audio'}
         </p>
       </div>
 

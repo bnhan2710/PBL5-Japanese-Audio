@@ -5,7 +5,7 @@ from pydantic import EmailStr
 from app.modules.users.models import User
 from app.modules.auth.schemas import UserCreate, LoginRequest, ChangePasswordRequest
 from app.modules.users.repository import UserRepository
-from app.core.security import verify_password, get_password_hash, create_access_token
+from app.core.security import verify_password, get_password_hash, create_access_token, create_refresh_token
 from app.shared.exceptions import (
     UserAlreadyExistsException,
     InvalidCredentialsException,
@@ -51,7 +51,8 @@ class AuthService:
             raise InvalidCredentialsException()
 
         access_token = create_access_token(data={"sub": user.email})
-        return {"access_token": access_token, "token_type": "bearer"}
+        refresh_token = create_refresh_token(data={"sub": user.email})
+        return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
 
     async def request_password_reset(self, email: EmailStr) -> dict:
         """Generate password reset token for user."""
@@ -76,6 +77,29 @@ class AuthService:
         await self.repository.update(user)
 
         return {"message": "Password has been reset successfully"}
+
+    async def refresh_access_token(self, refresh_token: str) -> dict:
+        """Validate refresh token and issue a new token pair."""
+        from jose import JWTError, jwt as jose_jwt
+        from app.core.config import get_settings
+        settings = get_settings()
+
+        try:
+            payload = jose_jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+            email: str = payload.get("sub")
+            token_type: str = payload.get("type")
+            if email is None or token_type != "refresh":
+                raise InvalidCredentialsException(detail="Invalid refresh token")
+        except JWTError:
+            raise InvalidCredentialsException(detail="Invalid or expired refresh token")
+
+        user = await self.repository.get_by_email(email)
+        if not user:
+            raise InvalidCredentialsException(detail="User not found")
+
+        new_access_token = create_access_token(data={"sub": user.email})
+        new_refresh_token = create_refresh_token(data={"sub": user.email})
+        return {"access_token": new_access_token, "refresh_token": new_refresh_token, "token_type": "bearer"}
 
     async def change_password(self, user: User, password_data: ChangePasswordRequest) -> dict:
         """Change user password."""

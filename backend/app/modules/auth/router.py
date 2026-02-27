@@ -4,7 +4,7 @@ from pydantic import EmailStr
 
 from app.db.session import get_db
 from app.modules.users.models import User
-from app.modules.auth.schemas import Token, UserCreate, LoginRequest, ChangePasswordRequest
+from app.modules.auth.schemas import Token, UserCreate, LoginRequest, ChangePasswordRequest, RefreshTokenRequest
 from app.modules.users.schemas import UserResponse, UserMeUpdate
 from app.modules.auth.service import AuthService
 from app.modules.users.service import UserService
@@ -40,6 +40,17 @@ async def login(
     Login and receive JWT access token.
     """
     return await service.authenticate_user(login_data)
+
+@router.post("/refresh", response_model=Token)
+async def refresh_token(
+    body: RefreshTokenRequest,
+    service: AuthService = Depends(get_auth_service),
+):
+    """
+    Exchange a valid refresh token for a new access + refresh token pair.
+    """
+    return await service.refresh_access_token(body.refresh_token)
+
 
 @router.get("/me", response_model=UserResponse)
 async def read_users_me(current_user: User = Depends(get_current_user)):
