@@ -1,239 +1,204 @@
+# PBL5 — Japanese Audio Learning Platform
+
+A full-stack web application for Japanese listening practice, powered by AI. Upload JLPT audio files and the system automatically transcribes, analyzes, and generates structured exam questions using ReazonSpeech and Gemini AI.
+
+---
+
 ## Features
 
-- **Backend (FastAPI)**
+- **AI-Powered Audio Processing** — Automatic transcription (ReazonSpeech k2) + script refinement & timestamp extraction (Gemini 2.5 Flash)
+- **JLPT Exam Management** — Create, manage, and take listening exams with structured Mondai/Question format
+- **User Management** — JWT authentication, Google OAuth, role-based access
+- **Result Tracking** — Store and review exam results per user
+- **Internationalization** — Frontend supports multiple languages (i18n)
+- **File Storage** — Audio/image uploads via Cloudinary
 
-  - Fast and modern Python web framework
-  - PostgreSQL/SQLite database with async SQLAlchemy ORM
-  - JWT-based authentication system
-  - Role-based access control
-  - Async database operations
-  - Proper connection pooling and cleanup
-  - Environment configuration with pydantic
-  - Structured logging
-  - Health check endpoint
-  - Graceful shutdown handling
-  - Modular project structure
+---
 
-- **Frontend (React 19)**
-  - Latest React features including `use` hook
-  - TypeScript for type safety and better developer experience
-  - React Router 7 for client-side routing
-  - shadcn/ui components for beautiful, accessible UI
-  - Component-based architecture
-  - Custom hooks for data fetching
-  - Modern error handling with Error Boundaries
-  - Suspense for loading states
-  - Tailwind CSS for styling
-  - Environment configuration
-  - Vite for fast development
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS v4, shadcn/ui |
+| Backend | FastAPI, SQLAlchemy 2.0 (async), Alembic, Pydantic v2 |
+| Database | PostgreSQL 17 |
+| AI / ASR | Gemini 2.5 Flash (`google-genai`), ReazonSpeech k2 |
+| Audio | PyDub |
+| Auth | JWT, Google OAuth2 |
+| Storage | Cloudinary |
+| Container | Docker, Docker Compose |
+
+---
 
 ## Project Structure
 
 ```
-fastapi-react-starter/
-├── backend/
+.
+├── backend/          # FastAPI application
 │   ├── app/
-│   │   ├── __init__.py
-│   │   ├── main.py              # FastAPI application entry
-│   │   ├── config/              # Configuration management
-│   │   │   ├── __init__.py
-│   │   │   └── config.py        # Environment settings
-│   │   ├── db/                  # Database
-│   │   │   ├── __init__.py
-│   │   │   ├── database.py      # Database connection
-│   │   │   └── models.py        # SQLAlchemy models
-│   │   ├── routes/              # API routes
-│   │   │   ├── __init__.py
-│   │   │   ├── auth.py         # Authentication endpoints
-│   │   │   └── health.py       # Health check endpoint
-│   │   ├── schemas/            # Pydantic models
-│   │   │   ├── __init__.py
-│   │   │   └── auth.py        # Authentication schemas
-│   │   ├── services/          # Business logic
-│   │   │   ├── __init__.py
-│   │   │   └── auth.py       # Authentication services
-│   │   └── utils/            # Utilities
-│   │       ├── __init__.py
-│   │       └── logger.py     # Logging configuration
-│   ├── .env                  # Environment variables
-│   └── requirements.txt      # Python dependencies
-├── frontend/
-│   ├── src/
-│   │   ├── components/       # Reusable UI components
-│   │   │   └── ui/          # shadcn/ui components
-│   │   │       ├── button.tsx
-│   │   │       ├── card.tsx
-│   │   │       └── status-dot.tsx
-│   │   ├── features/         # Feature modules
-│   │   │   ├── auth/        # Authentication feature
-│   │   │   │   ├── LoginForm.tsx
-│   │   │   │   └── RegisterForm.tsx
-│   │   │   └── health/      # Health check feature
-│   │   │       └── HealthStatus.tsx
-│   │   ├── hooks/           # Custom React hooks
-│   │   │   ├── useAuth.ts
-│   │   │   └── useHealthStatus.ts
-│   │   ├── layouts/         # Page layouts
-│   │   │   └── MainLayout.tsx
-│   │   ├── lib/             # Utility functions and configurations
-│   │   │   └── utils.ts
-│   │   ├── routes/          # Route components and configurations
-│   │   │   └── root.tsx
-│   │   ├── types/           # TypeScript type definitions
-│   │   │   └── index.d.ts
-│   │   └── App.tsx          # Main React component
-│   ├── .env                 # Frontend environment variables
-│   └── package.json         # Node.js dependencies
-└── README.md               # Project documentation
+│   │   ├── modules/  # auth, users, exam, questions, audio, ai_exam, result
+│   │   ├── core/     # config, security, health
+│   │   ├── db/       # models, session, migrations
+│   │   └── shared/   # email, upload, utils, webhook
+│   └── alembic/      # DB migration scripts
+├── frontend/         # React + Vite SPA
+│   └── src/
+│       ├── features/ # Feature modules
+│       ├── pages/    # Route pages
+│       └── components/
+├── R&D/Demo AI/      # AI pipeline scripts (standalone)
+├── deployments/      # AWS & GCP config
+├── docs/             # Project documentation
+└── docker-compose.yml
 ```
 
-## Quick Start
+---
 
-### Using Docker (Recommended)
+## Prerequisites
 
-1. Create environment files:
+- Python 3.12+
+- Node.js 20+ / pnpm
+- PostgreSQL 17 (or use Docker)
+- `ffmpeg` (required by PyDub)
+- Google API Key (Gemini)
 
-   Create `.env` file in the root directory:
+---
 
-   ```env
-   # Database Configuration
-   DB_USER=postgres
-   DB_PASSWORD=postgres
-   DB_NAME=fastapi_db
-   ```
+## Getting Started
 
-2. Start the application with Docker:
-
-   ```bash
-   docker compose up --build
-   ```
-
-   This will:
-
-   - Start PostgreSQL database
-   - Apply migrations to a fresh database (e.g., after Docker volume removal)
-   - Start the FastAPI backend at http://localhost:8000
-   - Start the React frontend at http://localhost:5173
-
-   The Swagger docs will be available at http://localhost:8000/docs
-
-### Automated Setup Scripts
-
-For your convenience, this project includes automated setup scripts for both Windows and Linux/Mac:
-
-#### Windows Setup
-
-1. Open PowerShell as Administrator
-2. Navigate to the project directory
-3. Run the setup script:
-   ```powershell
-   .\setup.ps1
-   ```
-
-This script will:
-
-- Check for required dependencies (Docker, Docker Compose V2)
-- Install the correct version of docker recommended for the system.
-- Set up environment variables
-
-#### Linux/Mac Setup
-
-1. Open a terminal
-2. Navigate to the project directory
-3. Make the script executable and run it:
-   ```bash
-   chmod +x setup.sh
-   ./setup.sh
-   ```
-
-This script performs the same setup steps as the Windows version but is adapted for Unix-based systems.
-
-### Manual Setup (Alternative)
-
-1. Backend Setup:
-
-   a. Install PostgreSQL and create a database:
-
-   ```bash
-   # macOS with Homebrew
-   brew install postgresql
-   brew services start postgresql
-
-   # Create database
-   createdb fastapi_db
-   ```
-
-   b. Create a `.env` file in the backend directory:
-
-   ```env
-   # Database Configuration
-   DB_NAME=fastapi_db
-   DB_USER=postgres  # your database user
-   DB_PASSWORD=postgres  # your database password
-   DB_HOST=localhost
-   DB_PORT=5432
-   CORS_ORIGINS=["http://localhost:5173"]
-   ENVIRONMENT=development
-   ```
-
-   c. Install Python dependencies and run migrations:
-
-   ```bash
-   cd backend
-   pip install -r requirements.txt
-   python manage.py migrate
-   uvicorn app.main:app --reload
-   ```
-
-2. Frontend Setup:
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
-
-### Database Management
-
-The project includes several database management commands:
+### 1. Clone & setup environment
 
 ```bash
-# Generate new migrations
-python manage.py makemigrations "description of changes"
+git clone https://github.com/bnhan2710/PBL5-Japanese-Audio.git
+cd PBL5-Japanese-Audio
 
-# Apply pending migrations
-python manage.py migrate
-
-# Apply all migrations to a (presumably) fresh database (runs 'alembic upgrade head')
-python manage.py reset_db
-
-# Check migration status
-python manage.py db-status
-
-# Rollback last migration
-python manage.py downgrade
+# Create virtual environment
+python3 -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
 ```
 
-If you encounter database errors and need a full reset:
+### 2. Start Database
 
-1. Stop all running services: `docker compose down`
-2. Remove the PostgreSQL Docker volume (e.g., `docker volume rm fastapi-react-starter_postgres_data` - verify volume name with `docker volume ls`)
-3. Restart services: `docker compose up -d --build`
+```bash
+docker compose up -d postgres
+```
 
-### Troubleshooting
+### 3. Backend
 
-1. Backend Status shows "error":
+```bash
+cd backend
+cp .env.example .env   # fill in your values
+pip install -r requirements.txt
 
-   - Ensure PostgreSQL is running
-   - Check database credentials in `.env`
-   - For a full reset, see the 'If you encounter database errors' section above (involves Docker volume removal).
-   - Check backend logs for specific error messages
+# Run migrations
+alembic upgrade head
 
-2. User Registration fails:
-   - Ensure the database is properly initialized
-   - Check if backend is running and accessible
-   - Verify CORS settings in backend `.env`
-   - Check browser console for specific error messages
+# Start dev server
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
 
-## License
+Backend API available at: `http://localhost:8000`  
+Swagger docs: `http://localhost:8000/docs`
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+### 4. Frontend
+
+```bash
+cd frontend
+pnpm install
+pnpm dev
+```
+
+Frontend available at: `http://localhost:5173`
+
+---
+
+## Environment Variables
+
+Create `backend/.env` with the following:
+
+```env
+# Database
+DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5433/fastapi_db
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=fastapi_db
+DB_HOST=localhost
+DB_PORT=5433
+
+# JWT
+JWT_SECRET_KEY=your-secret-key
+
+# Google AI
+GOOGLE_API_KEY=your-gemini-api-key
+
+# Google OAuth (optional)
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
+# Cloudinary (optional)
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+
+# Email (optional)
+SMTP_EMAIL=
+SMTP_PASSWORD=
+
+# n8n Webhook (optional)
+N8N_WEBHOOK_URL=
+```
+
+---
+
+## AI Audio Pipeline (R&D)
+
+Standalone script to process a JLPT audio file end-to-end:
+
+```bash
+cd "R&D/Demo AI"
+
+# Install dependencies
+pip install python-dotenv pydub google-genai reazonspeech-k2-asr
+
+# Create .env with GOOGLE_API_KEY
+echo "GOOGLE_API_KEY=your-key" > .env
+
+# Run pipeline
+python3 audio_splitter_to_text_v2.py input/J2.mp3 --output_dir output_v2
+```
+
+**Pipeline steps:**
+1. **ReazonSpeech** — Transcribes Japanese audio → `raw_transcript.txt`
+2. **Gemini** — Refines transcript into structured script → `refined_script.txt`
+3. **Gemini** — Extracts Mondai/Question timestamps → `timestamps.json`
+4. **PyDub** — Cuts audio into individual question files → `mondai/mondai_N/questions/`
+
+---
+
+## Running Tests
+
+```bash
+cd backend
+pytest
+```
+
+---
+
+## Deployment
+
+See [`deployments/`](deployments/README.md) for AWS (CodeBuild + ECS) and Google Cloud (Cloud Build + Cloud Run) configurations.
+
+---
+
+## Documentation
+
+Full documentation available via MkDocs:
+
+```bash
+pip install mkdocs
+mkdocs serve
+```
+
+Or browse the [`docs/`](docs/) folder directly.
+
+---

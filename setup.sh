@@ -1,10 +1,10 @@
 #!/bin/bash
-# FastAPI React Starter Setup Script for Docker
+# Japanese Aduio Setup Script for Docker
 
 # Stop on any error
 set -e
 
-echo -e "\e[32m=== FastAPI React Starter Setup Script (Docker Focus) ===\e[0m"
+echo -e "\e[32m=== Japanese Aduio Setup Script (Docker Focus) ===\e[0m"
 
 command_exists() {
     command -v "$1" &> /dev/null
