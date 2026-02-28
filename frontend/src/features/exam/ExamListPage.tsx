@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, BookOpen, Clock, Layers, FileText, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Plus, BookOpen, Clock, Layers, FileText, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react'
 import { examClient, ExamResponse } from './api/examClient'
 import ExamDetailModal from './ExamDetailModal'
 
@@ -80,11 +80,16 @@ export default function ExamListPage() {
   const [error, setError] = useState('')
   const [selected, setSelected] = useState<ExamResponse | null>(null)
 
-  useEffect(() => {
+  const fetchExams = () => {
+    setLoading(true)
     examClient.listExams()
       .then(data => setExams(Array.isArray(data) ? data : []))
       .catch(e => setError(e.message || 'Không thể tải danh sách đề thi'))
       .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    fetchExams()
   }, [])
 
   const published = exams.filter(e => e.is_published)
@@ -100,13 +105,22 @@ export default function ExamListPage() {
             Quản lý và xem lại toàn bộ đề thi bạn đã tạo
           </p>
         </div>
-        <button
-          onClick={() => navigate('/exam/create')}
-          className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm"
-        >
-          <Plus className="w-4 h-4" />
-          Tạo đề thi mới
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate('/exam/ai-create')}
+            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-lg text-sm font-semibold hover:from-violet-600 hover:to-purple-700 transition-all shadow-lg shadow-violet-500/30"
+          >
+            <Sparkles className="w-4 h-4" />
+            Tạo bằng AI
+          </button>
+          <button
+            onClick={() => navigate('/exam/create')}
+            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+            Tạo thủ công
+          </button>
+        </div>
       </div>
 
       {/* Error state */}
@@ -133,12 +147,20 @@ export default function ExamListPage() {
           <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
             Hãy tạo đề thi đầu tiên của bạn ngay bây giờ.
           </p>
-          <button
-            onClick={() => navigate('/exam/create')}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors"
-          >
-            <Plus className="w-4 h-4" /> Tạo đề thi mới
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/exam/ai-create')}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-lg text-sm font-semibold hover:from-violet-600 hover:to-purple-700 transition-all shadow-lg shadow-violet-500/30"
+            >
+              <Sparkles className="w-4 h-4" /> Tạo bằng AI
+            </button>
+            <button
+              onClick={() => navigate('/exam/create')}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" /> Tạo thủ công
+            </button>
+          </div>
         </div>
       ) : (
         <div className="space-y-8">
@@ -182,7 +204,18 @@ export default function ExamListPage() {
 
       {/* Detail Modal */}
       {selected && (
-        <ExamDetailModal exam={selected} onClose={() => setSelected(null)} />
+        <ExamDetailModal 
+          exam={selected} 
+          onClose={() => setSelected(null)} 
+          onExamDeleted={() => {
+            setSelected(null)
+            fetchExams()
+          }}
+          onExamUpdated={(updatedExam) => {
+            setSelected(updatedExam)
+            fetchExams()
+          }}
+        />
       )}
     </div>
   )
