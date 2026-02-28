@@ -1,10 +1,10 @@
 # Make It Yours: Customizing the Starter Template
 
-This guide helps you take the FastAPI React Starter template and adapt it into your own unique project.
+This guide helps you take the Japanese Aduio template and adapt it into your own unique project.
 
 ## 1. Introduction
 
-The FastAPI React Starter is designed to give you a head start with a modern tech stack and a sensible project structure. Follow these steps to rebrand and customize it.
+The Japanese Aduio is designed to give you a head start with a modern tech stack and a sensible project structure. Follow these steps to rebrand and customize it.
 
 ## 2. Renaming the Project
 
@@ -129,4 +129,4 @@ Consistent naming is key. Here's where to change the project's name:
 *   Remove or replace example images, SVGs (like `frontend/public/starter.svg`), and other assets.
 *   Ensure all example user accounts, data, or configurations are cleared before deploying to production.
 
-By following these steps, you can effectively transform the FastAPI React Starter template into a solid foundation for your own application.
+By following these steps, you can effectively transform the Japanese Aduio template into a solid foundation for your own application.

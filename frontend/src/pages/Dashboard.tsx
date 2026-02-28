@@ -1,6 +1,6 @@
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
-import { Users, BookOpen, BarChart2, Plus, FileText } from 'lucide-react'
+import { Users, BookOpen, BarChart2, Plus, FileText, Sparkles } from 'lucide-react'
 
 const ADMIN_SHORTCUTS = [
   {
@@ -23,6 +23,13 @@ const ADMIN_SHORTCUTS = [
     icon: Plus,
     path: '/exam/create',
     color: 'bg-sky-50 dark:bg-sky-900/20 text-sky-600 dark:text-sky-400',
+  },
+  {
+    title: 'Sinh đề bằng AI',
+    description: 'Tự động tạo đề nghe tiếng Nhật từ audio sử dụng AI',
+    icon: Sparkles,
+    path: '/exam/ai-create',
+    color: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400',
   },
   {
     title: 'Đề thi của tôi',
@@ -54,6 +61,13 @@ const USER_SHORTCUTS = [
     icon: Plus,
     path: '/exam/create',
     color: 'bg-sky-50 dark:bg-sky-900/20 text-sky-600 dark:text-sky-400',
+  },
+  {
+    title: 'Sinh đề bằng AI',
+    description: 'Tự động tạo đề nghe tiếng Nhật từ audio sử dụng AI',
+    icon: Sparkles,
+    path: '/exam/ai-create',
+    color: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400',
   },
   {
     title: 'Đề thi của tôi',

@@ -1,6 +1,6 @@
 # Deployment Guide
 
-This guide provides instructions for deploying the FastAPI React Starter application to a production environment. The primary method described uses Docker and Docker Compose.
+This guide provides instructions for deploying the Japanese Aduio application to a production environment. The primary method described uses Docker and Docker Compose.
 
 ## 1. Deployment Overview
 

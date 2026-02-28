@@ -1,10 +1,10 @@
-# FastAPI React Starter Setup Script for Windows (Docker Focus)
+# Japanese Aduio Setup Script for Windows (Docker Focus)
 # This script sets up Docker Desktop and prepares the environment for a Docker-based FastAPI React project
 
 # Stop on any error
 $ErrorActionPreference = "Stop"
 
-Write-Host "=== FastAPI React Starter Setup Script for Windows (Docker Focus) ===" -ForegroundColor Green
+Write-Host "=== Japanese Aduio Setup Script for Windows (Docker Focus) ===" -ForegroundColor Green
 
 # Function to check if a command exists
 function Test-CommandExists {

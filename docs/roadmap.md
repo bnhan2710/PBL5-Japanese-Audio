@@ -8,7 +8,7 @@ Welcome to the project roadmap! This page is intended to provide transparency in
 
 ## 2. Current Status
 
-*   _(Example: Initial version launched, based on the FastAPI React Starter template. Core functionalities for X and Y are in place.)_
+*   _(Example: Initial version launched, based on the Japanese Aduio template. Core functionalities for X and Y are in place.)_
 *   _(Describe the current state of your project here.)_
 
 ## 3. Short-Term Goals (Next 1-3 Months)

@@ -10,8 +10,8 @@ load_dotenv()
 
 class Settings(BaseSettings):
     APP_VERSION: str = "1.0.0"
-    APP_NAME: str = "FastAPI React Starter"
-    APP_DESCRIPTION: str = "FastAPI React Starter Template"
+    APP_NAME: str = "Japanese Aduio"
+    APP_DESCRIPTION: str = "Japanese Aduio Template"
     ENVIRONMENT: str = "development"
     DATABASE_URL: str = ""
     TEST_DATABASE_URL: Optional[str] = "sqlite+aiosqlite:///./test_app.db"
@@ -47,6 +47,9 @@ class Settings(BaseSettings):
     CLOUDINARY_CLOUD_NAME: Optional[str] = None
     CLOUDINARY_API_KEY: Optional[str] = None
     CLOUDINARY_API_SECRET: Optional[str] = None
+
+    # Google AI Settings
+    GOOGLE_API_KEY: Optional[str] = None
 
     # Google OAuth Settings
     GOOGLE_CLIENT_ID: Optional[str] = None

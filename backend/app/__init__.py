@@ -1,4 +1,4 @@
-"""FastAPI React Starter Application"""
+"""Japanese Aduio Application"""
 
 from .main import app
 

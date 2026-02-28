@@ -100,6 +100,9 @@ export const examClient = {
   getExam: (examId: string) =>
     apiFetch(`${API_BASE}/api/exams/${examId}`).then((r) => handleResponse<ExamResponse>(r)),
 
+  deleteExam: (examId: string) =>
+    apiFetch(`${API_BASE}/api/exams/${examId}`, { method: 'DELETE' }),
+
   listExams: () =>
     apiFetch(`${API_BASE}/api/exams`)
       .then((r) => handleResponse<ExamListResponse>(r)).then((data) => data.exams),
@@ -147,4 +150,84 @@ export const examClient = {
 
   deleteAnswer: (answerId: string) =>
     apiFetch(`${API_BASE}/api/answers/${answerId}`, { method: 'DELETE' }),
+};
+
+// --------------- AI Exam Generation Types ---------------
+
+export interface AIQuestionOption {
+  label: string;
+  content: string;
+  is_correct: boolean;
+}
+
+export interface AIQuestion {
+  mondai_group: string;
+  question_number: number;
+  introduction?: string;
+  script_text: string;
+  question_text: string;
+  audio_url?: string;
+  answers: AIQuestionOption[];
+}
+
+export interface AITimestampQuestion {
+  question_number: number;
+  start_time: number;
+  end_time: number;
+  text?: string;
+}
+
+export interface AITimestampMondai {
+  mondai_number: number;
+  title: string;
+  start_time: number;
+  end_time: number;
+  questions: AITimestampQuestion[];
+}
+
+export interface AIExamResult {
+  raw_transcript: string;
+  refined_script: string;
+  timestamps?: AITimestampMondai[];
+  questions: AIQuestion[];
+}
+
+export interface AIJobStatus {
+  job_id: string;
+  status: 'pending' | 'processing' | 'done' | 'failed';
+  progress_message: string;
+  result?: AIExamResult;
+  error?: string;
+}
+
+// --------------- AI Exam API Methods ---------------
+
+export const aiExamClient = {
+  /**
+   * Upload audio file and start AI exam generation pipeline.
+   * Returns job_id for polling.
+   */
+  generateExamFromAudio: (
+    file: File,
+    jlpt_level: string = 'N2',
+    title: string = '',
+  ): Promise<AIJobStatus> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('jlpt_level', jlpt_level);
+    formData.append('title', title);
+    return apiFetch(`${API_BASE}/api/ai/generate-exam`, {
+      method: 'POST',
+      body: formData,
+    }).then((r) => handleResponse<AIJobStatus>(r));
+  },
+
+  /** Poll job status. */
+  getJobStatus: (jobId: string): Promise<AIJobStatus> =>
+    apiFetch(`${API_BASE}/api/ai/job/${jobId}`)
+      .then((r) => handleResponse<AIJobStatus>(r)),
+
+  /** Cleanup job from server memory. */
+  deleteJob: (jobId: string): Promise<void> =>
+    apiFetch(`${API_BASE}/api/ai/job/${jobId}`, { method: 'DELETE' }).then(() => undefined),
 };

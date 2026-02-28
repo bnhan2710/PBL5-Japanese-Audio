@@ -59,7 +59,6 @@ function appReducer(state: AppState, action: Action): AppState {
     case ACTIONS.SET_THEME: {
       const newTheme = action.payload
       localStorage.setItem('theme', newTheme)
-      // Update DOM synchronously with state change
       const root = window.document.documentElement
       root.classList.remove('light', 'dark')
       root.classList.add(newTheme)
