@@ -9,6 +9,7 @@ from app.modules.users.router import router as users_router
 from app.modules.auth.router import router as auth_router
 from app.modules.exam.router import router as exam_router
 from app.modules.questions.router import router as questions_router
+from app.modules.ai_exam.router import router as ai_exam_router
 
 from app.db.session import init_db, engine
 from app.core.config import get_settings
@@ -72,6 +73,10 @@ app = FastAPI(
         {
             "name": "questions",
             "description": "Question / Answer CRUD + audio upload per question"
+        },
+        {
+            "name": "ai",
+            "description": "AI-powered exam generation: upload audio \u2192 ReazonSpeech ASR \u2192 Gemini analysis \u2192 JLPT questions"
         }
     ],
     swagger_ui_parameters={
@@ -134,6 +139,7 @@ app.include_router(users_router, prefix="/api")
 app.include_router(auth_router, prefix="/api")
 app.include_router(exam_router, prefix="/api")
 app.include_router(questions_router, prefix="/api")
+app.include_router(ai_exam_router, prefix="/api")
 
 
 logger.info("Application routes configured")

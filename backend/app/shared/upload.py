@@ -57,3 +57,22 @@ async def upload_audio(file: UploadFile, folder: str = "question-audio") -> dict
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to upload audio: {str(e)}")
+
+
+async def upload_audio_bytes(audio_bytes: bytes, filename: str, folder: str = "question-audio") -> dict:
+    """Upload raw audio bytes to Cloudinary and return metadata."""
+    try:
+        result = cloudinary.uploader.upload(
+            audio_bytes,
+            folder=f"{settings.APP_NAME}/{folder}",
+            resource_type="video",
+            public_id=filename.split(".")[0] if "." in filename else filename,
+        )
+        return {
+            "secure_url": result.get("secure_url"),
+            "public_id": result.get("public_id"),
+            "duration": result.get("duration"),
+            "format": result.get("format"),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to upload audio bytes: {str(e)}")
