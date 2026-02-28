@@ -1,6 +1,6 @@
 # Development Guide
 
-This guide provides instructions and best practices for developing within the FastAPI React Starter project.
+This guide provides instructions and best practices for developing within the Japanese Aduio project.
 
 ## 1. Project Structure Overview
 

@@ -1,6 +1,6 @@
 # Initial Project Setup
 
-This guide walks you through setting up the FastAPI React Starter project on your local machine. You can choose between the recommended Docker-based setup, using automated scripts, or a manual setup process.
+This guide walks you through setting up the Japanese Aduio project on your local machine. You can choose between the recommended Docker-based setup, using automated scripts, or a manual setup process.
 
 ## Prerequisites
 

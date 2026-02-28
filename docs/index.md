@@ -1,6 +1,6 @@
-# Welcome to the FastAPI React Starter Documentation
+# Welcome to the Japanese Aduio Documentation
 
-This documentation provides a comprehensive guide to understanding, setting up, developing, and deploying projects based on the FastAPI React Starter template.
+This documentation provides a comprehensive guide to understanding, setting up, developing, and deploying projects based on the Japanese Aduio template.
 
 This starter template is designed to provide a modern, full-featured foundation for building web applications with a Python (FastAPI) backend and a React frontend, leveraging best practices and popular tools.
 
