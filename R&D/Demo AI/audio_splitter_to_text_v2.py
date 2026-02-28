@@ -8,7 +8,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 from pydub import AudioSegment
 from pydub.silence import split_on_silence
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 import reazonspeech as rs
 from reazonspeech.k2.asr import load_model, transcribe, audio_from_path
 
@@ -106,28 +107,47 @@ class GeminiAnalyzer:
     def __init__(self, api_key):
         if not api_key:
             raise ValueError("Google API Key is required.")
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-2.5-flash')
+        self.client = genai.Client(api_key=api_key)
+        self.model_name = 'gemini-2.5-flash'
 
-    def upload_audio(self, audio_path):
+    def upload_audio(self, audio_path, max_retries=3):
         logger.info(f"Uploading audio to Gemini: {audio_path}")
-        try:
-            audio_file = genai.upload_file(path=audio_path)
-            logger.info(f"Audio uploaded. URI: {audio_file.uri}")
-            
-            # Wait for processing
-            while audio_file.state.name == "PROCESSING":
-                time.sleep(2)
-                audio_file = genai.get_file(audio_file.name)
+        import mimetypes
+        filename = Path(audio_path).name
+        mime_type = mimetypes.guess_type(audio_path)[0] or "audio/mpeg"
+        
+        last_exc = None
+        for attempt in range(1, max_retries + 1):
+            try:
+                logger.info(f"Upload attempt {attempt}/{max_retries}...")
+                audio_file = self.client.files.upload(
+                    file=audio_path,
+                    config=types.UploadFileConfig(
+                        display_name=filename,
+                        mime_type=mime_type,
+                    ),
+                )
+                logger.info(f"Audio uploaded. URI: {audio_file.uri}")
                 
-            if audio_file.state.name == "FAILED":
-                raise ValueError("Audio processing failed.")
-                
-            logger.info("Audio processing complete.")
-            return audio_file
-        except Exception as e:
-            logger.error(f"Error uploading audio: {e}")
-            raise
+                # Wait for processing
+                while audio_file.state.name == "PROCESSING":
+                    time.sleep(2)
+                    audio_file = self.client.files.get(name=audio_file.name)
+                    
+                if audio_file.state.name == "FAILED":
+                    raise ValueError("Audio processing failed.")
+                    
+                logger.info("Audio processing complete.")
+                return audio_file
+            except (BrokenPipeError, ConnectionError, OSError) as e:
+                last_exc = e
+                wait = 2 ** attempt
+                logger.warning(f"Upload attempt {attempt} failed ({e}). Retrying in {wait}s...")
+                time.sleep(wait)
+            except Exception as e:
+                logger.error(f"Error uploading audio: {e}")
+                raise
+        raise RuntimeError(f"Failed to upload audio after {max_retries} attempts: {last_exc}")
 
     def generate_refined_script(self, audio_file, raw_transcript):
         logger.info("Generating refined script (Introduction, Conversation, Question)...")
@@ -172,7 +192,10 @@ class GeminiAnalyzer:
         """
         
         try:
-            response = self.model.generate_content([prompt, audio_file, f"Raw Transcript:\n{raw_transcript}"])
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=[prompt, audio_file, f"Raw Transcript:\n{raw_transcript}"]
+            )
             return response.text.strip()
         except Exception as e:
             logger.error(f"Error generating refined script: {e}")
@@ -221,9 +244,12 @@ class GeminiAnalyzer:
         """
         
         try:
-            response = self.model.generate_content([prompt, audio_file, f"Raw Transcript:\n{raw_transcript}"])
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=[prompt, audio_file, f"Raw Transcript:\n{raw_transcript}"]
+            )
             text = response.text
-             # Clean markdown if present
+            # Clean markdown if present
             if "```json" in text:
                 text = text.split("```json")[1].split("```")[0].strip()
             elif "```" in text:
