@@ -209,31 +209,37 @@ Format:
 """
         return self._generate([prompt, audio_file, f"Raw Transcript:\n{raw_transcript}"])
 
-    def generate_timestamps(self, audio_file, raw_transcript: str) -> List[AITimestampMondai]:
+    def generate_timestamps(self, audio_file, refined_script: str) -> List[AITimestampMondai]:
         prompt = """
-You are an expert in analyzing JLPT listening tests.
-Identify start and end timestamps for each Mondai and Question in the audio.
+You are an expert in analyzing JLPT N-level listening audio.
+Your task is to find the EXACT start and end timestamps (in SECONDS) for each question in the audio.
 
-Definitions:
-- Mondai: Top-level section (Mondai 1, 2, ...)
-- Question: Individual questions (1番, 2番, ...), starts at BELL SOUND before number
+Rules:
+- All timestamps must be in SECONDS (e.g. 12.5, not "12s" or "0:12").
+- Each "question" in JLPT audio has this structure:
+    [BELL] → [Number announcement: 一番, 二番...] → [Situation intro] → [Dialogue/Monologue] → [Final repeated question]
+  - start_time = timestamp of the BELL SOUND that opens this question.
+  - end_time   = timestamp AFTER the final repeated question finishes (include it fully).
+- question_number must exactly match the sequential number within its Mondai (1, 2, 3, ...).
+- Use the REFINED SCRIPT provided to confirm the text boundaries for each question.
 
-Output ONLY valid JSON (no markdown blocks):
+Output ONLY valid JSON, no markdown, no explanation:
 {
   "mondai": [
     {
       "mondai_number": 1,
       "title": "Mondai 1",
       "start_time": 0.0,
-      "end_time": 120.5,
+      "end_time": 185.0,
       "questions": [
-        {"question_number": 1, "start_time": 0.0, "end_time": 15.5, "text": "..."}
+        {"question_number": 1, "start_time": 5.2,  "end_time": 42.0,  "text": "女の人は何をしますか。"},
+        {"question_number": 2, "start_time": 43.1, "end_time": 88.5,  "text": "男の人はどこへ行きますか。"}
       ]
     }
   ]
 }
 """
-        text = self._generate([prompt, audio_file, f"Raw Transcript:\n{raw_transcript}"])
+        text = self._generate([prompt, audio_file, f"Refined Script:\n{refined_script}"])
         data = json.loads(_strip_json_markdown(text))
 
         return [
@@ -343,9 +349,9 @@ class AIExamService:
     def _run_refine(self, audio_file, raw_transcript: str) -> str:
         return self._gemini.refine_script(audio_file, raw_transcript)
 
-    def _run_timestamps(self, audio_file, raw_transcript: str):
+    def _run_timestamps(self, audio_file, refined_script: str):
         try:
-            return self._gemini.generate_timestamps(audio_file, raw_transcript)
+            return self._gemini.generate_timestamps(audio_file, refined_script)
         except Exception as exc:
             logger.warning(f"Timestamp generation failed: {exc}")
             return None
@@ -374,20 +380,24 @@ class AIExamService:
             )
         logger.info(f"Raw transcript: {len(raw_transcript)} chars | audio uploaded: {audio_file.name}")
 
-        # ── Phase 2: Refine script + Timestamps in parallel ──────────────
-        logger.info("Phase 2: Refine script + Timestamps (parallel)...")
-        with ThreadPoolExecutor(max_workers=2) as pool:
-            refined_script, timestamps = await asyncio.gather(
-                loop.run_in_executor(pool, self._run_refine, audio_file, raw_transcript),
-                loop.run_in_executor(pool, self._run_timestamps, audio_file, raw_transcript),
-            )
+        # ── Phase 2a: Refine script (needed before timestamps) ───────────
+        logger.info("Phase 2a: Refining script...")
+        refined_script = await loop.run_in_executor(
+            None, self._run_refine, audio_file, raw_transcript
+        )
         logger.info(f"Refined script: {len(refined_script)} chars")
 
-        # ── Phase 3: Generate questions (needs refined_script) ────────────
-        logger.info("Phase 3: Generating JLPT questions...")
-        questions = self._gemini.generate_questions(
-            audio_file, refined_script, jlpt_level, mondai_config
-        )
+        # ── Phase 2b + 3: Timestamps + Questions in parallel ─────────────
+        # Both use refined_script → timestamps now has structured context
+        logger.info("Phase 2b+3: Timestamps + Questions (parallel, both use refined script)...")
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            timestamps, questions = await asyncio.gather(
+                loop.run_in_executor(pool, self._run_timestamps, audio_file, refined_script),
+                loop.run_in_executor(
+                    pool, self._gemini.generate_questions,
+                    audio_file, refined_script, jlpt_level, mondai_config,
+                ),
+            )
 
         # ── Phase 4: Attach audio URLs ────────────────────────────────────
         if timestamps and cloudinary_public_id:
@@ -437,23 +447,41 @@ class AIExamService:
         import re
         import cloudinary.utils
 
-        # Build (mondai_number, question_number) → (start, end) lookup
-        ts_map = {
-            (m.mondai_number, q.question_number): (q.start_time, q.end_time)
-            for m in timestamps
-            for q in m.questions
-        }
-
         def _extract_number(s: str) -> int:
             match = re.search(r"\d+", s)
             return int(match.group()) if match else 0
 
+        # Build per-mondai lookup: mondai_number → sorted list of (question_number, start, end)
+        mondai_qs: dict[int, list] = {}
+        for m in timestamps:
+            mondai_qs[m.mondai_number] = sorted(
+                [(q.question_number, q.start_time, q.end_time) for q in m.questions],
+                key=lambda x: x[0],
+            )
+
+        def _find_timestamp(mondai_num: int, q_num: int):
+            """Exact match first, then fallback to closest question_number in same mondai."""
+            candidates = mondai_qs.get(mondai_num, [])
+            if not candidates:
+                return None
+            # Exact match
+            for qn, st, et in candidates:
+                if qn == q_num:
+                    return st, et
+            # Fuzzy: pick closest by question_number (handles off-by-one from Gemini)
+            closest = min(candidates, key=lambda x: abs(x[0] - q_num))
+            logger.warning(
+                f"Q({mondai_num},{q_num}): no exact timestamp, using closest Q{closest[0]}"
+            )
+            return closest[1], closest[2]
+
         for q in questions:
             mondai_num = _extract_number(q.mondai_group)
-            key = (mondai_num, q.question_number)
-            if key not in ts_map:
+            result = _find_timestamp(mondai_num, q.question_number)
+            if result is None:
+                logger.warning(f"Q({mondai_num},{q.question_number}): no timestamp found, audio_url will be null")
                 continue
-            st, et = ts_map[key]
+            st, et = result
             audio_url, _ = cloudinary.utils.cloudinary_url(
                 cloudinary_public_id,
                 resource_type="video",
@@ -463,3 +491,4 @@ class AIExamService:
                 secure=True,
             )
             q.audio_url = audio_url
+            logger.info(f"Q({mondai_num},{q.question_number}): audio [{st:.1f}s → {et:.1f}s]")
