@@ -10,6 +10,7 @@ from app.modules.auth.router import router as auth_router
 from app.modules.exam.router import router as exam_router
 from app.modules.questions.router import router as questions_router
 from app.modules.ai_exam.router import router as ai_exam_router
+from app.modules.test.router import router as test_router
 
 from app.db.session import init_db, engine
 from app.core.config import get_settings
@@ -140,6 +141,7 @@ app.include_router(auth_router, prefix="/api")
 app.include_router(exam_router, prefix="/api")
 app.include_router(questions_router, prefix="/api")
 app.include_router(ai_exam_router, prefix="/api")
+app.include_router(test_router, prefix="/api")
 
 
 logger.info("Application routes configured")

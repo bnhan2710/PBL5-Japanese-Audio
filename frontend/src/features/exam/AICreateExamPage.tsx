@@ -586,7 +586,7 @@ function Step4Save({ questions, level, title, onBack }: Step4Props) {
           question_number: q.question_number,
           question_text: q.question_text,
           audio_clip_url: q.audio_url,
-          explanation: q.introduction || '',
+          explanation: q.script_text || '',
           answers: q.answers.map((a, i) => ({
             question_id: '',
             content: a.content,

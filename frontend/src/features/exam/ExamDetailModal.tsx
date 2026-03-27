@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   X, Headphones, Clock, BookOpen, Layers, Loader2,
   Trash2, Save, Brain, AlertCircle, CheckCircle2, Play, Pause,
-  Edit3, FileText, ChevronLeft
+  Edit3, FileText, ChevronLeft, ExternalLink
 } from 'lucide-react'
 import { examClient, ExamResponse, QuestionResponse, AnswerResponse } from './api/examClient'
 import { toast } from '@/hooks/use-toast'
@@ -95,6 +96,7 @@ function AudioPlayer({ url }: { url: string }) {
 // ─── Main Modal ───────────────────────────────────────────────────────────────
 
 export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUpdated }: Props) {
+  const navigate = useNavigate()
   const [questions, setQuestions] = useState<QuestionResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [activeQId, setActiveQId] = useState<string | null>(null)
@@ -291,6 +293,16 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
 
           <div className="flex items-center gap-2 shrink-0">
             <button
+              onClick={() => {
+                onClose()
+                navigate(`/test/exams/${exam.exam_id}`)
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              Làm bài thi
+            </button>
+            <button
               onClick={handleDeleteExam}
               disabled={deletingExam}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50"
@@ -448,6 +460,21 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
                       <div>
                         <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-1.5">
                           <FileText className="w-3.5 h-3.5 text-slate-500" />
+                          Kịch bản hội thoại (Script)
+                        </label>
+                        <textarea
+                          value={activeEdited.explanation ?? ''}
+                          onChange={e => patchQ(activeQ.question_id, { explanation: e.target.value })}
+                          rows={7}
+                          placeholder="Kịch bản hội thoại, ví dụ: 男：...&#10;女：..."
+                          className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-slate-50 dark:bg-slate-900/60 text-slate-800 dark:text-slate-200 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 font-medium leading-relaxed placeholder:text-slate-400 transition-shadow"
+                        />
+                      </div>
+
+                      {/* Question Text */}
+                      <div>
+                        <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-1.5">
+                          <FileText className="w-3.5 h-3.5 text-slate-500" />
                           Nội dung câu hỏi
                         </label>
                         <textarea
@@ -456,20 +483,6 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
                           rows={2}
                           placeholder="Nhập nội dung câu hỏi..."
                           className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder:text-slate-400 leading-relaxed transition-shadow"
-                        />
-                      </div>
-
-                      {/* Explanation / Script */}
-                      <div>
-                        <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">
-                          Kịch bản / Giải thích (Script)
-                        </label>
-                        <textarea
-                          value={activeEdited.explanation ?? ''}
-                          onChange={e => patchQ(activeQ.question_id, { explanation: e.target.value })}
-                          rows={5}
-                          placeholder="Nhập script hội thoại hoặc giải thích..."
-                          className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-slate-50 dark:bg-slate-900/60 text-slate-800 dark:text-slate-200 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 font-medium leading-relaxed placeholder:text-slate-400 transition-shadow"
                         />
                       </div>
 

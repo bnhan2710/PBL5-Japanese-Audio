@@ -211,29 +211,94 @@ Format:
 
     def generate_timestamps(self, audio_file, refined_script: str) -> List[AITimestampMondai]:
         prompt = """
-You are an expert in analyzing JLPT N-level listening audio.
-Your task is to find the EXACT start and end timestamps (in SECONDS) for each question in the audio.
+You are a JLPT listening audio analysis expert. Your task is to find the PRECISE start and end
+timestamps (in SECONDS) for each question segment in the audio file.
 
-Rules:
-- All timestamps must be in SECONDS (e.g. 12.5, not "12s" or "0:12").
-- Each "question" in JLPT audio has this structure:
-    [BELL] → [Number announcement: 一番, 二番...] → [Situation intro] → [Dialogue/Monologue] → [Final repeated question]
-  - start_time = timestamp of the BELL SOUND that opens this question.
-  - end_time   = timestamp AFTER the final repeated question finishes (include it fully).
-- question_number must exactly match the sequential number within its Mondai (1, 2, 3, ...).
-- Use the REFINED SCRIPT provided to confirm the text boundaries for each question.
+=== JLPT AUDIO STRUCTURE (CRITICAL – READ CAREFULLY) ===
 
-Output ONLY valid JSON, no markdown, no explanation:
+A JLPT listening test follows this EXACT structure:
+
+1. [OPENING MUSIC/JINGLE]
+
+2. [MONDAI INTRO] – e.g. "もんだい１ もんだい１では、まず しつもんを きいて ください。
+   それから はなしを きいて、１から４の なかから、いちばん いい ものを えらんで ください。"
+   ⚠ This is INSTRUCTIONS ONLY – NOT a question. Do NOT include it in any question's timestamp.
+
+3. [れい (EXAMPLE)] – A sample question to show the format. Also NOT a real question. Skip it.
+
+4. [ACTUAL QUESTIONS – repeated for each question number]:
+   ─────────────────────────────────────────────────────────
+   [ding/bell sound]
+   [Number announcement: いちばん / にばん / さんばん ...]
+   [Brief situation description / context]
+   [Dialogue or monologue content]
+   [ding/bell sound]
+   [Final question repeated aloud: e.g. "おとこの人は何をしますか。"]
+   [~1-2 seconds silence / pause]
+   ─────────────────────────────────────────────────────────
+   This full block = one question segment.
+
+5. [MONDAI 2 OPENING JINGLE/MUSIC] → repeat structure from step 2 for next mondai.
+
+=== TIMESTAMP RULES ===
+
+For each QUESTION segment:
+  • start_time = the moment the FIRST bell/ding sounds that introduces this question number
+                 (i.e. the bell BEFORE いちばん, にばん, etc.)
+                 ⚠ NOT the mondai intro, NOT the れい example
+  • end_time   = after the FINAL repeated question finishes speaking + ~1 second of silence
+                 (i.e. capture the complete repeated question text, then stop)
+
+For each MONDAI block:
+  • start_time = when the mondai intro begins (e.g. "もんだい１ もんだい１では…")
+  • end_time   = a few seconds after the last question in this mondai ends
+
+=== NUMBERING ===
+
+  • question_number = sequential within its mondai, starting at 1
+  • Do NOT count the れい (example) as question 1
+  • If you detect 5 questions under Mondai 1, number them 1–5
+
+=== OUTPUT FORMAT ===
+
+First, briefly think through the audio structure silently (which time ranges contain
+mondai intros, れい, and actual questions). Then output ONLY valid JSON, no markdown fences,
+no explanation:
+
 {
   "mondai": [
     {
       "mondai_number": 1,
-      "title": "Mondai 1",
-      "start_time": 0.0,
-      "end_time": 185.0,
+      "title": "もんだい 1",
+      "start_time": 3.5,
+      "end_time": 210.0,
       "questions": [
-        {"question_number": 1, "start_time": 5.2,  "end_time": 42.0,  "text": "女の人は何をしますか。"},
-        {"question_number": 2, "start_time": 43.1, "end_time": 88.5,  "text": "男の人はどこへ行きますか。"}
+        {
+          "question_number": 1,
+          "start_time": 42.0,
+          "end_time": 82.5,
+          "text": "おとこのひとは このあと まず 何を しますか。"
+        },
+        {
+          "question_number": 2,
+          "start_time": 84.0,
+          "end_time": 125.3,
+          "text": "おんなのひとは どこへ 行きますか。"
+        }
+      ]
+    },
+    {
+      "mondai_number": 2,
+      "title": "もんだい 2",
+      "start_time": 212.0,
+      "end_time": 420.0,
+      "questions": [
+        {
+          "question_number": 1,
+          "start_time": 240.0,
+          "end_time": 285.0,
+          "text": "男の人は 何が 問題だと 言っていますか。"
+        }
       ]
     }
   ]

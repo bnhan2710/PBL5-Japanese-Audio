@@ -1,5 +1,6 @@
 // Admin API Client
 import { apiFetch } from '@/lib/apiClient';
+import type { ResetPasswordResponse, UpdateUserData, User, UserListResponse } from '../users/types/user';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -37,7 +38,7 @@ class AdminApiClient {
     is_active?: boolean;
     page?: number;
     page_size?: number;
-  }) {
+  }): Promise<UserListResponse> {
     const queryParams = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== '') {
@@ -48,15 +49,15 @@ class AdminApiClient {
     const response = await apiFetch(
       `${API_BASE_URL}/api/users?${queryParams}`
     );
-    return this.handleResponse(response);
+    return this.handleResponse<UserListResponse>(response);
   }
 
   // Get user by ID
-  async getUser(userId: number) {
+  async getUser(userId: number): Promise<User> {
     const response = await apiFetch(
       `${API_BASE_URL}/api/users/${userId}`
     );
-    return this.handleResponse(response);
+    return this.handleResponse<User>(response);
   }
 
   // Create user
@@ -68,7 +69,7 @@ class AdminApiClient {
     first_name?: string;
     last_name?: string;
     avatar_url?: string;
-  }) {
+  }): Promise<User> {
     const response = await apiFetch(
       `${API_BASE_URL}/api/users`,
       {
@@ -76,19 +77,11 @@ class AdminApiClient {
         body: JSON.stringify(data),
       }
     );
-    return this.handleResponse(response);
+    return this.handleResponse<User>(response);
   }
 
   // Update user
-  async updateUser(userId: number, data: {
-    email?: string;
-    username?: string;
-    role?: string;
-    is_active?: boolean;
-    first_name?: string;
-    last_name?: string;
-    avatar_url?: string;
-  }) {
+  async updateUser(userId: number, data: UpdateUserData): Promise<User> {
     const response = await apiFetch(
       `${API_BASE_URL}/api/users/${userId}`,
       {
@@ -96,11 +89,11 @@ class AdminApiClient {
         body: JSON.stringify(data),
       }
     );
-    return this.handleResponse(response);
+    return this.handleResponse<User>(response);
   }
 
   // Lock user
-  async lockUser(userId: number, durationHours: number) {
+  async lockUser(userId: number, durationHours: number): Promise<User> {
     const response = await apiFetch(
       `${API_BASE_URL}/api/users/${userId}/lock`,
       {
@@ -108,27 +101,26 @@ class AdminApiClient {
         body: JSON.stringify({ duration_hours: durationHours }),
       }
     );
-    return this.handleResponse(response);
+    return this.handleResponse<User>(response);
   }
 
   // Unlock user
-  async unlockUser(userId: number) {
+  async unlockUser(userId: number): Promise<User> {
     const response = await apiFetch(
       `${API_BASE_URL}/api/users/${userId}/unlock`,
       { method: 'POST' }
     );
-    return this.handleResponse(response);
+    return this.handleResponse<User>(response);
   }
 
   // Reset password
-  async resetPassword(userId: number) {
+  async resetPassword(userId: number): Promise<ResetPasswordResponse> {
     const response = await apiFetch(
       `${API_BASE_URL}/api/users/${userId}/reset-password`,
       { method: 'POST' }
     );
-    return this.handleResponse(response);
+    return this.handleResponse<ResetPasswordResponse>(response);
   }
 }
 
 export const adminApi = new AdminApiClient();
-
