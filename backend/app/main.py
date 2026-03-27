@@ -9,6 +9,7 @@ from app.modules.users.router import router as users_router
 from app.modules.auth.router import router as auth_router
 from app.modules.exam.router import router as exam_router
 from app.modules.questions.router import router as questions_router
+from app.modules.ai_image.router import router as ai_image_router
 from app.modules.ai_exam.router import router as ai_exam_router
 
 from app.db.session import init_db, engine
@@ -18,6 +19,7 @@ from app.core.config import get_settings
 from app.modules.audio.models import Audio, TranscriptSegment  # noqa: F401
 from app.modules.questions.models import Question, Answer  # noqa: F401
 from app.modules.result.models import UserResult  # noqa: F401
+from app.modules.users.models import User  # noqa: F401
 
 settings = get_settings()
 logger = setup_logger(__name__)
@@ -140,6 +142,7 @@ app.include_router(auth_router, prefix="/api")
 app.include_router(exam_router, prefix="/api")
 app.include_router(questions_router, prefix="/api")
 app.include_router(ai_exam_router, prefix="/api")
+app.include_router(ai_image_router, prefix="/api")
 
 
 logger.info("Application routes configured")

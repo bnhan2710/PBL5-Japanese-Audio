@@ -1,4 +1,5 @@
 import cloudinary
+import io
 import cloudinary.uploader
 from fastapi import UploadFile, HTTPException
 from app.core.config import get_settings
@@ -76,3 +77,22 @@ async def upload_audio_bytes(audio_bytes: bytes, filename: str, folder: str = "q
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to upload audio bytes: {str(e)}")
+
+async def upload_image_bytes(image_bytes: bytes, filename: str):
+    """
+    Upload image bytes lên Cloudinary.
+    """
+    try:
+        # Chuyển bytes sang file-like object để cloudinary đọc được
+        file_to_upload = io.BytesIO(image_bytes)
+        
+        result = cloudinary.uploader.upload(
+            file_to_upload,
+            public_id=filename.split('.')[0], # Lấy tên file bỏ đuôi
+            folder="pbl5_japanese/questions",  # Thư mục lưu trên cloud
+            resource_type="image"
+        )
+        return result
+    except Exception as e:
+        print(f"Error uploading image to Cloudinary: {e}")
+        raise e

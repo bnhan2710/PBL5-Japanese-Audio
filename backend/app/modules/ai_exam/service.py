@@ -9,12 +9,21 @@ import shutil
 from pathlib import Path
 from typing import Optional, List
 from concurrent.futures import ThreadPoolExecutor
+from pydub import AudioSegment
 
 from app.core.config import get_settings
 from app.modules.ai_exam.schemas import (
     AIExamResult, AIQuestion, AIQuestionOption,
     AITimestampMondai, AITimestampQuestion
 )
+
+ffmpeg_path = r"C:\ffmpeg-8.1-essentials_build\ffmpeg-8.1-essentials_build\bin\ffmpeg.exe"
+ffprobe_path = r"C:\ffmpeg-8.1-essentials_build\ffmpeg-8.1-essentials_build\bin\ffprobe.exe"
+
+AudioSegment.converter = ffmpeg_path
+AudioSegment.ffprobe = ffprobe_path
+
+from io import BytesIO
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -50,64 +59,53 @@ class ReazonTranscriber:
                 "ReazonSpeech not installed. Run: pip install reazonspeech-k2-asr"
             )
 
+    from io import BytesIO
+
     def transcribe(self, audio_bytes: bytes, suffix: str = ".mp3") -> str:
-        """Transcribe audio bytes → raw Japanese text."""
-        try:
-            from pydub import AudioSegment
-            from pydub.silence import split_on_silence
-            from reazonspeech.k2.asr import transcribe, audio_from_path
-        except ImportError as e:
-            raise RuntimeError(f"Missing dependency: {e}")
+        from pydub import AudioSegment
+        from pydub.silence import split_on_silence
+        from reazonspeech.k2.asr import transcribe, audio_from_path
 
         if self._model is None:
             self._load_model()
 
-        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-            tmp.write(audio_bytes)
-            tmp_path = tmp.name
+        audio = AudioSegment.from_file(BytesIO(audio_bytes), format="mp3")
+
+        silence_thresh = audio.dBFS - 14
+        chunks = split_on_silence(
+            audio,
+            min_silence_len=250,
+            silence_thresh=silence_thresh,
+            keep_silence=200,
+        )
+
+        logger.info(f"Split into {len(chunks)} chunks for transcription.")
+
+        chunk_dir = tempfile.mkdtemp(prefix="reazon_chunks_")
+        full_transcript = []
 
         try:
-            audio = AudioSegment.from_file(tmp_path)
-            silence_thresh = audio.dBFS - 14
-            chunks = split_on_silence(
-                audio,
-                min_silence_len=250,
-                silence_thresh=silence_thresh,
-                keep_silence=200,
-            )
-            logger.info(f"Split into {len(chunks)} chunks for transcription.")
+            chunk_paths = []
+            for i, chunk in enumerate(chunks):
+                if len(chunk) < 200:
+                    continue
+                chunk_path = os.path.join(chunk_dir, f"chunk_{i}.wav")
+                chunk.export(chunk_path, format="wav")
+                chunk_paths.append((i, chunk_path))
 
-            chunk_dir = tempfile.mkdtemp(prefix="reazon_chunks_")
-            full_transcript: List[str] = []
-
-            try:
-                # Export all chunk files first
-                chunk_paths: List[tuple[int, str]] = []
-                for i, chunk in enumerate(chunks):
-                    if len(chunk) < 200:
-                        continue
-                    chunk_path = os.path.join(chunk_dir, f"chunk_{i}.wav")
-                    chunk.export(chunk_path, format="wav")
-                    chunk_paths.append((i, chunk_path))
-
-                # Transcribe sequentially (k2 model is NOT thread-safe)
-                for i, chunk_path in chunk_paths:
-                    try:
-                        ac = audio_from_path(chunk_path)
-                        ret = transcribe(self._model, ac)
-                        if ret.text and ret.text not in ("プ", "ピッ"):
-                            full_transcript.append(ret.text)
-                    except Exception as exc:
-                        logger.warning(f"Chunk {i} transcription error: {exc}")
-                    finally:
-                        if os.path.exists(chunk_path):
-                            os.remove(chunk_path)
-            finally:
-                shutil.rmtree(chunk_dir, ignore_errors=True)
-
-            return "".join(full_transcript)
+            for i, chunk_path in chunk_paths:
+                try:
+                    ac = audio_from_path(chunk_path)
+                    ret = transcribe(self._model, ac)
+                    if ret.text and ret.text not in ("プ", "ピッ"):
+                        full_transcript.append(ret.text)
+                finally:
+                    if os.path.exists(chunk_path):
+                        os.remove(chunk_path)
         finally:
-            os.unlink(tmp_path)
+            shutil.rmtree(chunk_dir, ignore_errors=True)
+
+        return "".join(full_transcript)
 
 
 # ─── Gemini Analyzer ───────────────────────────────────────────────────────
