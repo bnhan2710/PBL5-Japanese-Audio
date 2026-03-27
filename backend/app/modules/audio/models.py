@@ -11,6 +11,7 @@ class Audio(Base):
 
     audio_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     file_name = Column(String(255), nullable=True)
+    content_hash = Column(String(64), nullable=True, unique=True, index=True)
     file_url = Column(Text, nullable=False)
     duration = Column(Integer, nullable=True)  # seconds
     ai_status = Column(String(20), nullable=True, default="pending")  # pending | processing | completed | failed

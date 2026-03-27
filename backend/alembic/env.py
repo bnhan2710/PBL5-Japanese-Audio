@@ -7,6 +7,7 @@ from app.db.session import get_database_url, create_engine_with_retry
 # Import all models so Alembic can detect them
 from app.modules.users.models import User  # noqa: F401
 from app.modules.audio.models import Audio, TranscriptSegment  # noqa: F401
+from app.modules.ai_exam.models import AIExamCache  # noqa: F401
 from app.modules.exam.models import Exam  # noqa: F401
 from app.modules.questions.models import Question, Answer  # noqa: F401
 from app.modules.result.models import UserResult  # noqa: F401

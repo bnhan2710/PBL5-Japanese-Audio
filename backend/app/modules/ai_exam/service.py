@@ -1,5 +1,4 @@
 import os
-import io
 import json
 import logging
 import time
@@ -18,6 +17,7 @@ from app.modules.ai_exam.schemas import (
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
+PIPELINE_VERSION = "ai-exam-cache-v1"
 
 
 # ─── Helpers ───────────────────────────────────────────────────────────────
@@ -121,6 +121,10 @@ class GeminiAnalyzer:
         from google import genai
         self._client = genai.Client(api_key=api_key)
         self._model_name = "gemini-2.5-flash"
+
+    @property
+    def model_name(self) -> str:
+        return self._model_name
 
     def _generate(self, contents: list) -> str:
         response = self._client.models.generate_content(
@@ -433,6 +437,14 @@ class AIExamService:
                 mondai_config, cloudinary_public_id, cloudinary_format,
             )
         )
+
+    @property
+    def model_name(self) -> str:
+        return self._gemini.model_name if self._gemini else "unconfigured"
+
+    @property
+    def pipeline_version(self) -> str:
+        return PIPELINE_VERSION
 
     # ── helpers ───────────────────────────────────────────────────────────
 

@@ -16,6 +16,7 @@ from app.core.config import get_settings
 
 # Ensure all models are imported so SQLAlchemy can resolve all relationships
 from app.modules.audio.models import Audio, TranscriptSegment  # noqa: F401
+from app.modules.ai_exam.models import AIExamCache  # noqa: F401
 from app.modules.questions.models import Question, Answer  # noqa: F401
 from app.modules.result.models import UserResult  # noqa: F401
 
