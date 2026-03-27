@@ -344,10 +344,9 @@ interface Step2Props {
   examId: string
   onQuestionsChange: (qs: LocalQuestion[]) => void
   onBack: () => void
-  onNext: () => void  // used by parent's "Tiếp tục xem lại" button
 }
 
-function Step2({ questions, examId, onQuestionsChange, onBack, onNext }: Step2Props) {
+function Step2({ questions, examId, onQuestionsChange, onBack }: Step2Props) {
   const [selectedIdx, setSelectedIdx] = useState(0)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -605,14 +604,13 @@ function Step2({ questions, examId, onQuestionsChange, onBack, onNext }: Step2Pr
 
 interface Step3Props {
   questions: LocalQuestion[]
-  examId: string  // kept for future API calls (e.g. delete exam)
   examTitle: string
   onBack: () => void
   onPublish: () => Promise<void>
   publishing: boolean
 }
 
-function Step3({ questions, examId, examTitle, onBack, onPublish, publishing }: Step3Props) {
+function Step3({ questions, examTitle, onBack, onPublish, publishing }: Step3Props) {
   const groups = Array.from(new Set(questions.map(q => q.mondai_group)))
   const savedCount = questions.filter(q => q.saved).length
 
@@ -752,13 +750,11 @@ export default function CreateExamPage() {
             examId={examId}
             onQuestionsChange={setQuestions}
             onBack={() => setStep(1)}
-            onNext={handleStep2Next}
           />
         )}
         {step === 3 && (
           <Step3
             questions={questions}
-            examId={examId}
             examTitle={`[${level}] ${title}`}
             onBack={() => setStep(2)}
             onPublish={handlePublish}
