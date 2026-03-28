@@ -51,6 +51,9 @@ class Settings(BaseSettings):
     # Google AI Settings
     GOOGLE_API_KEY: Optional[str] = None
 
+    # OpenAI Settings
+    OPENAI_API_KEY: Optional[str] = None
+
     # Google OAuth Settings
     GOOGLE_CLIENT_ID: Optional[str] = None
     GOOGLE_CLIENT_SECRET: Optional[str] = None

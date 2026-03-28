@@ -2,10 +2,9 @@ import io
 import json
 import logging
 import asyncio
-import base64
 import httpx
-from pathlib import Path
-from typing import List, Optional
+import urllib.parse 
+from typing import List
 from PIL import Image, ImageDraw, ImageFont
 from google import genai
 
@@ -23,6 +22,7 @@ class AIImageService:
         api_key = settings.GOOGLE_API_KEY
         if not api_key:
             raise ValueError("GOOGLE_API_KEY is required for AIImageService.")
+        # Client này dùng cho Gemini Planning
         self._client = genai.Client(api_key=api_key)
         self._model_name = "gemini-2.0-flash"
 
@@ -36,10 +36,10 @@ class AIImageService:
     async def generate_quad_visual(self, req: AIImageTaskRequest) -> ImageResultData:
         loop = asyncio.get_event_loop()
 
-        # Step 1: Gemini planning
+        # Step 1: Gemini planning - Lên ý tưởng 4 bức ảnh dựa trên script JLPT
         visual_plan = await self._plan_visuals(req)
         
-        # Step 2: Sinh 4 ảnh song song với cơ chế Safe Call
+        # Step 2: Sinh 4 ảnh song song bằng Pollinations AI (Miễn phí, ổn định)
         logger.info(f"Generating 4 images for Question: {req.question_id}")
         
         async def safe_call(description: str):
@@ -52,12 +52,12 @@ class AIImageService:
         image_tasks = [safe_call(opt.description) for opt in visual_plan]
         images_data = await asyncio.gather(*image_tasks)
         
-        # Step 3: Ghép ảnh (Chạy trong thread pool vì xử lý Pillow nặng CPU)
+        # Step 3: Ghép 4 ảnh thành 1 khung hình (Sử dụng thread pool vì Pillow nặng CPU)
         final_image_bytes = await loop.run_in_executor(
             None, self._composite_images, images_data
         )
         
-        # Step 4: Upload
+        # Step 4: Upload lên Cloudinary
         filename = f"image_{req.question_id}.png"
         image_url = await self._upload_to_cloud(final_image_bytes, filename)
 
@@ -70,73 +70,87 @@ class AIImageService:
     async def _plan_visuals(self, req: AIImageTaskRequest) -> List[ImageOptionGenerate]:
         prompt = f"""
 You are an expert JLPT {req.jlpt_level} Exam Illustrator. 
-Task: Analyze the provided Japanese listening script and create 4 distinct visual descriptions (A, B, C, D).
+Task: Analyze the provided Japanese listening script and create 4 distinct visual descriptions (1, 2, 3, 4).
 
 Context:
 - Script: {req.script_text}
 - Question: {req.question_text}
 
-Guidelines for Options:
-1. One of the 4 options MUST be the Correct Answer (matching the final decision in the script).
-2. The other 3 options MUST be Distractors (based on discarded choices or common misunderstandings in the script).
-3. RANDOMIZE the position of the Correct Answer. It should not always be the first option.
-4. Each option should be distinct and clearly related to the JLPT {req.jlpt_level} context.
+Guidelines:
+1. One option is the Correct Answer, 3 are Distractors (common mistakes).
+2. Style: Minimalist black and white line art, Japanese Manga style, white background, NO text inside images.
 
-Visual Style for Descriptions:
-- All 4 images must share the same style: Minimalist black and white line art, Japanese Manga/ClipArt style.
-- White background, no shading, clean thick lines.
-- NO text, NO speech bubbles, NO characters' names inside the images.
-
-Output format:
-Return ONLY a valid JSON array of 4 objects. No preamble or postscript.
+Output format: ONLY a valid JSON array.
 [
-  {{"label": "1", "description": "detailed English prompt for DALL-E..."}},
+  {{"label": "1", "description": "Short English visual prompt..."}},
   {{"label": "2", "description": "..."}},
   {{"label": "3", "description": "..."}},
   {{"label": "4", "description": "..."}}
 ]
 """
-        response = self._client.models.generate_content(
-            model=self._model_name,
-            contents=[prompt]
-        )
-        data = json.loads(self._strip_json_markdown(response.text))
-        return [ImageOptionGenerate(**item) for item in data]
+        try:
+            response = self._client.models.generate_content(
+                model=self._model_name,
+                contents=prompt,
+                config={'response_mime_type': 'application/json'}
+            )
+            
+            clean_json = self._strip_json_markdown(response.text)
+            data = json.loads(clean_json)
+            return [ImageOptionGenerate(**item) for item in data]
+            
+        except Exception as e:
+            logger.error(f"Planning failed: {e}")
+            return [ImageOptionGenerate(label=str(i), description="Simple Japanese line art") for i in range(1, 5)]
 
     async def _call_image_api(self, prompt: str) -> bytes:
-        url = "https://api.openai.com/v1/images/generations"
-        headers = {
-            "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
-            "Content-Type": "application/json"
-        }
-        payload = {
-            "model": "dall-e-3",
-            "prompt": f"{prompt} --ar 1:1 --no text, words",
-            "n": 1,
-            "size": "1024x1024",
-            "response_format": "b64_json"
-        }
+        try:
+            # Làm sạch prompt
+            style_suffix = "minimalist Japanese line art, black and white, white background"
+            clean_prompt = urllib.parse.quote(f"{prompt}, {style_suffix}")
+            
+            import random
+            seed = random.randint(1, 999999)
 
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post(url, json=payload, headers=headers)
-            response.raise_for_status()
-            data = response.json()
-            return base64.b64decode(data["data"][0]["b64_json"])
+            # SỬA URL THÀNH ĐƯỜNG DẪN TRỰC TIẾP NÀY (Hạn chế dùng params để tránh check Auth)
+            url = f"https://image.pollinations.ai/prompt/{clean_prompt}?width=512&height=512&seed={seed}&nologo=true"
+            
+            # QUAN TRỌNG: Xóa bỏ các Header Authorization nếu bạn lỡ thêm vào trước đó
+            async with httpx.AsyncClient(timeout=40.0, follow_redirects=True) as client:
+                response = await client.get(url)
+                
+                if response.status_code == 401:
+                    logger.error("Pollinations đang đòi Key. Đang thử dùng server dự phòng...")
+                    # Nếu bị 401, thử gọi qua server dự phòng này
+                    fallback_url = f"https://embed.pollinations.ai/prompt/{clean_prompt}?width=512&height=512"
+                    response = await client.get(fallback_url)
+
+                response.raise_for_status()
+                return response.content
+        except Exception as e:
+            logger.error(f"Pollinations AI failed: {e}")
+            return self._get_fallback_image()
 
     def _composite_images(self, images_data: List[bytes]) -> bytes:
         size = 512
-        margin = 15
+        margin = 20
         canvas_size = (size * 2 + margin, size * 2 + margin)
+        # Tạo canvas trắng
         canvas = Image.new("RGB", canvas_size, (255, 255, 255))
         draw = ImageDraw.Draw(canvas)
         
+        # Load font mặc định
         try:
-            # Lưu ý: Bạn cần đảm bảo file font tồn tại hoặc dùng default
-            font = ImageFont.load_default() 
+            font = ImageFont.truetype("arial.ttf", 40)
         except:
-            font = None
+            font = ImageFont.load_default()
 
-        positions = [(0, 0), (size + margin, 0), (0, size + margin), (size + margin, size + margin)]
+        positions = [
+            (0, 0),                 # Ảnh 1 (Trên - Trái)
+            (size + margin, 0),      # Ảnh 2 (Trên - Phải)
+            (0, size + margin),      # Ảnh 3 (Dưới - Trái)
+            (size + margin, size + margin) # Ảnh 4 (Dưới - Phải)
+        ]
         labels = ["1", "2", "3", "4"]
 
         for idx, img_bytes in enumerate(images_data):
@@ -145,25 +159,25 @@ Return ONLY a valid JSON array of 4 objects. No preamble or postscript.
                 img = img.resize((size, size), Image.Resampling.LANCZOS)
                 canvas.paste(img, positions[idx])
                 
-                # Vẽ nhãn số
-                draw.ellipse([positions[idx][0]+5, positions[idx][1]+5, positions[idx][0]+45, positions[idx][1]+45], fill="white", outline="black")
-                draw.text((positions[idx][0]+20, positions[idx][1]+10), labels[idx], fill="black", font=font)
+                # Vẽ hình tròn trắng chứa số thứ tự ở góc mỗi ảnh
+                x, y = positions[idx]
+                draw.ellipse([x + 10, y + 10, x + 50, y + 50], fill="white", outline="black", width=2)
+                draw.text((x + 23, y + 15), labels[idx], fill="black", font=font)
             except Exception as e:
                 logger.error(f"Error pasting image {idx}: {e}")
 
-        # Vẽ vạch ngăn cách
-        mid = size + margin // 2
-        draw.line([(mid, 0), (mid, canvas_size[1])], fill=(200, 200, 200), width=3)
-        draw.line([(0, mid), (canvas_size[0], mid)], fill=(200, 200, 200), width=3)
+        # Vẽ vạch chia khung (Grid lines) màu xám
+        mid = size + (margin // 2)
+        draw.line([(mid, 0), (mid, canvas_size[1])], fill=(200, 200, 200), width=5)
+        draw.line([(0, mid), (canvas_size[0], mid)], fill=(200, 200, 200), width=5)
 
         output = io.BytesIO()
         canvas.save(output, format='PNG')
         return output.getvalue()
 
     def _get_fallback_image(self) -> bytes:
+        # Ảnh xám mặc định khi lỗi sinh ảnh
         img = Image.new("RGB", (512, 512), (240, 240, 240))
-        draw = ImageDraw.Draw(img)
-        draw.text((200, 250), "Image N/A", fill=(150, 150, 150))
         buf = io.BytesIO()
         img.save(buf, format="PNG")
         return buf.getvalue()
@@ -173,5 +187,5 @@ Return ONLY a valid JSON array of 4 objects. No preamble or postscript.
             result = await upload_image_bytes(image_bytes, filename)
             return result.get("secure_url", "")
         except Exception as e:
-            logger.error(f"Cloudinary upload failed: {e}")
+            logger.error(f"Upload failed: {e}")
             return ""

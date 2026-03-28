@@ -79,6 +79,10 @@ app = FastAPI(
         {
             "name": "ai",
             "description": "AI-powered exam generation: upload audio \u2192 ReazonSpeech ASR \u2192 Gemini analysis \u2192 JLPT questions"
+        }, 
+        {
+            "name": "ai-image",
+            "description": "AI-powered image generation for JLPT questions (using Gemini)"
         }
     ],
     swagger_ui_parameters={
@@ -95,6 +99,10 @@ app = FastAPI(
         "name": "MIT",
     },
 )
+
+import uvicorn
+if __name__ == "__main__":
+    uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=True)
 
 
 # Custom OpenAPI schema to add JWT Bearer authentication
