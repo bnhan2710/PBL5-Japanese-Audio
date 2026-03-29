@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import {
   Upload, Sparkles, ChevronLeft, Loader2, Check,
   AlertCircle, Headphones, FileAudio, RotateCcw, Brain, Eye,
-  CheckCircle2, Play, Pause, Wand2, Save, Image as ImageIcon
+  CheckCircle2, Play, Pause, Wand2, Save, Image as ImageIcon,
+  Plus, Scissors, Trash2
 } from 'lucide-react'
 import { aiExamClient, AIJobStatus, AIQuestion, AIExamResult, AIQuestionOption } from './api/examClient'
 import { examClient } from './api/examClient'
@@ -52,6 +53,126 @@ function buildAnswerOptions(count: 3 | 4, existing: AIQuestionOption[] = []): AI
     content: existing[index]?.content ?? '',
     is_correct: existing[index]?.is_correct ?? false,
   }))
+}
+
+// ─── Audio Trimmer ──────────────────────────────────────────────────────────
+
+interface AudioTrimmerProps {
+  audioFile: File | null
+  initialStart: number
+  initialEnd: number
+  onSave: (start: number, end: number) => void
+  onCancel: () => void
+}
+
+function AudioTrimmer({ audioFile, initialStart, initialEnd, onSave, onCancel }: AudioTrimmerProps) {
+  const [start, setStart] = useState<number>(initialStart || 0)
+  const [end, setEnd] = useState<number>(initialEnd || (initialStart + 10))
+  const [startText, setStartText] = useState(() => formatTime(initialStart || 0))
+  const [endText, setEndText] = useState(() => formatTime(initialEnd || (initialStart + 10)))
+  const [objectUrl, setObjectUrl] = useState<string | null>(null)
+  const audioRef = useRef<HTMLAudioElement>(null)
+  
+  useEffect(() => {
+    if (audioFile) {
+      const url = URL.createObjectURL(audioFile)
+      setObjectUrl(url)
+      return () => URL.revokeObjectURL(url)
+    }
+  }, [audioFile])
+
+  function formatTime(secs: number) {
+    const m = Math.floor(Math.max(0, secs) / 60)
+    const s = Math.floor(Math.max(0, secs) % 60)
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+  }
+
+  function parseTime(str: string, fallback: number) {
+    const p = str.split(':')
+    if (p.length === 2) return (parseInt(p[0]) || 0) * 60 + (parseInt(p[1]) || 0)
+    if (p.length === 1) return parseInt(p[0]) || 0
+    return fallback
+  }
+
+  const handleAdjustStart = (offset: number) => {
+    setStart(v => {
+      const next = Math.max(0, v + offset)
+      setStartText(formatTime(next))
+      if (audioRef.current) { audioRef.current.currentTime = next; audioRef.current.play().catch(()=>{}) }
+      return next
+    })
+  }
+
+  const handleAdjustEnd = (offset: number) => {
+    setEnd(v => {
+      const next = Math.max(0, v + offset)
+      setEndText(formatTime(next))
+      if (audioRef.current) { audioRef.current.currentTime = next; audioRef.current.play().catch(()=>{}) }
+      return next
+    })
+  }
+
+  const applyStart = () => {
+    const s = parseTime(startText, start)
+    setStart(s)
+    setStartText(formatTime(s))
+    if (audioRef.current) { audioRef.current.currentTime = s; audioRef.current.play().catch(()=>{}) }
+  }
+
+  const applyEnd = () => {
+    const e = parseTime(endText, end)
+    setEnd(e)
+    setEndText(formatTime(e))
+    if (audioRef.current) { audioRef.current.currentTime = e; audioRef.current.play().catch(()=>{}) }
+  }
+
+  return (
+    <div className="space-y-4 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+      {objectUrl && (
+         <audio ref={audioRef} src={objectUrl} controls className="w-full h-10 outline-none" />
+      )}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex-1 w-full">
+          <label className="text-xs font-bold text-slate-500 dark:text-slate-400 block mb-1.5 flex items-center gap-1"><Play className="w-3 h-3"/> Bắt đầu (mm:ss)</label>
+          <div className="flex items-center gap-2">
+            <input 
+              type="text" 
+              value={startText} 
+              onChange={e => setStartText(e.target.value)} 
+              onBlur={applyStart}
+              onKeyDown={e => e.key === 'Enter' && applyStart()}
+              className="w-20 px-3 py-1.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 outline-none focus:ring-1 focus:ring-blue-500 font-mono text-center" 
+            />
+            <button onClick={() => handleAdjustStart(-1)} className="px-2 py-1.5 text-xs font-medium bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-md text-slate-700 dark:text-slate-300 transition-colors">-1s</button>
+            <button onClick={() => handleAdjustStart(+1)} className="px-2 py-1.5 text-xs font-medium bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-md text-slate-700 dark:text-slate-300 transition-colors">+1s</button>
+          </div>
+        </div>
+        <div className="flex-1 w-full">
+          <label className="text-xs font-bold text-slate-500 dark:text-slate-400 block mb-1.5 flex items-center gap-1"><Pause className="w-3 h-3"/> Kết thúc (mm:ss)</label>
+          <div className="flex items-center gap-2">
+            <input 
+              type="text" 
+              value={endText} 
+              onChange={e => setEndText(e.target.value)} 
+              onBlur={applyEnd}
+              onKeyDown={e => e.key === 'Enter' && applyEnd()}
+              className="w-20 px-3 py-1.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 outline-none focus:ring-1 focus:ring-blue-500 font-mono text-center" 
+            />
+            <button onClick={() => handleAdjustEnd(-1)} className="px-2 py-1.5 text-xs font-medium bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-md text-slate-700 dark:text-slate-300 transition-colors">-1s</button>
+            <button onClick={() => handleAdjustEnd(+1)} className="px-2 py-1.5 text-xs font-medium bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-md text-slate-700 dark:text-slate-300 transition-colors">+1s</button>
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+        <button onClick={() => onSave(start, end)} className="flex-1 px-3 py-2 flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl text-sm font-bold hover:from-emerald-600 hover:to-teal-600 transition-colors shadow-sm">
+          <Scissors className="w-4 h-4"/> Lưu & Trích xuất
+        </button>
+        <button onClick={onCancel} className="px-4 py-2 bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 rounded-xl text-sm font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+          Hủy
+        </button>
+      </div>
+    </div>
+  )
 }
 
 // ─── Step Indicator ──────────────────────────────────────────────────────────
@@ -376,10 +497,12 @@ function Step2Processing({ jobId, onDone, onFailed }: Step2Props) {
 interface Step3Props {
   editableQuestions: AIQuestion[]
   setEditableQuestions: (qs: AIQuestion[]) => void
+  audioFile: File | null
 }
 
-function Step3Review({ editableQuestions, setEditableQuestions }: Step3Props) {
+function Step3Review({ editableQuestions, setEditableQuestions, audioFile }: Step3Props) {
   const [activeQIdx, setActiveQIdx] = useState<number>(0)
+  const [isEditingAudio, setIsEditingAudio] = useState(false)
 
   const updateQuestion = (idx: number, patch: Partial<AIQuestion>) => {
     setEditableQuestions(editableQuestions.map((q, i) => i === idx ? { ...q, ...patch } : q))
@@ -401,11 +524,99 @@ function Step3Review({ editableQuestions, setEditableQuestions }: Step3Props) {
     updateQuestion(qIdx, { answers: nextAnswers })
   }
 
+  const handleAddQuestion = (group: string) => {
+    const questionsInGroup = editableQuestions.filter(q => q.mondai_group === group)
+    const nums = questionsInGroup.map(q => q.question_number).sort((a, b) => a - b)
+    
+    let nextNum = 1
+    if (nums.length > 0) {
+      if (nums[0] > 1) {
+        nextNum = 1
+      } else {
+        nextNum = nums[nums.length - 1] + 1
+        for (let i = 0; i < nums.length - 1; i++) {
+          if (nums[i + 1] - nums[i] > 1) {
+            nextNum = nums[i] + 1
+            break
+          }
+        }
+      }
+    }
+
+    const lastQ = questionsInGroup[questionsInGroup.length - 1]
+
+    const newQ: AIQuestion = {
+      mondai_group: group,
+      question_number: nextNum,
+      introduction: '',
+      script_text: '',
+      question_text: '',
+      answers: buildAnswerOptions(4),
+      audio_url: lastQ?.audio_url || undefined,
+      source_segment_index: lastQ?.source_segment_index,
+      source_start_time: lastQ?.source_start_time,
+      source_end_time: lastQ?.source_end_time
+    }
+
+    const newQuestions = [...editableQuestions, newQ]
+    setEditableQuestions(newQuestions.sort((a, b) => {
+      if (a.mondai_group !== b.mondai_group) return a.mondai_group.localeCompare(b.mondai_group)
+      return a.question_number - b.question_number
+    }))
+    setActiveQIdx(newQuestions.indexOf(newQ))
+  }
+
+  const handleDeleteQuestion = (idx: number) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa câu hỏi này không?')) return
+    const newQs = [...editableQuestions]
+    newQs.splice(idx, 1)
+    setEditableQuestions(newQs)
+    setActiveQIdx(Math.max(0, idx - 1))
+  }
+
+  const handleSaveAudioTrim = (idx: number, start: number, end: number) => {
+    const q = editableQuestions[idx]
+    if (!q.audio_url) {
+      toast({ title: 'Lỗi', description: 'Câu hỏi chưa có file audio gốc.', variant: 'destructive' })
+      return
+    }
+
+    // Try replace so_ and eo_ in Cloudinary URLs
+    let newUrl = q.audio_url
+    if (newUrl.includes('cloudinary.com')) {
+      if (/so_[\d.]+/.test(newUrl)) {
+        newUrl = newUrl.replace(/so_[\d.]+/, `so_${start}`)
+      } else {
+        newUrl = newUrl.replace('/upload/', `/upload/so_${start}/`)
+      }
+
+      if (/eo_[\d.]+/.test(newUrl)) {
+        newUrl = newUrl.replace(/eo_[\d.]+/, `eo_${end}`)
+      } else {
+        newUrl = newUrl.replace('/upload/', `/upload/eo_${end}/`)
+      }
+
+      updateQuestion(idx, {
+        source_start_time: start,
+        source_end_time: end,
+        audio_url: newUrl
+      })
+      setIsEditingAudio(false)
+      toast({ title: 'Thành công', description: 'Đã cập nhật đoạn âm thanh!' })
+    } else {
+      toast({ title: 'Thất bại', description: 'Tính năng cắt âm thanh chỉ hỗ trợ audio Cloudinary.', variant: 'destructive' })
+    }
+  }
+
   const groupedQuestions = editableQuestions.reduce((acc, q, idx) => {
     if (!acc[q.mondai_group]) acc[q.mondai_group] = []
     acc[q.mondai_group].push({ q, idx })
     return acc
   }, {} as Record<string, { q: AIQuestion, idx: number }[]>)
+
+  for (const group in groupedQuestions) {
+    groupedQuestions[group].sort((a, b) => a.q.question_number - b.q.question_number)
+  }
 
   const activeQ = editableQuestions[activeQIdx]
 
@@ -435,7 +646,7 @@ function Step3Review({ editableQuestions, setEditableQuestions }: Step3Props) {
                   return (
                     <button
                       key={idx}
-                      onClick={() => setActiveQIdx(idx)}
+                      onClick={() => { setActiveQIdx(idx); setIsEditingAudio(false); }}
                       className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-200
                         ${isActive
                           ? 'border-blue-500 bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400 shadow-sm'
@@ -449,6 +660,13 @@ function Step3Review({ editableQuestions, setEditableQuestions }: Step3Props) {
                     </button>
                   )
                 })}
+                <button
+                  onClick={() => handleAddQuestion(group)}
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 border-dashed border-slate-300 dark:border-slate-600 text-slate-400 hover:border-blue-500 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors"
+                  title="Thêm câu hỏi mới"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
               </div>
             </div>
           ))}
@@ -460,18 +678,20 @@ function Step3Review({ editableQuestions, setEditableQuestions }: Step3Props) {
         {activeQ ? (
           <div className="flex-1 flex flex-col bg-white dark:bg-slate-800 shadow-sm rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
             {/* Header */}
-            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between bg-slate-50/30 dark:bg-slate-800/50">
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex flex-col gap-3 sm:flex-row sm:items-center justify-between bg-slate-50/30 dark:bg-slate-800/50">
               <div className="flex items-center gap-3">
                 <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Hiệu đính chi tiết</h2>
-                <div className="flex gap-2">
-                  <span className="text-xs font-semibold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2.5 py-1 rounded-md">
-                    {activeQ.mondai_group} - Câu {activeQ.question_number}
+                <div className="flex flex-wrap gap-2 items-center">
+                  <span className="text-xs font-semibold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 pl-2.5 pr-1 py-1 rounded-md flex items-center gap-1.5 border border-slate-200 dark:border-slate-600">
+                    {activeQ.mondai_group}
+                    <span className="text-slate-300 dark:text-slate-500 mx-0.5">-</span>
+                    Câu
+                    <div className="flex items-center gap-0.5">
+                      <button onClick={() => updateQuestion(activeQIdx, { question_number: Math.max(1, activeQ.question_number - 1) })} className="w-5 h-5 flex items-center justify-center bg-slate-200 dark:bg-slate-600 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-300 font-bold select-none leading-none">-</button>
+                      <span className="w-6 text-center">{activeQ.question_number}</span>
+                      <button onClick={() => updateQuestion(activeQIdx, { question_number: activeQ.question_number + 1 })} className="w-5 h-5 flex items-center justify-center bg-slate-200 dark:bg-slate-600 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-300 font-bold select-none leading-none">+</button>
+                    </div>
                   </span>
-                  {activeQ.source_segment_index && (
-                    <span className="text-xs font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 px-2.5 py-1 rounded-md">
-                      Segment {activeQ.source_segment_index}{(activeQ.source_question_index && activeQ.source_question_index > 1) ? ` · Q${activeQ.source_question_index}` : ''}
-                    </span>
-                  )}
                   {(activeQ.source_start_time !== undefined && activeQ.source_end_time !== undefined) && (
                     <span className="text-xs font-semibold bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-300 px-2.5 py-1 rounded-md">
                       {formatSeconds(activeQ.source_start_time)} → {formatSeconds(activeQ.source_end_time)}
@@ -479,7 +699,13 @@ function Step3Review({ editableQuestions, setEditableQuestions }: Step3Props) {
                   )}
                 </div>
               </div>
-
+              <button 
+                onClick={() => handleDeleteQuestion(activeQIdx)}
+                className="w-8 h-8 flex items-center justify-center shrink-0 rounded-lg text-red-500 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                title="Xóa câu hỏi này"
+              >
+                <Trash2 className="w-4 h-4"/>
+              </button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -489,11 +715,19 @@ function Step3Review({ editableQuestions, setEditableQuestions }: Step3Props) {
                   <Headphones className="w-4 h-4 text-slate-600 dark:text-slate-400" />
                   <span className="text-sm font-bold text-slate-700 dark:text-slate-300">File âm thanh</span>
                 </div>
-                {activeQ.audio_url ? (
+                {isEditingAudio ? (
+                  <AudioTrimmer 
+                    audioFile={audioFile}
+                    initialStart={activeQ.source_start_time || 0}
+                    initialEnd={activeQ.source_end_time || 0}
+                    onSave={(s, e) => handleSaveAudioTrim(activeQIdx, s, e)}
+                    onCancel={() => setIsEditingAudio(false)}
+                  />
+                ) : activeQ.audio_url ? (
                   <div className="flex items-center justify-between gap-4">
                     <audio controls src={activeQ.audio_url} className="w-full h-10 outline-none" />
-                    <button className="text-xs text-blue-500 hover:underline font-medium shrink-0 flex items-center gap-1">
-                      <FileAudio className="w-3 h-3" /> Thay thế file audio
+                    <button onClick={() => setIsEditingAudio(true)} className="text-xs px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium shrink-0 flex items-center gap-1.5 transition-colors">
+                      <Scissors className="w-3.5 h-3.5" /> Chỉnh sửa
                     </button>
                   </div>
                 ) : (
@@ -640,10 +874,11 @@ interface Step4Props {
   questions: AIQuestion[]
   level: Level
   title: string
+  draftId: string
   onBack: () => void
 }
 
-function Step4Save({ questions, level, title, onBack }: Step4Props) {
+function Step4Save({ questions, level, title, draftId, onBack }: Step4Props) {
   const navigate = useNavigate()
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -652,6 +887,9 @@ function Step4Save({ questions, level, title, onBack }: Step4Props) {
   const handleSave = async () => {
     setSaving(true)
     try {
+      if (draftId) {
+        await examClient.deleteExam(draftId).catch(() => {})
+      }
       // Create exam draft
       const exam = await examClient.createExam({
         title: `[${level}] ${title}`,
@@ -884,6 +1122,9 @@ export default function AICreateExamPage() {
   // Step 3 state
   const [editableQuestions, setEditableQuestions] = useState<AIQuestion[]>([])
   const [aiResult, setAiResult] = useState<AIExamResult | null>(null)
+  
+  const [draftId, setDraftId] = useState<string>('')
+  const [savingDraft, setSavingDraft] = useState(false)
 
   const [step, setStep] = useState<WizardStep>(1)
 
@@ -910,6 +1151,40 @@ export default function AICreateExamPage() {
   const handleJobFailed = (err: string) => {
     setFailed(true)
     setFailedMsg(err)
+  }
+
+  const handleSaveDraft = async () => {
+    setSavingDraft(true)
+    try {
+      if (draftId) await examClient.deleteExam(draftId).catch(() => {})
+      const exam = await examClient.createExam({
+        title: `[Nháp] [${level}] ${title}`,
+        time_limit: 60,
+      })
+      for (const q of editableQuestions) {
+        await examClient.createQuestion({
+          exam_id: exam.exam_id,
+          mondai_group: q.mondai_group,
+          question_number: q.question_number,
+          question_text: q.question_text,
+          audio_clip_url: q.audio_url,
+          explanation: composeExplanation(q),
+          answers: q.answers.map((a, i) => ({
+            question_id: '',
+            content: a.content,
+            is_correct: a.is_correct,
+            order_index: i,
+          })),
+        })
+      }
+      await examClient.updateExam(exam.exam_id, { is_published: false, current_step: 3 })
+      setDraftId(exam.exam_id)
+      toast({ title: 'Thành công', description: 'Đã lưu bản nháp!' })
+    } catch (e: any) {
+      toast({ title: 'Lỗi', description: 'Không thể lưu bản nháp', variant: 'destructive' })
+    } finally {
+      setSavingDraft(false)
+    }
   }
 
   return (
@@ -942,8 +1217,8 @@ export default function AICreateExamPage() {
         </div>
         {step >= 3 && step < 4 && (
           <div className="flex items-center gap-3 mt-2 md:mt-0">
-            <button className="px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-xl text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm">
-              Lưu bản nháp
+            <button onClick={handleSaveDraft} disabled={savingDraft} className="flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-xl text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm disabled:opacity-50">
+              {savingDraft ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Lưu bản nháp
             </button>
             <button onClick={() => setStep(4)}
               className="px-5 py-2.5 bg-blue-500 text-white rounded-xl text-sm font-bold hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/30">
@@ -997,6 +1272,7 @@ export default function AICreateExamPage() {
             <Step3Review
               editableQuestions={editableQuestions}
               setEditableQuestions={setEditableQuestions}
+              audioFile={audioFile}
             />
           )
         )}
@@ -1006,6 +1282,7 @@ export default function AICreateExamPage() {
             questions={editableQuestions}
             level={level}
             title={title}
+            draftId={draftId}
             onBack={() => setStep(3)}
           />
         )}
