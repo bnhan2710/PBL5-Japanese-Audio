@@ -3,6 +3,8 @@ from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel, Field, ConfigDict
 
+from app.modules.questions.schemas import QuestionBase, AnswerInline
+
 
 class ExamBase(BaseModel):
     title: str = Field(..., description="Exam title")
@@ -14,6 +16,17 @@ class ExamBase(BaseModel):
 class ExamCreate(ExamBase):
     """Payload for creating a new exam."""
     pass
+
+
+class QuestionCreateNested(QuestionBase):
+    """Payload for creating a question inline with an exam."""
+    answers: List[AnswerInline] = []
+
+
+class ExamCreateManual(ExamBase):
+    """Payload for creating an exam with all its questions and answers in one go."""
+    is_published: bool = False
+    questions: List[QuestionCreateNested] = []
 
 
 class ExamUpdate(BaseModel):
