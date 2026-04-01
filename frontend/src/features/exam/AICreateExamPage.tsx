@@ -8,6 +8,7 @@ import {
 import { aiExamClient, AIJobStatus, AIQuestion, AIExamResult } from './api/examClient'
 import { examClient } from './api/examClient'
 import { toast } from '@/hooks/use-toast'
+import { AIImageGenerateButton } from '../ai-image/components/AIImageGenerateButton'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -349,9 +350,10 @@ function Step2Processing({ jobId, onDone, onFailed }: Step2Props) {
 interface Step3Props {
   editableQuestions: AIQuestion[]
   setEditableQuestions: (qs: AIQuestion[]) => void
+  level: Level
 }
 
-function Step3Review({ editableQuestions, setEditableQuestions }: Step3Props) {
+function Step3Review({ editableQuestions, setEditableQuestions, level }: Step3Props) {
   const [activeQIdx, setActiveQIdx] = useState<number>(0)
 
   const updateQuestion = (idx: number, patch: Partial<AIQuestion>) => {
@@ -533,12 +535,37 @@ function Step3Review({ editableQuestions, setEditableQuestions }: Step3Props) {
                 <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">
                   Hình ảnh minh họa (Tùy chọn)
                 </label>
-                <div className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-8 flex flex-col items-center justify-center bg-slate-50/50 dark:bg-slate-900/30 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer group">
-                  <ImageIcon className="w-8 h-8 text-slate-400 group-hover:text-blue-500 mb-2 transition-colors" />
-                  <p className="text-sm text-slate-500 text-center">
-                    <span className="text-blue-500 font-semibold">Thêm ảnh</span> hoặc kéo thả
-                  </p>
-                </div>
+                {activeQ.image_url ? (
+                  <div className="flex flex-col items-start gap-4 mt-3">
+                    <img src={activeQ.image_url} alt="preview" className="max-h-48 rounded-lg border border-slate-200 shadow-sm object-contain" />
+                    <button onClick={() => updateQuestion(activeQIdx, { image_url: undefined })} className="text-xs text-red-500 hover:underline font-medium">
+                       Gỡ hình ảnh
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-4 py-6 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50/50 dark:bg-slate-900/30">
+                    <AIImageGenerateButton
+                      payload={{
+                        question_id: `ai_q_${activeQIdx}`,
+                        script_text: activeQ.script_text,
+                        question_text: activeQ.question_text,
+                        jlpt_level: level,
+                      }}
+                      onSuccess={(url) => updateQuestion(activeQIdx, { image_url: url })}
+                      buttonText="Sinh ảnh minh hoạ với AI"
+                    />
+                    <div className="w-full relative flex items-center justify-center py-2 max-w-[200px]">
+                      <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200 dark:border-slate-700"></div></div>
+                      <span className="relative bg-slate-50/50 dark:bg-slate-900/30 px-3 text-xs text-slate-400 font-medium">HOẶC</span>
+                    </div>
+                    <div className="flex flex-col items-center justify-center cursor-pointer group">
+                      <ImageIcon className="w-6 h-6 text-slate-400 group-hover:text-blue-500 mb-2 transition-colors" />
+                      <p className="text-sm text-slate-500 text-center">
+                        <span className="text-blue-500 font-semibold">Tải lên tĩnh (Sắp hoàn thiện)</span>
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
             </div>
@@ -586,6 +613,7 @@ function Step4Save({ questions, level, title, onBack }: Step4Props) {
           question_number: q.question_number,
           question_text: q.question_text,
           audio_clip_url: q.audio_url,
+          image_url: q.image_url,
           explanation: q.introduction || '',
           answers: q.answers.map((a, i) => ({
             question_id: '',
@@ -914,6 +942,7 @@ export default function AICreateExamPage() {
           <Step3Review
             editableQuestions={editableQuestions}
             setEditableQuestions={setEditableQuestions}
+            level={level}
           />
         )}
 

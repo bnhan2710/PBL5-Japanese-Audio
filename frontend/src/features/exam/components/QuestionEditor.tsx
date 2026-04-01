@@ -1,6 +1,7 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { Headphones, FileAudio, Trash2, Image as ImageIcon, CheckCircle2, Circle } from 'lucide-react';
+import { Headphones, Trash2, Image as ImageIcon } from 'lucide-react';
 import { QuestionType } from '../types/manualExam';
+import { AIImageGenerateButton } from '../../ai-image/components/AIImageGenerateButton';
 
 interface QuestionEditorProps {
   question: QuestionType;
@@ -224,10 +225,26 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
               </button>
             </div>
           ) : (
-            <div className="text-center py-2 cursor-pointer" onClick={() => imageInputRef.current?.click()}>
-               <p className="text-sm text-slate-500">
-                  <span className="text-violet-500 font-semibold">Tải lên Ảnh</span> hoặc kéo thả file
-               </p>
+            <div className="flex flex-col items-center gap-4 py-2">
+              <div className="text-center cursor-pointer" onClick={() => imageInputRef.current?.click()}>
+                 <p className="text-sm text-slate-500">
+                    <span className="text-violet-500 font-semibold">Tải lên Ảnh</span> hoặc kéo thả file
+                 </p>
+              </div>
+              <div className="w-full relative flex items-center justify-center py-2">
+                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200 dark:border-slate-700"></div></div>
+                <span className="relative bg-slate-50 dark:bg-slate-900/30 px-3 text-xs text-slate-400 font-medium">HOẶC</span>
+              </div>
+              <AIImageGenerateButton 
+                payload={{
+                  question_id: `manual_q_${index}`,
+                  script_text: question.explanation || '',
+                  question_text: question.question_text || '',
+                  jlpt_level: 'N2',
+                }}
+                onSuccess={(url) => updateField('image_url', url)}
+                buttonText="Sinh ảnh từ Script bằng AI"
+              />
             </div>
           )}
           <input type="file" accept="image/*" className="hidden" ref={imageInputRef} onChange={e => e.target.files && handleImageDrop({ preventDefault: () => {}, dataTransfer: { files: e.target.files } } as unknown as React.DragEvent)} />

@@ -167,6 +167,7 @@ export interface AIQuestion {
   script_text: string;
   question_text: string;
   audio_url?: string;
+  image_url?: string;
   answers: AIQuestionOption[];
 }
 
