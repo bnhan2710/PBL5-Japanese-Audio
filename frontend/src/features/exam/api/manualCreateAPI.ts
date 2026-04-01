@@ -53,12 +53,18 @@ export async function submitManualExam(payload: ExamManualType): Promise<any> {
   // Wait for all uploads to complete
   await Promise.all(uploadPromises);
 
+  const fixedPayload = { ...finalPayload };
+  if (fixedPayload.level) {
+    fixedPayload.title = `[${fixedPayload.level}] ${fixedPayload.title}`;
+    delete fixedPayload.level;
+  }
+
   // Now all files are replaced with strings (Cloudinary URLs) or are null.
   // We can safely send the JSON to POST /api/exams/manual.
   
   const response = await apiFetch(`${API_URL}/api/exams/manual`, {
     method: 'POST',
-    body: JSON.stringify(finalPayload),
+    body: JSON.stringify(fixedPayload),
   });
 
   if (!response.ok) {

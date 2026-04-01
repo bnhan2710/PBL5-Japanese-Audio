@@ -35,6 +35,7 @@ const NEW_QUESTION_TEMPLATE: QuestionType = {
 
 const defaultExam: ExamManualType = {
   title: '',
+  level: 'N3',
   description: '',
   time_limit: 30, 
   is_published: false,
@@ -222,6 +223,24 @@ export const ManualExamBuilder: React.FC = () => {
                      onChange={e => setFormData(p => ({...p, description: e.target.value}))}
                      placeholder="Đề này tập trung vào ôn tập chủ điểm gì?..."
                   />
+               </div>
+               <div>
+                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">Cấp độ JLPT</label>
+                  <div className="flex flex-wrap gap-2">
+                    {['N5', 'N4', 'N3', 'N2', 'N1'].map(lvl => (
+                      <button
+                        key={lvl}
+                        onClick={() => setFormData(p => ({ ...p, level: lvl }))}
+                        className={`px-5 py-2 rounded-xl text-sm font-bold transition-colors ${
+                          formData.level === lvl 
+                            ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 border-2 border-violet-500' 
+                            : 'bg-slate-50 dark:bg-slate-800 text-slate-500 border-2 border-transparent hover:bg-slate-100 dark:hover:bg-slate-700'
+                        }`}
+                      >
+                        {lvl}
+                      </button>
+                    ))}
+                  </div>
                </div>
                <div className="grid grid-cols-2 gap-4">
                    <div>

@@ -26,6 +26,7 @@ export const QuestionSchema = z.object({
 // Maximum questions allowed is normally around 35 for N3/N4, we provide hard limit of 70 (x2).
 export const ExamManualSchema = z.object({
   title: z.string().min(1, 'Tên đề thi là bắt buộc'),
+  level: z.string().optional(),
   description: z.string().optional(),
   time_limit: z.number().optional(),
   is_published: z.boolean().default(false),
