@@ -4,7 +4,8 @@ annotated-types==0.7.0
 anyio==4.9.0
 asyncpg==0.30.0
 audioread==3.1.0
-bcrypt==4.3.0
+# bcrypt==4.3.0
+bcrypt==3.2.2
 black==25.1.0
 certifi==2026.2.25
 cffi==1.17.1
@@ -107,3 +108,15 @@ urllib3==2.6.3
 uvicorn==0.35.0
 watchfiles==1.0.5
 websockets==15.0.1
+Pillow==11.1.0
+
+# --- FRONTEND DEPENDENCIES INFO ---
+# Frontend sử dụng package.json với pnpm (không dùng requirements.txt).
+# Các thư viện quan trọng đã cài đặt cho Frontend đợt này bao gồm:
+# - lucide-react (cho Icon UI sinh đề AI / Luyện nghe)
+# - react-router-dom (cho Routing)
+# - zod (cho Validate form đề thi)
+# - @radix-ui/react-toast (cho thông báo Toast UI)
+# Người bạn của bạn chỉ cần vào thư mục `frontend/` và chạy lệnh:
+# pnpm install
+# là toàn bộ các thư viện sẽ được tự động đồng bộ!

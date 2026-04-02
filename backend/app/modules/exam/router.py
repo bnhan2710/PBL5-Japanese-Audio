@@ -8,7 +8,8 @@ from app.db.session import get_db
 from app.core.security import get_current_user
 from app.modules.users.models import User
 from app.modules.exam.models import Exam
-from app.modules.exam.schemas import ExamCreate, ExamUpdate, ExamResponse, ExamListResponse
+from app.modules.questions.models import Question, Answer
+from app.modules.exam.schemas import ExamCreate, ExamUpdate, ExamResponse, ExamListResponse, ExamCreateManual
 
 router = APIRouter(prefix="/exams", tags=["exams"])
 
@@ -30,6 +31,54 @@ async def create_exam(
         is_published=False,
     )
     db.add(exam)
+    await db.commit()
+    await db.refresh(exam)
+    return exam
+
+
+@router.post("/manual", response_model=ExamResponse, status_code=201)
+async def create_exam_manual(
+    payload: ExamCreateManual,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Create a new exam manually with all its nested questions and answers."""
+    # Create Exam
+    exam = Exam(
+        creator_id=current_user.id,
+        title=payload.title,
+        description=payload.description,
+        time_limit=payload.time_limit,
+        audio_id=payload.audio_id,
+        current_step=5,
+        is_published=payload.is_published,
+    )
+    db.add(exam)
+    await db.flush()
+
+    for q in payload.questions:
+        question = Question(
+            exam_id=exam.exam_id,
+            mondai_group=q.mondai_group,
+            question_number=q.question_number,
+            audio_clip_url=q.audio_clip_url,
+            question_text=q.question_text,
+            image_url=q.image_url,
+            explanation=q.explanation,
+        )
+        db.add(question)
+        await db.flush()
+
+        for a in q.answers:
+            answer = Answer(
+                question_id=question.question_id,
+                content=a.content,
+                image_url=a.image_url,
+                is_correct=a.is_correct,
+                order_index=a.order_index,
+            )
+            db.add(answer)
+
     await db.commit()
     await db.refresh(exam)
     return exam

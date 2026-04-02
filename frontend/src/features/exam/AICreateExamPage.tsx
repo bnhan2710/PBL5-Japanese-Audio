@@ -9,6 +9,7 @@ import {
 import { aiExamClient, AIJobStatus, AIQuestion, AIExamResult, AIQuestionOption } from './api/examClient'
 import { examClient } from './api/examClient'
 import { toast } from '@/hooks/use-toast'
+import { AIImageGenerateButton } from '../ai-image/components/AIImageGenerateButton'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -498,11 +499,15 @@ interface Step3Props {
   editableQuestions: AIQuestion[]
   setEditableQuestions: (qs: AIQuestion[]) => void
   audioFile: File | null
+  level: Level
 }
 
-function Step3Review({ editableQuestions, setEditableQuestions, audioFile }: Step3Props) {
+function Step3Review({ editableQuestions, setEditableQuestions, audioFile, level }: Step3Props) {
   const [activeQIdx, setActiveQIdx] = useState<number>(0)
   const [isEditingAudio, setIsEditingAudio] = useState(false)
+  const imageInputRef = useRef<HTMLInputElement>(null)
+  const [draggingImage, setDraggingImage] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   const updateQuestion = (idx: number, patch: Partial<AIQuestion>) => {
     setEditableQuestions(editableQuestions.map((q, i) => i === idx ? { ...q, ...patch } : q))
@@ -608,6 +613,30 @@ function Step3Review({ editableQuestions, setEditableQuestions, audioFile }: Ste
     }
   }
 
+  const handleImageUpload = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+        toast({ title: 'Lỗi file', description: 'Chỉ hỗ trợ file hình ảnh', variant: 'destructive' })
+        return
+    }
+    setUploadingImage(true)
+    try {
+        const url = await examClient.uploadImage(file)
+        updateQuestion(activeQIdx, { image_url: url })
+        toast({ title: 'Thành công', description: 'Đã tải ảnh lên' })
+    } catch (err: any) {
+        toast({ title: 'Lỗi tải ảnh', description: err.message || 'Lỗi không xác định', variant: 'destructive' })
+    } finally {
+        setUploadingImage(false)
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setDraggingImage(true); }
+  const handleDragLeave = () => setDraggingImage(false)
+  const handleDrop = (e: React.DragEvent) => {
+      e.preventDefault()
+      setDraggingImage(false)
+      if (e.dataTransfer.files?.[0]) handleImageUpload(e.dataTransfer.files[0])
+  }
   const groupedQuestions = editableQuestions.reduce((acc, q, idx) => {
     if (!acc[q.mondai_group]) acc[q.mondai_group] = []
     acc[q.mondai_group].push({ q, idx })
@@ -840,18 +869,65 @@ function Step3Review({ editableQuestions, setEditableQuestions, audioFile }: Ste
                   </div>
                 </div>
 
-                {/* Image Upload Placeholder */}
-                <div>
-                  <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">
-                    Hình ảnh minh họa (Tùy chọn)
-                  </label>
-                  <div className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-8 flex flex-col items-center justify-center bg-slate-50/50 dark:bg-slate-900/30 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer group">
-                    <ImageIcon className="w-8 h-8 text-slate-400 group-hover:text-blue-500 mb-2 transition-colors" />
-                    <p className="text-sm text-slate-500 text-center">
-                      <span className="text-blue-500 font-semibold">Thêm ảnh</span> hoặc kéo thả
-                    </p>
+              {/* Image Upload Placeholder */}
+              <div>
+                <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">
+                  Hình ảnh minh họa (Tùy chọn)
+                </label>
+                {activeQ.image_url ? (
+                  <div className="flex flex-col items-start gap-4 mt-3">
+                    <img src={activeQ.image_url} alt="preview" className="max-h-48 rounded-lg border border-slate-200 shadow-sm object-contain" />
+                    <button onClick={() => updateQuestion(activeQIdx, { image_url: undefined })} className="text-xs text-red-500 hover:underline font-medium">
+                       Gỡ hình ảnh
+                    </button>
                   </div>
-                </div>
+                ) : (
+                  <div 
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    className={`flex flex-col items-center gap-4 py-6 border-2 rounded-xl transition-colors ${
+                      draggingImage ? 'border-violet-400 bg-violet-50 dark:bg-violet-900/20' : 'border-dashed border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30'
+                    }`}
+                  >
+                    <AIImageGenerateButton
+                      payload={{
+                        question_id: `ai_q_${activeQIdx}`,
+                        script_text: activeQ.script_text,
+                        question_text: activeQ.question_text,
+                        jlpt_level: level,
+                      }}
+                      onSuccess={(url) => updateQuestion(activeQIdx, { image_url: url })}
+                      buttonText="Sinh ảnh minh hoạ với AI"
+                    />
+                    <div className="w-full relative flex items-center justify-center py-2 max-w-[200px]">
+                      <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200 dark:border-slate-700"></div></div>
+                      <span className="relative px-3 text-xs text-slate-400 font-medium bg-slate-50 dark:bg-slate-900/40">HOẶC</span>
+                    </div>
+                    <div 
+                      onClick={() => !uploadingImage && imageInputRef.current?.click()}
+                      className={`flex flex-col items-center justify-center ${uploadingImage ? 'cursor-not-allowed opacity-70' : 'cursor-pointer group'}`}
+                    >
+                      {uploadingImage ? (
+                        <Loader2 className="w-6 h-6 text-slate-400 animate-spin mb-2" />
+                      ) : (
+                        <ImageIcon className="w-6 h-6 text-slate-400 group-hover:text-blue-500 mb-2 transition-colors" />
+                      )}
+                      <p className="text-sm text-slate-500 text-center">
+                        <span className="text-blue-500 font-semibold">{uploadingImage ? 'Đang tải lên...' : 'Tải lên từ máy tính'}</span>
+                        {!uploadingImage && ' hoặc kéo thả'}
+                      </p>
+                    </div>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      ref={imageInputRef} 
+                      onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0])} 
+                    />
+                  </div>
+                )}
+              </div>
 
               </div>
             </div>
@@ -903,6 +979,7 @@ function Step4Save({ questions, level, title, draftId, onBack }: Step4Props) {
           question_number: q.question_number,
           question_text: q.question_text,
           audio_clip_url: q.audio_url,
+          image_url: q.image_url,
           explanation: composeExplanation(q),
           answers: q.answers.map((a, i) => ({
             question_id: '',
@@ -1272,6 +1349,7 @@ export default function AICreateExamPage() {
               editableQuestions={editableQuestions}
               setEditableQuestions={setEditableQuestions}
               audioFile={audioFile}
+              level={level}
             />
           )
         )}

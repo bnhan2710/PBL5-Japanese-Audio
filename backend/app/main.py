@@ -9,9 +9,11 @@ from app.modules.users.router import router as users_router
 from app.modules.auth.router import router as auth_router
 from app.modules.exam.router import router as exam_router
 from app.modules.questions.router import router as questions_router
+from app.modules.ai_image.router import router as ai_image_router
 from app.modules.ai_exam.router import router as ai_exam_router
 from app.modules.test.router import router as test_router
 from app.modules.result.router import router as result_router
+from app.shared.upload_router import router as upload_router
 from app.db.session import init_db, engine
 from app.core.config import get_settings
 
@@ -20,6 +22,7 @@ from app.modules.audio.models import Audio, TranscriptSegment  # noqa: F401
 from app.modules.ai_exam.models import AIExamCache  # noqa: F401
 from app.modules.questions.models import Question, Answer  # noqa: F401
 from app.modules.result.models import UserResult  # noqa: F401
+from app.modules.users.models import User  # noqa: F401
 
 settings = get_settings()
 logger = setup_logger(__name__)
@@ -78,7 +81,11 @@ app = FastAPI(
         },
         {
             "name": "ai",
-            "description": "Local exam generation: upload audio \u2192 bell split \u2192 ReazonSpeech ASR \u2192 JLPT draft questions"
+            "description": "AI-powered exam generation: upload audio \u2192 bell split \u2192 ReazonSpeech ASR \u2192 Gemini analysis \u2192 JLPT questions"
+        }, 
+        {
+            "name": "ai-image",
+            "description": "AI-powered image generation for JLPT questions (using Gemini)"
         }
     ],
     swagger_ui_parameters={
@@ -95,6 +102,10 @@ app = FastAPI(
         "name": "MIT",
     },
 )
+
+import uvicorn
+if __name__ == "__main__":
+    uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=True)
 
 
 # Custom OpenAPI schema to add JWT Bearer authentication
@@ -144,6 +155,8 @@ app.include_router(questions_router, prefix="/api")
 app.include_router(ai_exam_router, prefix="/api")
 app.include_router(test_router, prefix="/api")
 app.include_router(result_router, prefix="/api")
+app.include_router(ai_image_router, prefix="/api")
+app.include_router(upload_router, prefix="/api")
 
 
 logger.info("Application routes configured")

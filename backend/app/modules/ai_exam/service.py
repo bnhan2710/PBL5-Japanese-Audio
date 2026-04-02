@@ -7,7 +7,9 @@ import tempfile
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Optional, Sequence
+from typing import Callable, Optional, Sequence, List
+from concurrent.futures import ThreadPoolExecutor
+from pydub import AudioSegment
 
 from app.modules.ai_exam.schemas import (
     AIExamResult,
@@ -18,6 +20,19 @@ from app.modules.ai_exam.schemas import (
     AITimestampQuestion,
 )
 
+from io import BytesIO
+import sys
+import os
+import json
+import time
+from app.core.config import get_settings
+
+settings = get_settings()
+
+if settings.FFMPEG_PATH and os.path.exists(settings.FFMPEG_PATH):
+    AudioSegment.converter = settings.FFMPEG_PATH
+if settings.FFPROBE_PATH and os.path.exists(settings.FFPROBE_PATH):
+    AudioSegment.ffprobe = settings.FFPROBE_PATH
 logger = logging.getLogger(__name__)
 PIPELINE_VERSION = "ai-exam-cache-v6-reazon-local-ban-aware-numbering"
 REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -412,9 +427,20 @@ class ReazonTranscriber:
         if self._model is None:
             self._load_model()
 
-        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-            tmp.write(audio_bytes)
-            tmp_path = tmp.name
+        audio = AudioSegment.from_file(BytesIO(audio_bytes), format="mp3")
+
+        silence_thresh = audio.dBFS - 14
+        chunks = split_on_silence(
+            audio,
+            min_silence_len=250,
+            silence_thresh=silence_thresh,
+            keep_silence=200,
+        )
+
+        logger.info(f"Split into {len(chunks)} chunks for transcription.")
+
+        chunk_dir = tempfile.mkdtemp(prefix="reazon_chunks_")
+        full_transcript = []
 
         try:
             audio = AudioSegment.from_file(tmp_path)
@@ -471,6 +497,141 @@ class ReazonTranscriber:
         finally:
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)
+
+
+# ─── Gemini Analyzer ───────────────────────────────────────────────────────
+
+class GeminiAnalyzer:
+    """Gemini AI for script refinement, timestamp detection, question generation."""
+
+    def __init__(self, api_key: str):
+        if not api_key:
+            raise ValueError("GOOGLE_API_KEY is required.")
+        from google import genai
+        self._client = genai.Client(api_key=api_key)
+        self._model_name = "gemini-2.5-flash"
+
+    def _generate(self, contents: list) -> str:
+        response = self._client.models.generate_content(
+            model=self._model_name,
+            contents=contents,
+        )
+        return response.text.strip()
+
+    def upload_audio(self, audio_bytes: bytes, filename: str, max_retries: int = 3):
+        """Upload audio to Gemini Files API and wait for processing."""
+        from google.genai import types
+        import mimetypes
+
+        suffix = Path(filename).suffix
+        mime_type = mimetypes.guess_type(filename)[0] or "audio/mpeg"
+
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+            tmp.write(audio_bytes)
+            tmp_path = tmp.name
+
+        try:
+            last_exc = None
+            for attempt in range(1, max_retries + 1):
+                try:
+                    logger.info(f"Uploading audio to Gemini (attempt {attempt}/{max_retries})...")
+                    audio_file = self._client.files.upload(
+                        file=tmp_path,
+                        config=types.UploadFileConfig(
+                            display_name=filename,
+                            mime_type=mime_type,
+                        ),
+                    )
+                    while audio_file.state.name == "PROCESSING":
+                        import time
+                        time.sleep(2)
+                        audio_file = self._client.files.get(name=audio_file.name)
+                    if audio_file.state.name == "FAILED":
+                        raise RuntimeError("Gemini audio processing failed.")
+                    logger.info(f"Audio uploaded successfully: {audio_file.uri}")
+                    return audio_file
+                except (BrokenPipeError, ConnectionError, OSError) as exc:
+                    last_exc = exc
+                    wait = 2 ** attempt
+                    logger.warning(f"Upload attempt {attempt} failed ({exc}). Retrying in {wait}s...")
+                    import time
+                    time.sleep(wait)
+                except Exception as exc:
+                    raise
+            raise RuntimeError(f"Failed to upload audio after {max_retries} attempts: {last_exc}")
+        finally:
+            os.unlink(tmp_path)
+
+    def delete_audio(self, audio_file) -> None:
+        """Delete uploaded audio file from Gemini Files API to free storage."""
+        try:
+            self._client.files.delete(name=audio_file.name)
+            logger.info(f"Deleted Gemini file: {audio_file.name}")
+        except Exception as exc:
+            logger.warning(f"Failed to delete Gemini file {audio_file.name}: {exc}")
+
+    def refine_script(self, audio_file, raw_transcript: str) -> str:
+        prompt = """
+You are a professional Japanese transcriber specializing in JLPT listening tests.
+Refine the raw ASR transcript using both the AUDIO and RAW TRANSCRIPT as input.
+
+Structure for each question:
+1. [Introduction]: Mondai number + situation description + initial question
+2. [Conversation]: Dialogue with speaker labels (男：/ 女：)
+3. [Question]: Final repeated question
+
+Rules:
+- Do NOT summarize. Keep full content.
+- Add correct Japanese punctuation (。、? !)
+- Output ONLY structured text, no extra commentary.
+"""
+        return self._generate([prompt, audio_file, f"Raw Transcript:\n{raw_transcript}"])
+
+    def generate_timestamps(self, audio_file, refined_script: str) -> List[AITimestampMondai]:
+        prompt = """
+You are an expert in analyzing JLPT N-level listening audio.
+Your task is to find the EXACT start and end timestamps (in SECONDS) for each question in the audio.
+
+Rules:
+- All timestamps must be in SECONDS (e.g. 12.5, not "12s" or "0:12").
+- Each "question" in JLPT audio has this structure:
+    [BELL] → [Number announcement: 一番, 二番...] → [Situation intro] → [Dialogue/Monologue] → [Final repeated question]
+  - start_time = timestamp of the BELL SOUND that opens this question.
+  - end_time   = timestamp AFTER the final repeated question finishes (include it fully).
+- question_number must exactly match the sequential number within its Mondai (1, 2, 3, ...).
+- Use the REFINED SCRIPT provided to confirm the text boundaries for each question.
+
+Output ONLY valid JSON, no markdown, no explanation:
+{
+  "mondai": [
+    {
+      "mondai_number": 1,
+      "title": "Mondai 1",
+      "start_time": 0.0,
+      "end_time": 185.0,
+      "questions": [
+        {"question_number": 1, "start_time": 5.2,  "end_time": 42.0,  "text": "女の人は何をしますか。"},
+        {"question_number": 2, "start_time": 43.1, "end_time": 88.5,  "text": "男の人はどこへ行きますか。"}
+      ]
+    }
+  ]
+}
+"""
+        text = self._generate([prompt, audio_file, f"Refined Script:\n{refined_script}"])
+        # We handle markdown codeblock parsing manually
+        text = text.replace("```json", "").replace("```", "").strip()
+        data = json.loads(text)
+
+        return [
+            AITimestampMondai(
+                mondai_number=m["mondai_number"],
+                title=m["title"],
+                start_time=float(m["start_time"]),
+                end_time=float(m["end_time"]),
+                questions=[AITimestampQuestion(**q) for q in m.get("questions", [])],
+            )
+            for m in data.get("mondai", [])
+        ]
 
 
 class AIExamService:
