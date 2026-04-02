@@ -20,6 +20,7 @@ export function TestAudioPlayer({ title, url, compact = false }: TestAudioPlayer
   const [progress, setProgress] = useState(0)
   const [duration, setDuration] = useState(0)
   const [volume, setVolume] = useState(0.9)
+  const [playbackRate, setPlaybackRate] = useState(1)
 
   useEffect(() => {
     setIsPlaying(false)
@@ -35,6 +36,11 @@ export function TestAudioPlayer({ title, url, compact = false }: TestAudioPlayer
     if (!audioRef.current) return
     audioRef.current.volume = volume
   }, [volume])
+
+  useEffect(() => {
+    if (!audioRef.current) return
+    audioRef.current.playbackRate = playbackRate
+  }, [playbackRate])
 
   const toggle = async () => {
     if (!audioRef.current || !url) return
@@ -132,6 +138,19 @@ export function TestAudioPlayer({ title, url, compact = false }: TestAudioPlayer
           >
             <FastForward className="h-4 w-4" />
           </button>
+          <div className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2 py-1.5 text-xs font-semibold text-slate-600 hover:border-blue-300 transition-colors">
+            <select
+              value={playbackRate}
+              onChange={(e) => setPlaybackRate(Number(e.target.value))}
+              className="bg-transparent outline-none cursor-pointer text-center hover:text-blue-600 transition-colors pl-1"
+            >
+              <option value={0.5}>0.5x</option>
+              <option value={0.75}>0.75x</option>
+              <option value={1}>1.0x</option>
+              <option value={1.25}>1.25x</option>
+              <option value={1.5}>1.5x</option>
+            </select>
+          </div>
           <div className="flex min-w-[132px] items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2">
             <Volume2 className="h-4 w-4 text-slate-500" />
             <input

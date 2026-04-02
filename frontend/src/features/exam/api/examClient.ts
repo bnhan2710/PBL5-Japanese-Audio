@@ -59,6 +59,7 @@ export interface QuestionPayload {
   question_text?: string;
   image_url?: string;
   explanation?: string;
+  difficulty?: number;
   answers?: AnswerPayload[];
 }
 
@@ -71,6 +72,7 @@ export interface QuestionResponse {
   question_text?: string;
   image_url?: string;
   explanation?: string;
+  difficulty?: number;
   answers: AnswerResponse[];
 }
 

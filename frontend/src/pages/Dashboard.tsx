@@ -1,6 +1,6 @@
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
-import { Users, BookOpen, BarChart2, Plus, FileText, Sparkles } from 'lucide-react'
+import { Users, BookOpen, BarChart2, Plus, FileText, Sparkles, History } from 'lucide-react'
 
 const ADMIN_SHORTCUTS = [
   {
@@ -45,6 +45,13 @@ const ADMIN_SHORTCUTS = [
     path: '/analytics',
     color: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400',
   },
+  {
+    title: 'Bài thi đã làm',
+    description: 'Xem kết quả và lịch sử làm bài thi của bạn',
+    icon: History,
+    path: '/history',
+    color: 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400',
+  },
 ]
 
 const USER_SHORTCUTS = [
@@ -82,6 +89,13 @@ const USER_SHORTCUTS = [
     icon: BarChart2,
     path: '/analytics',
     color: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400',
+  },
+  {
+    title: 'Bài thi đã làm',
+    description: 'Xem kết quả và lịch sử làm bài thi của bạn',
+    icon: History,
+    path: '/history',
+    color: 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400',
   },
 ]
 

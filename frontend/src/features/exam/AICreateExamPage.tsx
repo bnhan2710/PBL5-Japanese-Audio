@@ -72,7 +72,7 @@ function AudioTrimmer({ audioFile, initialStart, initialEnd, onSave, onCancel }:
   const [endText, setEndText] = useState(() => formatTime(initialEnd || (initialStart + 10)))
   const [objectUrl, setObjectUrl] = useState<string | null>(null)
   const audioRef = useRef<HTMLAudioElement>(null)
-  
+
   useEffect(() => {
     if (audioFile) {
       const url = URL.createObjectURL(audioFile)
@@ -98,7 +98,7 @@ function AudioTrimmer({ audioFile, initialStart, initialEnd, onSave, onCancel }:
     setStart(v => {
       const next = Math.max(0, v + offset)
       setStartText(formatTime(next))
-      if (audioRef.current) { audioRef.current.currentTime = next; audioRef.current.play().catch(()=>{}) }
+      if (audioRef.current) { audioRef.current.currentTime = next; audioRef.current.play().catch(() => { }) }
       return next
     })
   }
@@ -107,7 +107,7 @@ function AudioTrimmer({ audioFile, initialStart, initialEnd, onSave, onCancel }:
     setEnd(v => {
       const next = Math.max(0, v + offset)
       setEndText(formatTime(next))
-      if (audioRef.current) { audioRef.current.currentTime = next; audioRef.current.play().catch(()=>{}) }
+      if (audioRef.current) { audioRef.current.currentTime = next; audioRef.current.play().catch(() => { }) }
       return next
     })
   }
@@ -116,47 +116,47 @@ function AudioTrimmer({ audioFile, initialStart, initialEnd, onSave, onCancel }:
     const s = parseTime(startText, start)
     setStart(s)
     setStartText(formatTime(s))
-    if (audioRef.current) { audioRef.current.currentTime = s; audioRef.current.play().catch(()=>{}) }
+    if (audioRef.current) { audioRef.current.currentTime = s; audioRef.current.play().catch(() => { }) }
   }
 
   const applyEnd = () => {
     const e = parseTime(endText, end)
     setEnd(e)
     setEndText(formatTime(e))
-    if (audioRef.current) { audioRef.current.currentTime = e; audioRef.current.play().catch(()=>{}) }
+    if (audioRef.current) { audioRef.current.currentTime = e; audioRef.current.play().catch(() => { }) }
   }
 
   return (
     <div className="space-y-4 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
       {objectUrl && (
-         <audio ref={audioRef} src={objectUrl} controls className="w-full h-10 outline-none" />
+        <audio ref={audioRef} src={objectUrl} controls className="w-full h-10 outline-none" />
       )}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex-1 w-full">
-          <label className="text-xs font-bold text-slate-500 dark:text-slate-400 block mb-1.5 flex items-center gap-1"><Play className="w-3 h-3"/> Bắt đầu (mm:ss)</label>
+          <label className="text-xs font-bold text-slate-500 dark:text-slate-400 block mb-1.5 flex items-center gap-1"><Play className="w-3 h-3" /> Bắt đầu (mm:ss)</label>
           <div className="flex items-center gap-2">
-            <input 
-              type="text" 
-              value={startText} 
-              onChange={e => setStartText(e.target.value)} 
+            <input
+              type="text"
+              value={startText}
+              onChange={e => setStartText(e.target.value)}
               onBlur={applyStart}
               onKeyDown={e => e.key === 'Enter' && applyStart()}
-              className="w-20 px-3 py-1.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 outline-none focus:ring-1 focus:ring-blue-500 font-mono text-center" 
+              className="w-20 px-3 py-1.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 outline-none focus:ring-1 focus:ring-blue-500 font-mono text-center"
             />
             <button onClick={() => handleAdjustStart(-1)} className="px-2 py-1.5 text-xs font-medium bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-md text-slate-700 dark:text-slate-300 transition-colors">-1s</button>
             <button onClick={() => handleAdjustStart(+1)} className="px-2 py-1.5 text-xs font-medium bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-md text-slate-700 dark:text-slate-300 transition-colors">+1s</button>
           </div>
         </div>
         <div className="flex-1 w-full">
-          <label className="text-xs font-bold text-slate-500 dark:text-slate-400 block mb-1.5 flex items-center gap-1"><Pause className="w-3 h-3"/> Kết thúc (mm:ss)</label>
+          <label className="text-xs font-bold text-slate-500 dark:text-slate-400 block mb-1.5 flex items-center gap-1"><Pause className="w-3 h-3" /> Kết thúc (mm:ss)</label>
           <div className="flex items-center gap-2">
-            <input 
-              type="text" 
-              value={endText} 
-              onChange={e => setEndText(e.target.value)} 
+            <input
+              type="text"
+              value={endText}
+              onChange={e => setEndText(e.target.value)}
               onBlur={applyEnd}
               onKeyDown={e => e.key === 'Enter' && applyEnd()}
-              className="w-20 px-3 py-1.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 outline-none focus:ring-1 focus:ring-blue-500 font-mono text-center" 
+              className="w-20 px-3 py-1.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 outline-none focus:ring-1 focus:ring-blue-500 font-mono text-center"
             />
             <button onClick={() => handleAdjustEnd(-1)} className="px-2 py-1.5 text-xs font-medium bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-md text-slate-700 dark:text-slate-300 transition-colors">-1s</button>
             <button onClick={() => handleAdjustEnd(+1)} className="px-2 py-1.5 text-xs font-medium bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-md text-slate-700 dark:text-slate-300 transition-colors">+1s</button>
@@ -165,7 +165,7 @@ function AudioTrimmer({ audioFile, initialStart, initialEnd, onSave, onCancel }:
       </div>
       <div className="flex items-center gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
         <button onClick={() => onSave(start, end)} className="flex-1 px-3 py-2 flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl text-sm font-bold hover:from-emerald-600 hover:to-teal-600 transition-colors shadow-sm">
-          <Scissors className="w-4 h-4"/> Lưu & Trích xuất
+          <Scissors className="w-4 h-4" /> Lưu & Trích xuất
         </button>
         <button onClick={onCancel} className="px-4 py-2 bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 rounded-xl text-sm font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
           Hủy
@@ -527,7 +527,7 @@ function Step3Review({ editableQuestions, setEditableQuestions, audioFile }: Ste
   const handleAddQuestion = (group: string) => {
     const questionsInGroup = editableQuestions.filter(q => q.mondai_group === group)
     const nums = questionsInGroup.map(q => q.question_number).sort((a, b) => a - b)
-    
+
     let nextNum = 1
     if (nums.length > 0) {
       if (nums[0] > 1) {
@@ -623,247 +623,246 @@ function Step3Review({ editableQuestions, setEditableQuestions, audioFile }: Ste
   return (
     <div className="space-y-6 mt-4">
       <div className="flex flex-col md:flex-row gap-6">
-      {/* Left Sidebar: Question List */}
-      <div className="w-full md:w-[300px] shrink-0 border border-slate-200 dark:border-slate-700 rounded-2xl bg-white dark:bg-slate-800/20 overflow-hidden flex flex-col h-[700px] shadow-sm">
-        <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/80">
-          <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400">DANH SÁCH CÂU HỎI</h3>
-          <span className="text-[10px] font-bold bg-slate-200/60 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2.5 py-0.5 rounded-full">
-            {editableQuestions.length} câu
-          </span>
+        {/* Left Sidebar: Question List */}
+        <div className="w-full md:w-[300px] shrink-0 border border-slate-200 dark:border-slate-700 rounded-2xl bg-white dark:bg-slate-800/20 overflow-hidden flex flex-col h-[700px] shadow-sm">
+          <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/80">
+            <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400">DANH SÁCH CÂU HỎI</h3>
+            <span className="text-[10px] font-bold bg-slate-200/60 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2.5 py-0.5 rounded-full">
+              {editableQuestions.length} câu
+            </span>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-5 space-y-8">
+            {Object.entries(groupedQuestions).map(([group, qs]) => (
+              <div key={group}>
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">{group}</h4>
+                  <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">{qs.length} câu</span>
+                </div>
+                <div className="flex flex-wrap gap-2.5">
+                  {qs.map(({ q, idx }) => {
+                    const isActive = activeQIdx === idx
+                    const hasAnswer = q.answers.some(a => a.is_correct)
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => { setActiveQIdx(idx); setIsEditingAudio(false); }}
+                        className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-200
+                        ${isActive
+                            ? 'border-blue-500 bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400 shadow-sm'
+                            : hasAnswer
+                              ? 'border-emerald-500 text-emerald-600 bg-white dark:bg-slate-800 dark:border-emerald-600 dark:text-emerald-400 hover:bg-emerald-50'
+                              : 'border-slate-200 text-slate-600 bg-white hover:border-slate-300 dark:border-slate-700 dark:text-slate-300 dark:bg-slate-800'
+                          }
+                      `}
+                      >
+                        {q.question_number}
+                      </button>
+                    )
+                  })}
+                  <button
+                    onClick={() => handleAddQuestion(group)}
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 border-dashed border-slate-300 dark:border-slate-600 text-slate-400 hover:border-blue-500 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors"
+                    title="Thêm câu hỏi mới"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-8">
-          {Object.entries(groupedQuestions).map(([group, qs]) => (
-            <div key={group}>
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">{group}</h4>
-                <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">{qs.length} câu</span>
-              </div>
-              <div className="flex flex-wrap gap-2.5">
-                {qs.map(({ q, idx }) => {
-                  const isActive = activeQIdx === idx
-                  const hasAnswer = q.answers.some(a => a.is_correct)
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => { setActiveQIdx(idx); setIsEditingAudio(false); }}
-                      className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-200
-                        ${isActive
-                          ? 'border-blue-500 bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400 shadow-sm'
-                          : hasAnswer
-                            ? 'border-emerald-500 text-emerald-600 bg-white dark:bg-slate-800 dark:border-emerald-600 dark:text-emerald-400 hover:bg-emerald-50'
-                            : 'border-slate-200 text-slate-600 bg-white hover:border-slate-300 dark:border-slate-700 dark:text-slate-300 dark:bg-slate-800'
-                        }
-                      `}
-                    >
-                      {q.question_number}
-                    </button>
-                  )
-                })}
+        {/* Right Content: Detail View */}
+        <div className="flex-1 flex flex-col h-[700px]">
+          {activeQ ? (
+            <div className="flex-1 flex flex-col bg-white dark:bg-slate-800 shadow-sm rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+              {/* Header */}
+              <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex flex-col gap-3 sm:flex-row sm:items-center justify-between bg-slate-50/30 dark:bg-slate-800/50">
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Hiệu đính chi tiết</h2>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    <span className="text-xs font-semibold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 pl-2.5 pr-1 py-1 rounded-md flex items-center gap-1.5 border border-slate-200 dark:border-slate-600">
+                      {activeQ.mondai_group}
+                      <span className="text-slate-300 dark:text-slate-500 mx-0.5">-</span>
+                      Câu
+                      <div className="flex items-center gap-0.5">
+                        <button onClick={() => updateQuestion(activeQIdx, { question_number: Math.max(1, activeQ.question_number - 1) })} className="w-5 h-5 flex items-center justify-center bg-slate-200 dark:bg-slate-600 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-300 font-bold select-none leading-none">-</button>
+                        <span className="w-6 text-center">{activeQ.question_number}</span>
+                        <button onClick={() => updateQuestion(activeQIdx, { question_number: activeQ.question_number + 1 })} className="w-5 h-5 flex items-center justify-center bg-slate-200 dark:bg-slate-600 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-300 font-bold select-none leading-none">+</button>
+                      </div>
+                    </span>
+                    {(activeQ.source_start_time !== undefined && activeQ.source_end_time !== undefined) && (
+                      <span className="text-xs font-semibold bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-300 px-2.5 py-1 rounded-md">
+                        {formatSeconds(activeQ.source_start_time)} → {formatSeconds(activeQ.source_end_time)}
+                      </span>
+                    )}
+                  </div>
+                </div>
                 <button
-                  onClick={() => handleAddQuestion(group)}
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 border-dashed border-slate-300 dark:border-slate-600 text-slate-400 hover:border-blue-500 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors"
-                  title="Thêm câu hỏi mới"
+                  onClick={() => handleDeleteQuestion(activeQIdx)}
+                  className="w-8 h-8 flex items-center justify-center shrink-0 rounded-lg text-red-500 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                  title="Xóa câu hỏi này"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Trash2 className="w-4 h-4" />
                 </button>
               </div>
-            </div>
-          ))}
-        </div>
-      </div>
 
-      {/* Right Content: Detail View */}
-      <div className="flex-1 flex flex-col h-[700px]">
-        {activeQ ? (
-          <div className="flex-1 flex flex-col bg-white dark:bg-slate-800 shadow-sm rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-            {/* Header */}
-            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex flex-col gap-3 sm:flex-row sm:items-center justify-between bg-slate-50/30 dark:bg-slate-800/50">
-              <div className="flex items-center gap-3">
-                <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Hiệu đính chi tiết</h2>
-                <div className="flex flex-wrap gap-2 items-center">
-                  <span className="text-xs font-semibold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 pl-2.5 pr-1 py-1 rounded-md flex items-center gap-1.5 border border-slate-200 dark:border-slate-600">
-                    {activeQ.mondai_group}
-                    <span className="text-slate-300 dark:text-slate-500 mx-0.5">-</span>
-                    Câu
-                    <div className="flex items-center gap-0.5">
-                      <button onClick={() => updateQuestion(activeQIdx, { question_number: Math.max(1, activeQ.question_number - 1) })} className="w-5 h-5 flex items-center justify-center bg-slate-200 dark:bg-slate-600 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-300 font-bold select-none leading-none">-</button>
-                      <span className="w-6 text-center">{activeQ.question_number}</span>
-                      <button onClick={() => updateQuestion(activeQIdx, { question_number: activeQ.question_number + 1 })} className="w-5 h-5 flex items-center justify-center bg-slate-200 dark:bg-slate-600 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-300 font-bold select-none leading-none">+</button>
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {/* Audio */}
+                <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Headphones className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                    <span className="text-sm font-bold text-slate-700 dark:text-slate-300">File âm thanh</span>
+                  </div>
+                  {isEditingAudio ? (
+                    <AudioTrimmer
+                      audioFile={audioFile}
+                      initialStart={activeQ.source_start_time || 0}
+                      initialEnd={activeQ.source_end_time || 0}
+                      onSave={(s, e) => handleSaveAudioTrim(activeQIdx, s, e)}
+                      onCancel={() => setIsEditingAudio(false)}
+                    />
+                  ) : activeQ.audio_url ? (
+                    <div className="flex items-center justify-between gap-4">
+                      <audio controls src={activeQ.audio_url} className="w-full h-10 outline-none" />
+                      <button onClick={() => setIsEditingAudio(true)} className="text-xs px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium shrink-0 flex items-center gap-1.5 transition-colors">
+                        <Scissors className="w-3.5 h-3.5" /> Chỉnh sửa
+                      </button>
                     </div>
-                  </span>
-                  {(activeQ.source_start_time !== undefined && activeQ.source_end_time !== undefined) && (
-                    <span className="text-xs font-semibold bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-300 px-2.5 py-1 rounded-md">
-                      {formatSeconds(activeQ.source_start_time)} → {formatSeconds(activeQ.source_end_time)}
-                    </span>
+                  ) : (
+                    <p className="text-sm text-slate-400">Chưa có audio</p>
                   )}
                 </div>
-              </div>
-              <button 
-                onClick={() => handleDeleteQuestion(activeQIdx)}
-                className="w-8 h-8 flex items-center justify-center shrink-0 rounded-lg text-red-500 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
-                title="Xóa câu hỏi này"
-              >
-                <Trash2 className="w-4 h-4"/>
-              </button>
-            </div>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              {/* Audio */}
-              <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 rounded-xl p-5">
-                <div className="flex items-center gap-2 mb-3">
-                  <Headphones className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-                  <span className="text-sm font-bold text-slate-700 dark:text-slate-300">File âm thanh</span>
-                </div>
-                {isEditingAudio ? (
-                  <AudioTrimmer 
-                    audioFile={audioFile}
-                    initialStart={activeQ.source_start_time || 0}
-                    initialEnd={activeQ.source_end_time || 0}
-                    onSave={(s, e) => handleSaveAudioTrim(activeQIdx, s, e)}
-                    onCancel={() => setIsEditingAudio(false)}
+                {/* Introduction */}
+                <div>
+                  <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">
+                    Ngữ cảnh mở đầu (Introduction)
+                  </label>
+                  <textarea
+                    value={activeQ.introduction || ''}
+                    onChange={e => updateQuestion(activeQIdx, { introduction: e.target.value })}
+                    rows={4}
+                    placeholder="Gõ phần mô tả bối cảnh..."
+                    className="w-full min-h-[112px] px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
                   />
-                ) : activeQ.audio_url ? (
-                  <div className="flex items-center justify-between gap-4">
-                    <audio controls src={activeQ.audio_url} className="w-full h-10 outline-none" />
-                    <button onClick={() => setIsEditingAudio(true)} className="text-xs px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium shrink-0 flex items-center gap-1.5 transition-colors">
-                      <Scissors className="w-3.5 h-3.5" /> Chỉnh sửa
-                    </button>
-                  </div>
-                ) : (
-                  <p className="text-sm text-slate-400">Chưa có audio</p>
-                )}
-              </div>
-
-              {/* Introduction */}
-              <div>
-                <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">
-                  Ngữ cảnh mở đầu (Introduction)
-                </label>
-                <textarea
-                  value={activeQ.introduction || ''}
-                  onChange={e => updateQuestion(activeQIdx, { introduction: e.target.value })}
-                  rows={4}
-                  placeholder="Gõ phần mô tả bối cảnh..."
-                  className="w-full min-h-[112px] px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
-                />
-              </div>
-
-              {/* Script */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                    Kịch bản hội thoại (Script)
-                  </label>
-
                 </div>
-                <textarea
-                  value={activeQ.script_text}
-                  onChange={e => updateQuestion(activeQIdx, { script_text: e.target.value })}
-                  rows={6}
-                  placeholder="Gõ nội dung script..."
-                  className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-slate-50 dark:bg-slate-900/60 text-slate-800 dark:text-slate-200 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 font-medium leading-relaxed"
-                />
-              </div>
 
-              {/* Question Text */}
-              <div>
-                <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">
-                  Nội dung câu hỏi (Question)
-                </label>
-                <textarea
-                  value={activeQ.question_text}
-                  onChange={e => updateQuestion(activeQIdx, { question_text: e.target.value })}
-                  rows={2}
-                  placeholder="Gõ nội dung câu hỏi..."
-                  className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
-                />
-              </div>
+                {/* Script */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                      Kịch bản hội thoại (Script)
+                    </label>
 
-              {/* Choices */}
-              <div>
-                <div className="flex items-center justify-between gap-3 mb-3">
-                  <label className="block text-sm font-bold text-slate-800 dark:text-slate-200">
-                    Đáp án lựa chọn (Choices)
+                  </div>
+                  <textarea
+                    value={activeQ.script_text}
+                    onChange={e => updateQuestion(activeQIdx, { script_text: e.target.value })}
+                    rows={6}
+                    placeholder="Gõ nội dung script..."
+                    className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-slate-50 dark:bg-slate-900/60 text-slate-800 dark:text-slate-200 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 font-medium leading-relaxed"
+                  />
+                </div>
+
+                {/* Question Text */}
+                <div>
+                  <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">
+                    Nội dung câu hỏi (Question)
                   </label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Số đáp án</span>
-                    {[3, 4].map((count) => {
-                      const isActive = activeQ.answers.length === count
-                      return (
+                  <textarea
+                    value={activeQ.question_text}
+                    onChange={e => updateQuestion(activeQIdx, { question_text: e.target.value })}
+                    rows={2}
+                    placeholder="Gõ nội dung câu hỏi..."
+                    className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  />
+                </div>
+
+                {/* Choices */}
+                <div>
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <label className="block text-sm font-bold text-slate-800 dark:text-slate-200">
+                      Đáp án lựa chọn (Choices)
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Số đáp án</span>
+                      {[3, 4].map((count) => {
+                        const isActive = activeQ.answers.length === count
+                        return (
+                          <button
+                            key={count}
+                            type="button"
+                            onClick={() => updateAnswerCount(activeQIdx, count as 3 | 4)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${isActive
+                                ? 'border-blue-500 bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300'
+                                : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                              }`}
+                          >
+                            {count} đáp án
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    {activeQ.answers.map((a, ai) => (
+                      <div key={ai} className="flex items-center gap-4 group/answer">
                         <button
-                          key={count}
-                          type="button"
-                          onClick={() => updateAnswerCount(activeQIdx, count as 3 | 4)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
-                            isActive
-                              ? 'border-blue-500 bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300'
-                              : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
-                          }`}
+                          onClick={() => updateAnswer(activeQIdx, ai, { is_correct: true })}
+                          className="flex flex-col items-center justify-center w-12 shrink-0 transition-opacity opacity-70 hover:opacity-100"
                         >
-                          {count} đáp án
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${a.is_correct ? 'border-emerald-500 bg-emerald-500' : 'border-slate-300 dark:border-slate-600'
+                            }`}>
+                            {a.is_correct && <span className="w-2.5 h-2.5 rounded-full bg-white" />}
+                          </div>
+                          {a.is_correct ? (
+                            <span className="text-[10px] font-bold text-emerald-600 mt-1">Đúng</span>
+                          ) : (
+                            <span className="text-[10px] font-medium text-slate-400 mt-1 opacity-0 group-hover/answer:opacity-100 transition-opacity">Chọn</span>
+                          )}
                         </button>
-                      )
-                    })}
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  {activeQ.answers.map((a, ai) => (
-                    <div key={ai} className="flex items-center gap-4 group/answer">
-                      <button
-                        onClick={() => updateAnswer(activeQIdx, ai, { is_correct: true })}
-                        className="flex flex-col items-center justify-center w-12 shrink-0 transition-opacity opacity-70 hover:opacity-100"
-                      >
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${a.is_correct ? 'border-emerald-500 bg-emerald-500' : 'border-slate-300 dark:border-slate-600'
+                        <div className={`flex-1 border rounded-xl px-4 py-3 transition-colors ${a.is_correct ? 'border-emerald-400 bg-emerald-50/50 dark:border-emerald-500/50 dark:bg-emerald-900/10' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300'
                           }`}>
-                          {a.is_correct && <span className="w-2.5 h-2.5 rounded-full bg-white" />}
-                        </div>
-                        {a.is_correct ? (
-                          <span className="text-[10px] font-bold text-emerald-600 mt-1">Đúng</span>
-                        ) : (
-                          <span className="text-[10px] font-medium text-slate-400 mt-1 opacity-0 group-hover/answer:opacity-100 transition-opacity">Chọn</span>
-                        )}
-                      </button>
-                      <div className={`flex-1 border rounded-xl px-4 py-3 transition-colors ${a.is_correct ? 'border-emerald-400 bg-emerald-50/50 dark:border-emerald-500/50 dark:bg-emerald-900/10' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300'
-                        }`}>
-                        <div className="flex items-center gap-3">
-                          <span className={`text-sm font-bold ${a.is_correct ? 'text-emerald-500' : 'text-slate-400'}`}>{ai + 1}.</span>
-                          <input
-                            value={a.content}
-                            onChange={e => updateAnswer(activeQIdx, ai, { content: e.target.value })}
-                            className="w-full text-sm bg-transparent border-0 outline-none text-slate-700 dark:text-slate-200 font-medium"
-                            placeholder="Nhập nội dung đáp án..."
-                          />
+                          <div className="flex items-center gap-3">
+                            <span className={`text-sm font-bold ${a.is_correct ? 'text-emerald-500' : 'text-slate-400'}`}>{ai + 1}.</span>
+                            <input
+                              value={a.content}
+                              onChange={e => updateAnswer(activeQIdx, ai, { content: e.target.value })}
+                              className="w-full text-sm bg-transparent border-0 outline-none text-slate-700 dark:text-slate-200 font-medium"
+                              placeholder="Nhập nội dung đáp án..."
+                            />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              {/* Image Upload Placeholder */}
-              <div>
-                <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">
-                  Hình ảnh minh họa (Tùy chọn)
-                </label>
-                <div className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-8 flex flex-col items-center justify-center bg-slate-50/50 dark:bg-slate-900/30 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer group">
-                  <ImageIcon className="w-8 h-8 text-slate-400 group-hover:text-blue-500 mb-2 transition-colors" />
-                  <p className="text-sm text-slate-500 text-center">
-                    <span className="text-blue-500 font-semibold">Thêm ảnh</span> hoặc kéo thả
-                  </p>
+                {/* Image Upload Placeholder */}
+                <div>
+                  <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">
+                    Hình ảnh minh họa (Tùy chọn)
+                  </label>
+                  <div className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-8 flex flex-col items-center justify-center bg-slate-50/50 dark:bg-slate-900/30 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer group">
+                    <ImageIcon className="w-8 h-8 text-slate-400 group-hover:text-blue-500 mb-2 transition-colors" />
+                    <p className="text-sm text-slate-500 text-center">
+                      <span className="text-blue-500 font-semibold">Thêm ảnh</span> hoặc kéo thả
+                    </p>
+                  </div>
                 </div>
-              </div>
 
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
-            <Brain className="w-12 h-12 text-slate-300 dark:text-slate-600 mb-4" />
-            <p className="text-slate-500 font-medium">Chọn một câu hỏi ở danh sách bên trái để hiệu đính</p>
-          </div>
-        )}
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
+              <Brain className="w-12 h-12 text-slate-300 dark:text-slate-600 mb-4" />
+              <p className="text-slate-500 font-medium">Chọn một câu hỏi ở danh sách bên trái để hiệu đính</p>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
     </div>
   )
 }
@@ -888,7 +887,7 @@ function Step4Save({ questions, level, title, draftId, onBack }: Step4Props) {
     setSaving(true)
     try {
       if (draftId) {
-        await examClient.deleteExam(draftId).catch(() => {})
+        await examClient.deleteExam(draftId).catch(() => { })
       }
       // Create exam draft
       const exam = await examClient.createExam({
@@ -959,7 +958,7 @@ function Step4Save({ questions, level, title, draftId, onBack }: Step4Props) {
               </div>
             </div>
           </div>
-          
+
           <div className="flex flex-col sm:flex-row items-center gap-3">
             <button onClick={onBack}
               className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors">
@@ -1122,7 +1121,7 @@ export default function AICreateExamPage() {
   // Step 3 state
   const [editableQuestions, setEditableQuestions] = useState<AIQuestion[]>([])
   const [aiResult, setAiResult] = useState<AIExamResult | null>(null)
-  
+
   const [draftId, setDraftId] = useState<string>('')
   const [savingDraft, setSavingDraft] = useState(false)
 
@@ -1156,7 +1155,7 @@ export default function AICreateExamPage() {
   const handleSaveDraft = async () => {
     setSavingDraft(true)
     try {
-      if (draftId) await examClient.deleteExam(draftId).catch(() => {})
+      if (draftId) await examClient.deleteExam(draftId).catch(() => { })
       const exam = await examClient.createExam({
         title: `[Nháp] [${level}] ${title}`,
         time_limit: 60,

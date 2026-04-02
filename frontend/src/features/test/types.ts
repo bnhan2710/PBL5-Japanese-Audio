@@ -12,6 +12,7 @@ export interface TestQuestion {
   audio_clip_url?: string | null
   question_text?: string | null
   image_url?: string | null
+  difficulty?: number | null
   answers: TestAnswerOption[]
 }
 

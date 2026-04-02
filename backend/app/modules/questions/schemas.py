@@ -61,6 +61,7 @@ class QuestionBase(BaseModel):
     question_text: Optional[str] = Field(None, description="Question text")
     image_url: Optional[str] = Field(None, description="Image URL for image-type questions")
     explanation: Optional[str] = Field(None, description="Explanation for the correct answer")
+    difficulty: Optional[int] = Field(None, description="IRT difficulty (1-5 stars)")
 
 
 class QuestionCreate(QuestionBase):
@@ -76,6 +77,7 @@ class QuestionUpdate(BaseModel):
     question_text: Optional[str] = None
     image_url: Optional[str] = None
     explanation: Optional[str] = None
+    difficulty: Optional[int] = None
 
 
 class QuestionResponse(QuestionBase):

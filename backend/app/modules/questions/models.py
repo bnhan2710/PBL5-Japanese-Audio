@@ -17,6 +17,7 @@ class Question(Base):
     question_text = Column(Text, nullable=True)
     image_url = Column(Text, nullable=True)             # Image-based question
     explanation = Column(Text, nullable=True)           # Answer explanation
+    difficulty = Column(Integer, default=None, nullable=True) # IRT difficulty (1-5 stars)
 
     # Relationships
     exam = relationship("Exam", back_populates="questions")

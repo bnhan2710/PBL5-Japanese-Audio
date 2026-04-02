@@ -16,6 +16,7 @@ class UserResultResponse(BaseModel):
     result_id: UUID
     user_id: Optional[int] = None
     exam_id: Optional[UUID] = None
+    exam_title: Optional[str] = None
     score: Optional[float] = None
     total_questions: Optional[int] = None
     correct_answers: Optional[int] = None

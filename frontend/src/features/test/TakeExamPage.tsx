@@ -142,7 +142,7 @@ export default function TakeExamPage() {
       setResult(submitResult)
       toast({
         title: autoSubmit ? 'Hết giờ, bài thi đã được nộp' : 'Nộp bài thành công',
-        description: `Bạn đúng ${submitResult.correct_answers}/${submitResult.total_questions} câu.`,
+        description: `Điểm IRT: ${submitResult.score}/60. Bạn đúng ${submitResult.correct_answers}/${submitResult.total_questions} câu.`,
       })
     } catch (submitError: any) {
       toast({
@@ -419,19 +419,32 @@ export default function TakeExamPage() {
             </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                <p className="text-sm text-slate-500">Điểm</p>
-                <p className="mt-1 text-3xl font-black text-slate-900">{result.score}%</p>
+              <div className={`rounded-2xl border px-4 py-4 ${
+                result.score <= 19 ? 'border-rose-200 bg-rose-50 text-rose-900' : 'border-emerald-200 bg-emerald-50 text-emerald-900'
+              }`}>
+                <p className="text-sm opacity-80 font-medium">Điểm (IRT)</p>
+                <div className="flex items-baseline gap-2 mt-1">
+                  <p className="text-3xl font-black">{result.score.toFixed(2)}</p>
+                  <p className="text-sm font-bold opacity-75">/ 60</p>
+                </div>
+                <span className={`inline-block mt-2 px-2 py-0.5 text-[10px] font-bold uppercase rounded-full ${
+                  result.score <= 19 ? 'bg-rose-200/50 text-rose-700' : 'bg-emerald-200/50 text-emerald-700'
+                }`}>
+                  {result.score <= 19 ? 'Rớt' : 'Đậu'}
+                </span>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                <p className="text-sm text-slate-500">Đúng</p>
-                <p className="mt-1 text-3xl font-black text-slate-900">
-                  {result.correct_answers}/{result.total_questions}
-                </p>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-slate-900">
+                <p className="text-sm text-slate-500 font-medium">Đúng</p>
+                <div className="flex items-baseline gap-2 mt-1">
+                  <p className="text-3xl font-black">
+                    {result.correct_answers}
+                  </p>
+                  <p className="text-sm font-bold text-slate-400">/ {result.total_questions}</p>
+                </div>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                <p className="text-sm text-slate-500">Đã trả lời</p>
-                <p className="mt-1 text-3xl font-black text-slate-900">{result.answered_questions}</p>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-slate-900">
+                <p className="text-sm text-slate-500 font-medium">Đã trả lời</p>
+                <p className="mt-1 text-3xl font-black">{result.answered_questions}</p>
               </div>
             </div>
 

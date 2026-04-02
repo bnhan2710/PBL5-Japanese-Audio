@@ -21,6 +21,7 @@ class TestQuestionResponse(BaseModel):
     audio_clip_url: Optional[str] = None
     question_text: Optional[str] = None
     image_url: Optional[str] = None
+    difficulty: Optional[int] = Field(None, description="IRT difficulty (1-5 stars)")
     answers: List[TestAnswerOptionResponse]
 
     model_config = ConfigDict(from_attributes=True)

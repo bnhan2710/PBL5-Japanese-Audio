@@ -18,6 +18,7 @@ const AICreateExamPage = lazy(() => import('../features/exam/AICreateExamPage'))
 const ExamListPage = lazy(() => import('../features/exam/ExamListPage'))
 const TestExamDetailPage = lazy(() => import('../features/test/TestExamDetailPage'))
 const TakeExamPage = lazy(() => import('../features/test/TakeExamPage'))
+const ExamHistoryPage = lazy(() => import('../features/exam/ExamHistoryPage').then(m => ({ default: m.ExamHistoryPage })))
 
 // Error boundary component
 function ErrorBoundary() {
@@ -95,6 +96,10 @@ const routes = {
     {
       path: 'test/exams/:examId/take',
       element: <TakeExamPage />,
+    },
+    {
+      path: 'history',
+      element: <ExamHistoryPage />,
     },
   ],
 }
