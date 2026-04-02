@@ -51,12 +51,19 @@ class Settings(BaseSettings):
     # Google AI Settings
     GOOGLE_API_KEY: Optional[str] = None
 
+    # OpenAI Settings
+    OPENAI_API_KEY: Optional[str] = None
+
     # Google OAuth Settings
     GOOGLE_CLIENT_ID: Optional[str] = None
     GOOGLE_CLIENT_SECRET: Optional[str] = None
 
     # n8n Automation Settings
     N8N_WEBHOOK_URL: Optional[str] = os.getenv("N8N_WEBHOOK_URL")
+
+    # FFmpeg Settings
+    FFMPEG_PATH: Optional[str] = None
+    FFPROBE_PATH: Optional[str] = None
 
     class Config:
         env_file = ".env"
