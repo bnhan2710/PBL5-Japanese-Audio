@@ -29,6 +29,29 @@
   --chart-5: #8250df;
 }
 
+.light {
+  --background: #f6f8fa;
+  --foreground: #24292f;
+  --card: #fff;
+  --card-foreground: #24292f;
+  --popover: #fff;
+  --popover-foreground: #24292f;
+  --primary: #0969da;
+  --primary-foreground: #fff;
+  --secondary: #f5f5f5;
+  --secondary-foreground: #24292f;
+  --muted: #eaeaea;
+  --muted-foreground: #57606a;
+  --accent: #2da44e;
+  --accent-foreground: #fff;
+  --destructive: #d1242f;
+  --destructive-foreground: #fff;
+  --border: #d0d7de;
+  --input: #d0d7de;
+  --ring: #0969da;
+  color-scheme: light;
+}
+
 .dark {
   --background: #0d1117;
   --foreground: #c9d1d9;
