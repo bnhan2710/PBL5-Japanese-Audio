@@ -412,9 +412,7 @@ class ReazonTranscriber:
         if self._model is None:
             self._load_model()
 
-        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-            tmp.write(audio_bytes)
-            tmp_path = tmp.name
+        audio = AudioSegment.from_file(BytesIO(audio_bytes), format="mp3")
 
         try:
             audio = AudioSegment.from_file(tmp_path)

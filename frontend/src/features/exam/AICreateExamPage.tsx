@@ -9,6 +9,7 @@ import {
 import { aiExamClient, AIJobStatus, AIQuestion, AIExamResult, AIQuestionOption } from './api/examClient'
 import { examClient } from './api/examClient'
 import { toast } from '@/hooks/use-toast'
+import { AIImageGenerateButton } from '../ai-image/components/AIImageGenerateButton'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -498,9 +499,10 @@ interface Step3Props {
   editableQuestions: AIQuestion[]
   setEditableQuestions: (qs: AIQuestion[]) => void
   audioFile: File | null
+  level: Level
 }
 
-function Step3Review({ editableQuestions, setEditableQuestions, audioFile }: Step3Props) {
+function Step3Review({ editableQuestions, setEditableQuestions, audioFile, level }: Step3Props) {
   const [activeQIdx, setActiveQIdx] = useState<number>(0)
   const [isEditingAudio, setIsEditingAudio] = useState(false)
 
@@ -796,8 +798,8 @@ function Step3Review({ editableQuestions, setEditableQuestions, audioFile }: Ste
                             type="button"
                             onClick={() => updateAnswerCount(activeQIdx, count as 3 | 4)}
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${isActive
-                                ? 'border-blue-500 bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300'
-                                : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                              ? 'border-blue-500 bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300'
+                              : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
                               }`}
                           >
                             {count} đáp án
@@ -842,15 +844,57 @@ function Step3Review({ editableQuestions, setEditableQuestions, audioFile }: Ste
 
                 {/* Image Upload Placeholder */}
                 <div>
-                  <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">
-                    Hình ảnh minh họa (Tùy chọn)
+                  <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-blue-500" /> Hình ảnh minh họa (Tùy chọn)
                   </label>
-                  <div className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-8 flex flex-col items-center justify-center bg-slate-50/50 dark:bg-slate-900/30 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer group">
-                    <ImageIcon className="w-8 h-8 text-slate-400 group-hover:text-blue-500 mb-2 transition-colors" />
-                    <p className="text-sm text-slate-500 text-center">
-                      <span className="text-blue-500 font-semibold">Thêm ảnh</span> hoặc kéo thả
-                    </p>
-                  </div>
+                  {activeQ.image_url ? (
+                    <div className="border-2 border-slate-200 dark:border-slate-700 rounded-xl p-5 bg-white dark:bg-slate-900/40">
+                      <div className="flex flex-col items-start gap-4">
+                        <img 
+                          src={activeQ.image_url instanceof File ? URL.createObjectURL(activeQ.image_url) : activeQ.image_url} 
+                          alt="preview" 
+                          className="max-h-32 rounded-lg border border-slate-200 shadow-sm" 
+                        />
+                        <button onClick={() => updateQuestion(activeQIdx, { image_url: null })} className="text-xs text-red-500 hover:underline font-medium">
+                           Gỡ hình ảnh
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-5 flex flex-col items-center justify-center bg-slate-50/50 dark:bg-slate-900/30 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group">
+                      <label className="flex flex-col items-center cursor-pointer w-full pb-4">
+                        <ImageIcon className="w-8 h-8 text-slate-400 group-hover:text-blue-500 mb-2 transition-colors" />
+                        <p className="text-sm text-slate-500 text-center">
+                          <span className="text-blue-500 font-semibold">Tải lên ảnh thủ công</span>
+                        </p>
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          className="hidden" 
+                          onChange={(e) => {
+                            if (e.target.files?.[0]) {
+                              updateQuestion(activeQIdx, { image_url: e.target.files[0] });
+                              e.target.value = '';
+                            }
+                          }}
+                        />
+                      </label>
+                      <div className="w-full relative flex items-center justify-center py-2">
+                        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200 dark:border-slate-700"></div></div>
+                        <span className="relative bg-slate-50 dark:bg-slate-900/30 px-3 text-xs text-slate-400 font-medium">HOẶC</span>
+                      </div>
+                      <AIImageGenerateButton 
+                        payload={{
+                          question_id: `ai_q_${activeQIdx}`,
+                          script_text: activeQ.script_text || '',
+                          question_text: activeQ.question_text || '',
+                          jlpt_level: level,
+                        }}
+                        onSuccess={(url) => updateQuestion(activeQIdx, { image_url: url })}
+                        buttonText="Sinh ảnh bằng AI"
+                      />
+                    </div>
+                  )}
                 </div>
 
               </div>
@@ -897,12 +941,18 @@ function Step4Save({ questions, level, title, draftId, onBack }: Step4Props) {
 
       // Create each question + answers
       for (const q of questions) {
+        let finalImageUrl = q.image_url;
+        if (finalImageUrl instanceof File) {
+          finalImageUrl = await examClient.uploadImage(finalImageUrl);
+        }
+
         await examClient.createQuestion({
           exam_id: exam.exam_id,
           mondai_group: q.mondai_group,
           question_number: q.question_number,
           question_text: q.question_text,
           audio_clip_url: q.audio_url,
+          image_url: typeof finalImageUrl === 'string' ? finalImageUrl : undefined,
           explanation: composeExplanation(q),
           answers: q.answers.map((a, i) => ({
             question_id: '',
@@ -1161,12 +1211,18 @@ export default function AICreateExamPage() {
         time_limit: 60,
       })
       for (const q of editableQuestions) {
+        let finalImageUrl = q.image_url;
+        if (finalImageUrl instanceof File) {
+          finalImageUrl = await examClient.uploadImage(finalImageUrl);
+        }
+
         await examClient.createQuestion({
           exam_id: exam.exam_id,
           mondai_group: q.mondai_group,
           question_number: q.question_number,
           question_text: q.question_text,
           audio_clip_url: q.audio_url,
+          image_url: typeof finalImageUrl === 'string' ? finalImageUrl : undefined,
           explanation: composeExplanation(q),
           answers: q.answers.map((a, i) => ({
             question_id: '',
@@ -1272,6 +1328,7 @@ export default function AICreateExamPage() {
               editableQuestions={editableQuestions}
               setEditableQuestions={setEditableQuestions}
               audioFile={audioFile}
+              level={level}
             />
           )
         )}
