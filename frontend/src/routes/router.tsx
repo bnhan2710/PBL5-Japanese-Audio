@@ -16,6 +16,7 @@ const ResetPasswordPage = lazy(() => import('../pages/ResetPasswordPage'))
 const CreateExamPage = lazy(() => import('../features/exam/CreateExamPage'))
 const AICreateExamPage = lazy(() => import('../features/exam/AICreateExamPage'))
 const ExamListPage = lazy(() => import('../features/exam/ExamListPage'))
+const ExamPrintPage = lazy(() => import('../features/exam/ExamPrintPage'))
 const TestExamDetailPage = lazy(() => import('../features/test/TestExamDetailPage'))
 const TakeExamPage = lazy(() => import('../features/test/TakeExamPage'))
 const ExamHistoryPage = lazy(() => import('../features/exam/ExamHistoryPage').then(m => ({ default: m.ExamHistoryPage })))
@@ -117,6 +118,11 @@ const withGuestOnly = (element: React.ReactNode) => (
 )
 
 export const router = createBrowserRouter([
+  {
+    path: '/exam/:examId/pdf',
+    element: withProtection(<ExamPrintPage />),
+    errorElement: <ErrorBoundary />,
+  },
   {
     path: '/',
     element: <RootLayout />,

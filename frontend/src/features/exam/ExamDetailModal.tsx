@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   X, Headphones, Clock, Layers, Loader2,
   Trash2, Save, Brain, AlertCircle, Play, Pause,
-  Edit3, FileText, ChevronLeft, ExternalLink, Plus, Star, Scissors
+  Edit3, FileText, ChevronLeft, ExternalLink, Plus, Star, Scissors, Download
 } from 'lucide-react'
 import { examClient, ExamResponse, QuestionResponse, AnswerResponse } from './api/examClient'
 import { toast } from '@/hooks/use-toast'
@@ -257,6 +257,10 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
   const [deletingQ, setDeletingQ] = useState<string | null>(null)
   const [confirmDeleteQ, setConfirmDeleteQ] = useState<string | null>(null)
   const [isEditingAudio, setIsEditingAudio] = useState<string | null>(null)
+
+  const handleOpenPdfExport = () => {
+    window.open(`/exam/${exam.exam_id}/pdf?autoprint=1`, '_blank', 'noopener,noreferrer')
+  }
 
   useEffect(() => {
     examClient.getExamQuestions(exam.exam_id)
@@ -537,6 +541,13 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleOpenPdfExport}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-stone-700 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800 rounded-lg transition-colors"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Tải PDF
+            </button>
             <button
               onClick={() => {
                 onClose()
