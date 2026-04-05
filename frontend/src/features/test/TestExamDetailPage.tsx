@@ -27,6 +27,7 @@ export default function TestExamDetailPage() {
   const [exam, setExam] = useState<TestExamDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [audioMode, setAudioMode] = useState<'practice' | 'simulation'>('practice')
 
   useEffect(() => {
     if (!examId) {
@@ -95,12 +96,46 @@ export default function TestExamDetailPage() {
             <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">
               {exam.description || 'Đề thi nghe gồm nhiều mondai, được trình bày theo cấu trúc JLPT để người dùng luyện tập trực tiếp trên giao diện web.'}
             </p>
+            <div className="mt-6 max-w-2xl">
+              <p className="mb-3 text-sm font-semibold text-slate-700">Chế độ nghe</p>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setAudioMode('simulation')}
+                  className={[
+                    'rounded-2xl border px-4 py-3 text-left transition-colors',
+                    audioMode === 'simulation'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300',
+                  ].join(' ')}
+                >
+                  <p className="text-sm font-bold">Nghe mô phỏng thi</p>
+                  <p className="mt-1 text-xs opacity-80">Không có nút điều khiển âm thanh khi thi.</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAudioMode('practice')}
+                  className={[
+                    'rounded-2xl border px-4 py-3 text-left transition-colors',
+                    audioMode === 'practice'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300',
+                  ].join(' ')}
+                >
+                  <p className="text-sm font-bold">Nghe luyện tập</p>
+                  <p className="mt-1 text-xs opacity-80">Có thể phát, tua, chỉnh tốc độ và âm lượng.</p>
+                </button>
+              </div>
+            </div>
             <div className="mt-8 flex justify-center lg:justify-start">
               <Button
                 size="lg"
                 className="rounded-2xl bg-blue-600 px-8 text-base font-semibold shadow-lg shadow-blue-600/20 hover:bg-blue-700"
                 disabled={exam.questions.length === 0}
-                onClick={() => navigate(`/test/exams/${exam.exam_id}/take`)}
+                onClick={() => {
+                  const takeUrl = `/test/exams/${exam.exam_id}/take?audioMode=${audioMode}`
+                  window.open(takeUrl, '_blank', 'noopener,noreferrer')
+                }}
               >
                 <PlayCircle className="h-5 w-5" />
                 Làm bài thi
@@ -133,6 +168,7 @@ export default function TestExamDetailPage() {
           </div>
         </div>
       </section>
+
     </div>
   )
 }

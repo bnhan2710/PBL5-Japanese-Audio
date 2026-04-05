@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, ConfigDict
 class ExamBase(BaseModel):
     title: str = Field(..., description="Exam title")
     description: Optional[str] = Field(None, description="Exam description")
+    audio_mode: str = Field("practice", description="Audio mode: practice or simulation")
     time_limit: Optional[int] = Field(None, description="Time limit in minutes")
     audio_id: Optional[UUID] = Field(None, description="Associated audio UUID")
 
@@ -20,6 +21,7 @@ class ExamUpdate(BaseModel):
     """Fields that can be patched."""
     title: Optional[str] = None
     description: Optional[str] = None
+    audio_mode: Optional[str] = None
     time_limit: Optional[int] = None
     current_step: Optional[int] = Field(None, ge=1, le=5, description="UI wizard step 1–5")
     is_published: Optional[bool] = None

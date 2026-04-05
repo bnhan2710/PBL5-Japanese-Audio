@@ -42,6 +42,14 @@ QUESTION_NUMBER_PATTERNS = [
     (re.compile(r"^(?:第)?(?:一|いち|イチ|1)\s*番"), 1),
 ]
 
+MONDAI_NUMBER_PATTERNS = [
+    (re.compile(r"(?:問題|もんだい|モンダイ)\s*(?:五|ご|ゴ|5)"), 5),
+    (re.compile(r"(?:問題|もんだい|モンダイ)\s*(?:四|よん|ヨン|4)"), 4),
+    (re.compile(r"(?:問題|もんだい|モンダイ)\s*(?:三|さん|サン|3)"), 3),
+    (re.compile(r"(?:問題|もんだい|モンダイ)\s*(?:二|に|ニ|2)"), 2),
+    (re.compile(r"(?:問題|もんだい|モンダイ)\s*(?:一|いち|イチ|1)"), 1),
+]
+
 
 def _format_seconds(seconds: float) -> str:
     total_ms = int(round(seconds * 1000))
@@ -101,7 +109,219 @@ def _extract_spoken_question_number(text: str) -> Optional[int]:
     return None
 
 
-def _parse_formatted_segment(formatted_text: str, raw_text: str) -> tuple[Optional[str], str, list[str], Optional[int]]:
+def _extract_announced_mondai_number(text: str) -> Optional[int]:
+    normalized_text = re.sub(r"\s+", "", text or "")
+    for pattern, number in MONDAI_NUMBER_PATTERNS:
+        if pattern.search(normalized_text):
+            return number
+    return None
+
+
+def _extract_mondai_number(label: str | None) -> int:
+    if not label:
+        return 0
+    match = re.search(r"\d+", label)
+    return int(match.group()) if match else 0
+
+
+def _strip_leading_ban_block(text: str) -> str:
+    lines = [line.rstrip() for line in (text or "").splitlines()]
+    if not lines:
+        return ""
+
+    first_content_index: Optional[int] = None
+    for index, line in enumerate(lines):
+        if line.strip():
+            first_content_index = index
+            break
+
+    if first_content_index is None:
+        return ""
+
+    first_line = lines[first_content_index].strip()
+    if _extract_spoken_question_number(first_line) is not None:
+        lines = lines[first_content_index + 1 :]
+    else:
+        lines = lines[first_content_index:]
+
+    return "\n".join(lines).strip()
+
+
+def _build_contextual_question_text(cleaned_text: str, current_question_text: str) -> str:
+    question_text = (current_question_text or "").strip()
+    body = _strip_leading_ban_block(cleaned_text)
+    if not body:
+        return question_text
+
+    lines = [line.strip() for line in body.splitlines() if line.strip()]
+    intro_lines: list[str] = []
+    for line in lines:
+        if re.match(r"^[^：\n]{1,12}：", line):
+            break
+        intro_lines.append(line)
+
+    contextual = "\n".join(intro_lines).strip()
+    return contextual or question_text
+
+
+def _strip_speaker_prefix(text: str) -> str:
+    return re.sub(r"^[^：\n]{1,12}：", "", (text or "").strip()).strip()
+
+
+def _clean_option_text(text: str) -> str:
+    cleaned = re.sub(r"\s+", "", (text or "").strip())
+    cleaned = cleaned.strip("。！？、")
+    return cleaned
+
+
+def _extract_dialogue_sentences(script_text: str) -> list[str]:
+    lines = [line.strip() for line in (script_text or "").splitlines() if line.strip()]
+    sentences: list[str] = []
+    for line in lines:
+        speaker_free = _strip_speaker_prefix(line)
+        for sentence in _split_sentences(speaker_free):
+            normalized = _clean_option_text(sentence)
+            if normalized:
+                sentences.append(normalized)
+    return sentences
+
+
+def _extract_regex_candidates(pattern: str, text: str) -> list[str]:
+    seen: list[str] = []
+    for match in re.findall(pattern, text or ""):
+        value = _clean_option_text(match)
+        if value and value not in seen:
+            seen.append(value)
+    return seen
+
+
+def _question_type(question_text: str) -> str:
+    text = question_text or ""
+    if any(keyword in text for keyword in ["何時", "いつ", "何曜日", "何日"]):
+        return "time"
+    if any(keyword in text for keyword in ["いくつ", "何個", "何本", "何枚", "何人", "いくら", "何階", "何冊"]):
+        return "quantity"
+    if any(keyword in text for keyword in ["どこ", "どちら", "どの場所"]):
+        return "place"
+    if any(keyword in text for keyword in ["誰", "どの人"]):
+        return "person"
+    if any(keyword in text for keyword in ["どうして", "なぜ"]):
+        return "reason"
+    if "どう" in text:
+        return "method"
+    return "generic"
+
+
+def _extract_time_candidates(text: str) -> list[str]:
+    return _extract_regex_candidates(
+        r"(?:午前|午後)?\d{1,2}時(?:半|\d{1,2}分)?|(?:午前|午後)?[一二三四五六七八九十]+時(?:半|[一二三四五六七八九十]+分)?",
+        text,
+    )
+
+
+def _extract_quantity_candidates(text: str) -> list[str]:
+    return _extract_regex_candidates(
+        r"\d+(?:人|個|本|枚|つ|円|階|冊|回|日)|[一二三四五六七八九十百]+(?:人|個|本|枚|つ|円|階|冊|回|日)",
+        text,
+    )
+
+
+def _extract_place_candidates(text: str) -> list[str]:
+    return _extract_regex_candidates(
+        r"(?:学校|会社|駅|会議室|教室|図書館|食堂|店|スーパー|病院|郵便局|銀行|公園|家|うち|受付|空港|ホテル|レストラン|喫茶店|部屋|教務課|事務所|売り場)",
+        text,
+    )
+
+
+def _extract_person_candidates(text: str) -> list[str]:
+    return _extract_regex_candidates(
+        r"(?:男の人|女の人|学生|先生|店員|社員|部長|課長|受付の人|田中さん|山田さん|佐藤さん)",
+        text,
+    )
+
+
+def _fallback_candidates(script_text: str) -> list[str]:
+    sentences = _extract_dialogue_sentences(script_text)
+    candidates: list[str] = []
+    for sentence in sentences:
+        trimmed = sentence
+        if len(trimmed) > 24:
+            trimmed = trimmed[:24].rstrip("、") + "…"
+        if trimmed and trimmed not in candidates:
+            candidates.append(trimmed)
+    return candidates
+
+
+def _mutate_time_option(base: str, offset: int) -> str:
+    match = re.search(r"(\d{1,2}|[一二三四五六七八九十]+)時", base)
+    if not match:
+        return base
+    numeral = match.group(1)
+    kanji_to_int = {
+        "一": 1, "二": 2, "三": 3, "四": 4, "五": 5,
+        "六": 6, "七": 7, "八": 8, "九": 9, "十": 10,
+    }
+    if numeral.isdigit():
+        hour = int(numeral)
+    else:
+        hour = 10 if numeral == "十" else kanji_to_int.get(numeral, 1)
+    new_hour = max(1, min(12, hour + offset))
+    return base.replace(match.group(0), f"{new_hour}時", 1)
+
+
+def _mutate_quantity_option(base: str, offset: int) -> str:
+    match = re.search(r"(\d+)(人|個|本|枚|つ|円|階|冊|回|日)", base)
+    if not match:
+        return base
+    value = max(1, int(match.group(1)) + offset)
+    return f"{value}{match.group(2)}"
+
+
+def _choose_correct_answer(question_type: str, script_text: str, question_text: str) -> str:
+    source_text = f"{script_text}\n{question_text}"
+    if question_type == "time":
+        candidates = _extract_time_candidates(source_text)
+    elif question_type == "quantity":
+        candidates = _extract_quantity_candidates(source_text)
+    elif question_type == "place":
+        candidates = _extract_place_candidates(source_text)
+    elif question_type == "person":
+        candidates = _extract_person_candidates(source_text)
+    else:
+        candidates = _fallback_candidates(script_text)
+
+    if candidates:
+        return candidates[-1]
+
+    fallback_sentences = _extract_dialogue_sentences(script_text)
+    return fallback_sentences[-1] if fallback_sentences else "内容を確認する"
+
+
+def _build_answer_options(question_number: int, script_text: str, question_text: str) -> list[AIQuestionOption]:
+    return [
+        AIQuestionOption(label=label, content="", is_correct=False)
+        for label in ["A", "B", "C", "D"]
+    ]
+
+
+def _estimate_question_difficulty(script_text: str, question_text: str, answers: Sequence[AIQuestionOption]) -> int:
+    question_type = _question_type(question_text)
+    script_len = len(re.sub(r"\s+", "", script_text or ""))
+    answer_count = len([answer for answer in answers if answer.content.strip()])
+
+    difficulty = 3
+    if question_type in {"time", "quantity"}:
+        difficulty -= 1
+    if question_type in {"reason", "method"}:
+        difficulty += 1
+    if script_len > 70:
+        difficulty += 1
+    if answer_count <= 3:
+        difficulty -= 1
+    return max(1, min(5, difficulty))
+
+
+def _parse_formatted_segment(formatted_text: str, raw_text: str) -> tuple[Optional[str], str, list[str], Optional[int], Optional[int]]:
     cleaned = _strip_reazon_frame(formatted_text)
     blocks = [block.strip() for block in re.split(r"\n\s*\n", cleaned) if block.strip()]
 
@@ -128,8 +348,13 @@ def _parse_formatted_segment(formatted_text: str, raw_text: str) -> tuple[Option
         question_texts = [fallback_question] if fallback_question else [""]
 
     spoken_number = _extract_spoken_question_number(introduction or cleaned or raw_text)
+    announced_mondai_number = _extract_announced_mondai_number(cleaned or raw_text)
     limited_question_texts = question_texts[-1:] or [""]
-    return introduction or None, script_text or raw_text, limited_question_texts, spoken_number
+    if limited_question_texts and limited_question_texts[0]:
+        limited_question_texts = [
+            _build_contextual_question_text(cleaned, limited_question_texts[0])
+        ]
+    return introduction or None, script_text or raw_text, limited_question_texts, spoken_number, announced_mondai_number
 
 
 def _format_jlpt_master(chunks_data: Sequence[dict]) -> str:
@@ -223,6 +448,7 @@ class SplitAudioChunk:
     script_text: str = ""
     question_texts: list[str] = field(default_factory=list)
     spoken_question_number: Optional[int] = None
+    announced_mondai_number: Optional[int] = None
 
 
 @dataclass
@@ -456,7 +682,7 @@ class ReazonTranscriber:
 
             raw_text = "".join(raw_parts)
             formatted_text = _format_jlpt_master(chunks_data) or raw_text
-            introduction, script_text, question_texts, spoken_number = _parse_formatted_segment(
+            introduction, script_text, question_texts, spoken_number, announced_mondai_number = _parse_formatted_segment(
                 formatted_text,
                 raw_text,
             )
@@ -467,6 +693,7 @@ class ReazonTranscriber:
                 "script_text": script_text,
                 "question_texts": question_texts,
                 "spoken_question_number": spoken_number,
+                "announced_mondai_number": announced_mondai_number,
             }
         finally:
             if os.path.exists(tmp_path):
@@ -510,6 +737,7 @@ class AIExamService:
             segment.script_text = transcript_result["script_text"]
             segment.question_texts = transcript_result["question_texts"]
             segment.spoken_question_number = transcript_result["spoken_question_number"]
+            segment.announced_mondai_number = transcript_result.get("announced_mondai_number")
 
         self._notify(progress_callback, "Step 5/7: Formatting scripts with local Reazon rules...")
         structured_segments = self._build_structured_segments(split_segments)
@@ -565,6 +793,12 @@ class AIExamService:
         for segment in split_segments:
             question_text = (segment.question_texts[-1] if segment.question_texts else "")
             base_question_number = segment.spoken_question_number
+            announced_mondai_number = segment.announced_mondai_number
+
+            if announced_mondai_number is not None:
+                current_mondai = max(1, min(MAX_MONDAI, announced_mondai_number))
+                if not structured or current_mondai != _extract_mondai_number(structured[-1].mondai_group):
+                    last_question_number = 0
 
             if base_question_number is None:
                 base_question_number = last_question_number + 1 if last_question_number else 1
@@ -591,15 +825,6 @@ class AIExamService:
             last_question_number = base_question_number
 
         return structured
-
-    @staticmethod
-    def _build_placeholder_answers() -> list[AIQuestionOption]:
-        return [
-            AIQuestionOption(label="A", content="", is_correct=False),
-            AIQuestionOption(label="B", content="", is_correct=False),
-            AIQuestionOption(label="C", content="", is_correct=False),
-            AIQuestionOption(label="D", content="", is_correct=False),
-        ]
 
     @staticmethod
     def _build_raw_transcript(split_segments: Sequence[SplitAudioChunk]) -> str:
@@ -645,6 +870,11 @@ class AIExamService:
         questions: list[AIQuestion] = []
         for structured in structured_segments:
             source = segment_map[structured.source_segment_index]
+            answers = _build_answer_options(
+                structured.question_number,
+                structured.script_text or structured.refined_transcript or source.transcript,
+                structured.question_text,
+            )
             questions.append(
                 AIQuestion(
                     mondai_group=structured.mondai_group,
@@ -652,12 +882,18 @@ class AIExamService:
                     introduction=structured.introduction,
                     script_text=structured.script_text or structured.refined_transcript or source.transcript,
                     question_text=structured.question_text,
+                    difficulty=_estimate_question_difficulty(
+                        structured.script_text or structured.refined_transcript or source.transcript,
+                        structured.question_text,
+                        answers,
+                    ),
+                    image_url=None,
                     source_segment_index=structured.source_segment_index,
                     source_question_index=structured.source_question_index,
                     source_start_time=source.start_ms / 1000.0,
                     source_end_time=source.end_ms / 1000.0,
-                    source_transcript=source.transcript,
-                    answers=AIExamService._build_placeholder_answers(),
+                    source_transcript=source.refined_transcript or source.transcript,
+                    answers=answers,
                 )
             )
         return questions

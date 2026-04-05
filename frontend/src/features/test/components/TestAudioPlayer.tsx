@@ -5,6 +5,8 @@ interface TestAudioPlayerProps {
   title: string
   url?: string | null
   compact?: boolean
+  mode?: 'practice' | 'simulation'
+  autoPlaySignal?: number
 }
 
 function formatTime(value: number) {
@@ -14,7 +16,13 @@ function formatTime(value: number) {
   return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
 }
 
-export function TestAudioPlayer({ title, url, compact = false }: TestAudioPlayerProps) {
+export function TestAudioPlayer({
+  title,
+  url,
+  compact = false,
+  mode = 'practice',
+  autoPlaySignal = 0,
+}: TestAudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -41,6 +49,11 @@ export function TestAudioPlayer({ title, url, compact = false }: TestAudioPlayer
     if (!audioRef.current) return
     audioRef.current.playbackRate = playbackRate
   }, [playbackRate])
+
+  useEffect(() => {
+    if (!audioRef.current || !url || autoPlaySignal <= 0 || mode !== 'practice') return
+    void audioRef.current.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false))
+  }, [autoPlaySignal, mode, url])
 
   const toggle = async () => {
     if (!audioRef.current || !url) return
@@ -74,6 +87,46 @@ export function TestAudioPlayer({ title, url, compact = false }: TestAudioPlayer
     return (
       <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-4 text-sm text-slate-500">
         Chưa có audio khả dụng cho phần này.
+      </div>
+    )
+  }
+
+  if (mode === 'simulation') {
+    return (
+      <div
+        className={[
+          'rounded-[28px] border border-blue-100 bg-gradient-to-br from-sky-50 via-white to-blue-50 shadow-sm',
+          compact ? 'px-4 py-4' : 'px-5 py-5',
+        ].join(' ')}
+      >
+        <div className="flex items-center gap-4">
+          <div
+            className={[
+              'flex shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/20',
+              compact ? 'h-12 w-12' : 'h-14 w-14',
+            ].join(' ')}
+          >
+            <Headphones className={compact ? 'h-5 w-5' : 'h-6 w-6'} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-slate-500">Audio đang phát</p>
+          </div>
+        </div>
+        <audio
+          ref={audioRef}
+          src={url}
+          preload="auto"
+          autoPlay
+          onEnded={() => {
+            setIsPlaying(false)
+            setProgress(0)
+          }}
+          onTimeUpdate={() => setProgress(audioRef.current?.currentTime ?? 0)}
+          onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? 0)}
+          onPause={() => setIsPlaying(false)}
+          onPlay={() => setIsPlaying(true)}
+          className="hidden"
+        />
       </div>
     )
   }

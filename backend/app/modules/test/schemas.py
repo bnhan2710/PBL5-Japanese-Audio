@@ -38,6 +38,7 @@ class TestExamDetailResponse(BaseModel):
     exam_id: UUID
     title: str
     description: Optional[str] = None
+    audio_mode: str = "practice"
     time_limit: Optional[int] = None
     is_published: bool
     audio_url: Optional[str] = None
@@ -59,7 +60,7 @@ class TestSubmitRequest(BaseModel):
 class TestSubmitResponse(BaseModel):
     result_id: UUID
     exam_id: UUID
-    score: float = Field(..., description="Percentage score from 0 to 100")
+    score: float = Field(..., description="IRT score from 0 to 60")
     total_questions: int
     correct_answers: int
     answered_questions: int

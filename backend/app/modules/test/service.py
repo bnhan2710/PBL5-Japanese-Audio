@@ -42,8 +42,40 @@ def _sort_questions(questions: List[Question]) -> List[Question]:
     )
 
 
+def _difficulty_to_b(difficulty: int) -> float:
+    bounded = max(1, min(5, int(difficulty)))
+    return {1: -1.5, 2: -0.75, 3: 0.0, 4: 0.75, 5: 1.5}[bounded]
+
+
+def _difficulty_to_a(difficulty: int) -> float:
+    bounded = max(1, min(5, int(difficulty)))
+    return {1: 0.8, 2: 0.95, 3: 1.1, 4: 1.2, 5: 1.35}[bounded]
+
+
+def _estimate_question_difficulty(question: Question) -> int:
+    if question.difficulty is not None:
+        return max(1, min(5, int(question.difficulty)))
+
+    if question.image_url:
+        return 2
+
+    answers = list(question.answers)
+    answer_lengths = [len((answer.content or "").strip()) for answer in answers]
+    total_answer_length = sum(answer_lengths)
+    question_length = len((question.question_text or "").strip())
+    explanation_length = len((question.explanation or "").strip())
+
+    if len(answers) <= 3 and total_answer_length < 30 and question_length < 35:
+        return 1
+    if answers and all(length <= 8 for length in answer_lengths) and question_length < 45:
+        return 2
+    if explanation_length > 140 or question_length > 60:
+        return 4
+    return 3
+
+
 def calculate_irt_score(responses: List[Tuple[int, int]]) -> float:
-    """Calculate an IRT MLE score scaled to [0, 60]."""
+    """Estimate ability with a bounded 2PL model and scale the result to [0, 60]."""
     if not responses:
         return 0.0
 
@@ -52,24 +84,23 @@ def calculate_irt_score(responses: List[Tuple[int, int]]) -> float:
     if all(x == 0 for b, x in responses):
         return 0.0
 
-    def neg_log_likelihood(theta):
+    def neg_log_likelihood(theta: float) -> float:
         nll = 0.0
-        for star, correct in responses:
-            b = star - 3  # mapping [1,5] stars to [-2,2] difficulty
-            p = 1.0 / (1.0 + math.exp(-(theta - b)))
-            p = max(min(p, 0.9999), 0.0001)
+        for difficulty, correct in responses:
+            a = _difficulty_to_a(difficulty)
+            b = _difficulty_to_b(difficulty)
+            p = 1.0 / (1.0 + math.exp(-a * (theta - b)))
+            p = max(min(p, 0.999999), 0.000001)
             if correct:
                 nll -= math.log(p)
             else:
                 nll -= math.log(1.0 - p)
         return nll
 
-    # Find theta in [-4, 4]
-    res = minimize_scalar(neg_log_likelihood, bounds=(-4, 4), method='bounded')
-    theta = getattr(res, 'x', 0)
+    res = minimize_scalar(neg_log_likelihood, bounds=(-4.0, 4.0), method="bounded")
+    theta = float(getattr(res, "x", 0.0))
 
-    # Map theta from [-4, 4] to [0, 60] scale
-    score = ((theta + 4) / 8.0) * 60.0
+    score = ((theta + 4.0) / 8.0) * 60.0
     return max(0.0, min(60.0, score))
 
 
@@ -155,6 +186,7 @@ class TestService:
             exam_id=exam.exam_id,
             title=exam.title,
             description=exam.description,
+            audio_mode=getattr(exam, "audio_mode", "practice") or "practice",
             time_limit=exam.time_limit,
             is_published=exam.is_published,
             audio_url=audio_url,
@@ -195,30 +227,7 @@ class TestService:
                     correct_answers += 1
                     is_correct = 1
 
-            difficulty = question.difficulty
-            if difficulty is None:
-                # Heuristics:
-                # 2: Has image
-                # 1: Short answer (<30 chars) and 3 choices
-                # 4: Short text answers only (all choices <= 10 characters)
-                # 3: Normal
-                # (Can't check audio > 120s easily here without external lib on URLs, so stick to text-based heuristics)
-                # Wait, test service doesn't have the audio clip object, just the URL.
-                # So audio length check is skipped or assumed 3 if not 1, 2, 4.
-
-                if question.image_url:
-                    difficulty = 2
-                else:
-                    ans_list = list(question.answers)
-                    total_ans_len = sum(len(a.content or "") for a in ans_list)
-                    if len(ans_list) <= 3 and total_ans_len < 30:
-                        difficulty = 1
-                    elif len(ans_list) > 0 and all(len(a.content or "") <= 10 for a in ans_list):
-                        difficulty = 4
-                    else:
-                        difficulty = 3
-
-            # Treat unselected responses as incorrect
+            difficulty = _estimate_question_difficulty(question)
             responses.append((difficulty, is_correct))
 
         total_questions = len(sorted_questions)

@@ -27,6 +27,7 @@ export interface TestExamDetail {
   exam_id: string
   title: string
   description?: string | null
+  audio_mode?: 'practice' | 'simulation'
   time_limit?: number | null
   is_published: boolean
   audio_url?: string | null

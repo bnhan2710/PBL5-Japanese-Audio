@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft,
   CheckCircle2,
@@ -8,6 +8,7 @@ import {
   Clock3,
   Flag,
   Loader2,
+  PlayCircle,
   Send,
 } from 'lucide-react'
 
@@ -34,8 +35,19 @@ function getQuestionStatus(question: TestQuestion, answers: AnswerMap, reviews: 
   return 'idle'
 }
 
-export default function TakeExamPage() {
-  const { examId } = useParams()
+interface TakeExamContentProps {
+  examId: string
+  initialAudioMode?: 'practice' | 'simulation'
+  onClose?: () => void
+  standalone?: boolean
+}
+
+export function TakeExamContent({
+  examId,
+  initialAudioMode = 'practice',
+  onClose,
+  standalone = false,
+}: TakeExamContentProps) {
   const navigate = useNavigate()
   const [exam, setExam] = useState<TestExamDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -47,6 +59,13 @@ export default function TakeExamPage() {
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<TestSubmitResult | null>(null)
   const [autoSubmitted, setAutoSubmitted] = useState(false)
+  const [startPhase, setStartPhase] = useState<'ready' | 'countdown' | 'active'>('ready')
+  const [countdownSeconds, setCountdownSeconds] = useState(3)
+  const [audioAutoPlaySignal, setAudioAutoPlaySignal] = useState(0)
+  const simulationAudioRef = useRef<HTMLAudioElement>(null)
+  const countdownIntervalRef = useRef<number | null>(null)
+  const startTimeoutRef = useRef<number | null>(null)
+  const selectedAudioMode = initialAudioMode || exam?.audio_mode || 'practice'
 
   useEffect(() => {
     if (!examId) {
@@ -63,13 +82,16 @@ export default function TakeExamPage() {
         setActiveQuestionId(data.questions[0]?.question_id || '')
         setRemainingSeconds((data.time_limit || 45) * 60)
         setAutoSubmitted(false)
+        setStartPhase('ready')
+        setCountdownSeconds(3)
+        setAudioAutoPlaySignal(0)
       })
       .catch((err: Error) => setError(err.message || 'Không tải được bài thi'))
       .finally(() => setLoading(false))
   }, [examId])
 
   useEffect(() => {
-    if (!exam || result || submitting || autoSubmitted) return
+    if (!exam || result || submitting || autoSubmitted || startPhase !== 'active') return
     if (remainingSeconds <= 0) {
       setAutoSubmitted(true)
       void handleSubmit(true)
@@ -81,7 +103,7 @@ export default function TakeExamPage() {
     }, 1000)
 
     return () => window.clearInterval(timer)
-  }, [autoSubmitted, exam, remainingSeconds, result, submitting])
+  }, [autoSubmitted, exam, remainingSeconds, result, startPhase, submitting])
 
   const groupedQuestions = useMemo(() => {
     if (!exam) return []
@@ -107,6 +129,14 @@ export default function TakeExamPage() {
   const activeGroupEnd =
     activeGroupQuestions[activeGroupQuestions.length - 1]?.question_number || activeGroupQuestions.length || 1
 
+  useEffect(() => {
+    return () => {
+      if (countdownIntervalRef.current) window.clearInterval(countdownIntervalRef.current)
+      if (startTimeoutRef.current) window.clearTimeout(startTimeoutRef.current)
+      simulationAudioRef.current?.pause()
+    }
+  }, [])
+
   const moveQuestion = (step: number) => {
     if (!exam || activeIndex < 0) return
     const nextQuestion = exam.questions[activeIndex + step]
@@ -119,6 +149,51 @@ export default function TakeExamPage() {
 
   const toggleReview = (questionId: string) => {
     setReviews((current) => ({ ...current, [questionId]: !current[questionId] }))
+  }
+
+  const beginExam = () => {
+    if (countdownIntervalRef.current) window.clearInterval(countdownIntervalRef.current)
+    if (startTimeoutRef.current) window.clearTimeout(startTimeoutRef.current)
+
+    setCountdownSeconds(3)
+    setStartPhase('countdown')
+
+    countdownIntervalRef.current = window.setInterval(() => {
+      setCountdownSeconds((current) => {
+        if (current <= 1) {
+          if (countdownIntervalRef.current) {
+            window.clearInterval(countdownIntervalRef.current)
+            countdownIntervalRef.current = null
+          }
+          return 1
+        }
+        return current - 1
+      })
+    }, 1000)
+
+    startTimeoutRef.current = window.setTimeout(async () => {
+      setStartPhase('active')
+      setCountdownSeconds(3)
+
+      if (selectedAudioMode === 'simulation') {
+        const audio = simulationAudioRef.current
+        if (audio) {
+          audio.currentTime = 0
+          audio.load()
+          try {
+            await audio.play()
+          } catch {
+            toast({
+              title: 'Không thể tự phát audio',
+              description: 'Trình duyệt đang chặn autoplay. Hãy nhấp một lần trong tab này rồi thử lại.',
+              variant: 'destructive',
+            })
+          }
+        }
+      } else {
+        setAudioAutoPlaySignal((current) => current + 1)
+      }
+    }, 3000)
   }
 
   const handleSubmit = async (autoSubmit = false) => {
@@ -167,24 +242,30 @@ export default function TakeExamPage() {
     return (
       <div className="mx-auto max-w-3xl rounded-3xl border border-red-200 bg-red-50 px-8 py-10 text-center">
         <p className="text-lg font-semibold text-red-700">{error || 'Không thể hiển thị bài thi'}</p>
-        <Button className="mt-5" variant="outline" onClick={() => navigate('/exam')}>
-          Quay lại danh sách đề
+        <Button className="mt-5" variant="outline" onClick={() => (onClose ? onClose() : navigate('/exam'))}>
+          {onClose ? 'Đóng' : 'Quay lại danh sách đề'}
         </Button>
       </div>
     )
   }
 
   return (
-    <div className="mx-auto max-w-[1650px]">
+    <div className={standalone ? 'mx-auto max-w-[1650px]' : 'mx-auto max-w-[1500px]'}>
       <section className="overflow-hidden rounded-[36px] border border-slate-200 bg-white shadow-xl shadow-slate-200/50">
         <div className="border-b border-slate-200 bg-white px-6 py-6 sm:px-8">
           <div className="grid items-center gap-4 lg:grid-cols-[1fr_auto_1fr]">
             <div className="flex min-w-0 items-center gap-4">
-              <Button asChild variant="ghost" size="icon" className="rounded-full">
-                <Link to={`/test/exams/${exam.exam_id}`}>
+              {onClose ? (
+                <Button variant="ghost" size="icon" className="rounded-full" onClick={onClose}>
                   <ArrowLeft className="h-5 w-5" />
-                </Link>
-              </Button>
+                </Button>
+              ) : (
+                <Button asChild variant="ghost" size="icon" className="rounded-full">
+                  <Link to={`/test/exams/${exam.exam_id}`}>
+                    <ArrowLeft className="h-5 w-5" />
+                  </Link>
+                </Button>
+              )}
               <div className="min-w-0">
                 <p className="truncate text-base font-black tracking-tight text-teal-950">{exam.title}</p>
                 <p className="mt-1 text-[11px] text-slate-500">
@@ -303,12 +384,14 @@ export default function TakeExamPage() {
                     </button>
                   </div>
 
-                  {(activeQuestion.audio_clip_url || exam.audio_url) && (
+                  {selectedAudioMode !== 'simulation' && (activeQuestion.audio_clip_url || exam.audio_url) && (
                     <div className="mb-6">
                       <TestAudioPlayer
                         compact
                         title="Nghe câu hỏi"
                         url={activeQuestion.audio_clip_url || exam.audio_url}
+                        mode={selectedAudioMode}
+                        autoPlaySignal={audioAutoPlaySignal}
                       />
                     </div>
                   )}
@@ -407,6 +490,10 @@ export default function TakeExamPage() {
         </div>
       </section>
 
+      {selectedAudioMode === 'simulation' && exam.audio_url && (
+        <audio ref={simulationAudioRef} src={exam.audio_url} preload="auto" className="hidden" />
+      )}
+
       {result && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
           <div className="w-full max-w-xl rounded-[32px] border border-slate-200 bg-white p-8 shadow-2xl">
@@ -450,15 +537,70 @@ export default function TakeExamPage() {
 
             <div className="mt-7 flex flex-wrap justify-end gap-3">
               <Button variant="outline" className="rounded-2xl px-5" onClick={() => setResult(null)}>
-                Ở lại trang này
+                {onClose ? 'Tiếp tục xem' : 'Ở lại trang này'}
               </Button>
-              <Button className="rounded-2xl bg-blue-600 px-5 hover:bg-blue-700" onClick={() => navigate('/exam')}>
-                Về danh sách đề
+              <Button
+                className="rounded-2xl bg-blue-600 px-5 hover:bg-blue-700"
+                onClick={() => (onClose ? onClose() : navigate('/exam'))}
+              >
+                {onClose ? 'Đóng cửa sổ' : 'Về danh sách đề'}
               </Button>
             </div>
           </div>
         </div>
       )}
+
+      {startPhase !== 'active' && !result && (
+        <div className="fixed inset-0 z-30 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[32px] border border-slate-200 bg-white p-8 text-center shadow-2xl">
+            {startPhase === 'ready' ? (
+              <>
+                <div className="mx-auto mb-5 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-100 text-blue-600">
+                  <PlayCircle className="h-8 w-8" />
+                </div>
+                <h2 className="text-3xl font-black tracking-tight text-slate-900">Bắt đầu bài thi</h2>
+                <p className="mt-3 text-base leading-7 text-slate-600">
+                  Khi bắt đầu, hệ thống sẽ đếm ngược 3 giây rồi phát audio.
+                </p>
+                <Button
+                  size="lg"
+                  className="mt-6 rounded-2xl bg-blue-600 px-8 text-base font-semibold shadow-lg shadow-blue-600/20 hover:bg-blue-700"
+                  onClick={beginExam}
+                >
+                  Bắt đầu bài thi
+                </Button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-bold uppercase tracking-[0.2em] text-slate-500">Sẵn sàng</p>
+                <div className="mt-4 text-7xl font-black leading-none text-blue-600">{countdownSeconds}</div>
+                <p className="mt-4 text-base text-slate-600">Audio sẽ bắt đầu ngay sau khi đếm ngược kết thúc.</p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
+}
+
+export default function TakeExamPage() {
+  const { examId } = useParams()
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
+
+  if (!examId) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <p className="text-sm text-red-600">Thiếu mã đề thi</p>
+      </div>
+    )
+  }
+
+  const initialAudioMode =
+    (searchParams.get('audioMode') as 'practice' | 'simulation' | null)
+    || (location.state as { audioMode?: 'practice' | 'simulation' } | null)?.audioMode
+    || 'practice'
+
+  return <TakeExamContent examId={examId} initialAudioMode={initialAudioMode} standalone />
 }
