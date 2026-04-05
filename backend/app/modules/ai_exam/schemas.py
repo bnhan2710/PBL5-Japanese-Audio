@@ -25,6 +25,8 @@ class AIQuestion(BaseModel):
     introduction: Optional[str] = None
     script_text: str
     question_text: str
+    difficulty: Optional[int] = None
+    image_url: Optional[str] = None
     audio_url: Optional[str] = None
     source_segment_index: Optional[int] = None
     source_question_index: Optional[int] = None

@@ -10,6 +10,7 @@ from app.modules.ai_exam.service import (
     BELL_SOUND_PATH,
     BellAudioSplitter,
     SplitAudioChunk,
+    _parse_formatted_segment,
 )
 
 
@@ -81,16 +82,18 @@ class _FakeReazon:
                 "formatted_text": "--------\n二番\n会社での会話です。\n\n男：会議は三時です。\n\n男の人は何時に会議をしますか。\n--------",
                 "introduction": "二番\n会社での会話です。",
                 "script_text": "男：会議は三時です。",
-                "question_texts": ["男の人は何時に会議をしますか。"],
+                "question_texts": ["会社での会話です。"],
                 "spoken_question_number": 2,
+                "announced_mondai_number": None,
             }
         return {
             "raw_text": "一番お店での会話です女りんごを二つください男はいわかりました男の人はどう返事をしましたか",
             "formatted_text": "--------\n一番\nお店での会話です。\n\n女：りんごを二つください。\n男：はい、わかりました。\n\n男の人はどう返事をしましたか。\n--------",
             "introduction": "一番\nお店での会話です。",
             "script_text": "女：りんごを二つください。\n男：はい、わかりました。",
-            "question_texts": ["男の人はどう返事をしましたか。"],
+            "question_texts": ["お店での会話です。"],
             "spoken_question_number": 1,
+            "announced_mondai_number": None,
         }
 
 
@@ -118,9 +121,11 @@ def test_generate_uses_local_reazon_only_and_keeps_one_question_per_segment():
     assert result.questions[1].question_number == 1
     assert result.questions[1].source_segment_index == 2
     assert result.questions[1].source_question_index == 1
-    assert result.questions[1].question_text == "男の人はどう返事をしましたか。"
-    assert result.questions[0].answers[0].content == ""
-    assert result.questions[0].answers[0].is_correct is False
+    assert result.questions[1].question_text == "お店での会話です。"
+    assert len(result.questions[0].answers) == 4
+    assert all(not answer.is_correct for answer in result.questions[0].answers)
+    assert all(answer.content == "" for answer in result.questions[0].answers)
+    assert result.questions[0].difficulty is not None
     assert [item.mondai_number for item in result.timestamps or []] == [1, 2]
     assert progress_messages == [
         "Step 2/7: Detecting bell timestamps...",
@@ -205,4 +210,95 @@ def test_build_structured_segments_uses_leading_ban_and_opens_new_mondai_on_ichi
         ("Mondai 1", 2),
         ("Mondai 1", 11),
         ("Mondai 2", 1),
+    ]
+
+
+def test_build_questions_generates_non_empty_time_options():
+    split_segments = [
+        SplitAudioChunk(
+            segment_index=1,
+            file_name="segment_01.wav",
+            start_ms=1000,
+            end_ms=3000,
+            audio_bytes=b"",
+            transcript="",
+            refined_transcript="",
+            introduction="一番\n会社での会話です。",
+            script_text="男：会議は3時です。\n女：わかりました。",
+            question_texts=["男の人は何時に会議をしますか。"],
+            spoken_question_number=1,
+        )
+    ]
+
+    structured = AIExamService._build_structured_segments(split_segments)
+    questions = AIExamService._build_questions(structured, split_segments)
+
+    assert len(questions) == 1
+    assert questions[0].difficulty in {1, 2, 3, 4, 5}
+    assert len(questions[0].answers) == 4
+    assert all(answer.content == "" for answer in questions[0].answers)
+    assert all(not answer.is_correct for answer in questions[0].answers)
+
+
+def test_parse_formatted_segment_expands_question_text_from_ban_to_current_question():
+    formatted_text = (
+        "--------\n"
+        "二番\n"
+        "会社での会話です。\n\n"
+        "男：会議は三時です。\n"
+        "女：わかりました。\n\n"
+        "男の人は何時に会議をしますか。\n"
+        "--------"
+    )
+
+    introduction, script_text, question_texts, spoken_number, announced_mondai_number = _parse_formatted_segment(
+        formatted_text,
+        raw_text="",
+    )
+
+    assert introduction is not None
+    assert "会社での会話です。" in introduction
+    assert "男：会議は三時です。" in script_text
+    assert question_texts == ["会社での会話です。"]
+    assert spoken_number == 2
+    assert announced_mondai_number is None
+
+
+def test_build_structured_segments_prefers_announced_mondai_number():
+    split_segments = [
+        SplitAudioChunk(
+            segment_index=1,
+            file_name="segment_01.wav",
+            start_ms=1000,
+            end_ms=2000,
+            audio_bytes=b"",
+            transcript="segment-1",
+            refined_transcript="segment-1",
+            introduction="問題一\n一番\n会話です。",
+            script_text="男：...",
+            question_texts=["質問A。"],
+            spoken_question_number=1,
+            announced_mondai_number=1,
+        ),
+        SplitAudioChunk(
+            segment_index=2,
+            file_name="segment_02.wav",
+            start_ms=3000,
+            end_ms=4000,
+            audio_bytes=b"",
+            transcript="segment-2",
+            refined_transcript="segment-2",
+            introduction="問題五\n一番\n会話です。",
+            script_text="女：...",
+            question_texts=["質問B。"],
+            spoken_question_number=1,
+            announced_mondai_number=5,
+        ),
+    ]
+
+    structured = AIExamService._build_structured_segments(split_segments)
+
+    assert [(item.mondai_group, item.question_number) for item in structured] == [
+        ("Mondai 1", 1),
+        ("Mondai 5", 1),
     ]

@@ -83,6 +83,11 @@ export interface AudioUploadResponse {
   format?: string;
 }
 
+export interface ImageUploadResponse {
+  question_id: string;
+  image_url: string;
+}
+
 // --------------- API Methods ---------------
 
 export const examClient = {
@@ -137,6 +142,15 @@ export const examClient = {
     }).then((r) => handleResponse<AudioUploadResponse>(r));
   },
 
+  uploadQuestionImage: (questionId: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiFetch(`${API_BASE}/api/questions/${questionId}/image`, {
+      method: 'POST',
+      body: formData,
+    }).then((r) => handleResponse<ImageUploadResponse>(r));
+  },
+
   // Answer CRUD
   createAnswer: (data: AnswerPayload) =>
     apiFetch(`${API_BASE}/api/answers`, {
@@ -168,6 +182,9 @@ export interface AIQuestion {
   introduction?: string;
   script_text: string;
   question_text: string;
+  difficulty?: number;
+  image_url?: string;
+  image_file?: File;
   audio_url?: string;
   source_segment_index?: number;
   source_question_index?: number;

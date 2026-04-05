@@ -12,7 +12,7 @@ from app.modules.questions.schemas import (
     QuestionCreate, QuestionUpdate, QuestionResponse, QuestionWithAnswersResponse,
     AnswerCreate, AnswerUpdate, AnswerResponse,
 )
-from app.shared.upload import upload_audio
+from app.shared.upload import upload_audio, upload_image
 
 router = APIRouter(tags=["questions"])
 
@@ -55,6 +55,7 @@ async def create_question(
         question_text=payload.question_text,
         image_url=payload.image_url,
         explanation=payload.explanation,
+        difficulty=payload.difficulty,
     )
     db.add(question)
     await db.flush()  # get question_id before adding answers
@@ -154,6 +155,33 @@ async def upload_question_audio(
         "audio_clip_url": question.audio_clip_url,
         "duration": upload_result.get("duration"),
         "format": upload_result.get("format"),
+    }
+
+
+@router.post(
+    "/questions/{question_id}/image",
+    summary="Upload image for a question",
+    response_model=dict,
+)
+async def upload_question_image(
+    question_id: UUID,
+    file: UploadFile = File(..., description="Image file"),
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    result = await db.execute(select(Question).where(Question.question_id == question_id))
+    question = result.scalar_one_or_none()
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+
+    question.image_url = await upload_image(file, folder="question-images")
+
+    await db.commit()
+    await db.refresh(question)
+
+    return {
+        "question_id": str(question.question_id),
+        "image_url": question.image_url,
     }
 
 

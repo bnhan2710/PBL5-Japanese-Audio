@@ -4,7 +4,7 @@ import {
   Upload, Sparkles, ChevronLeft, Loader2, Check,
   AlertCircle, Headphones, FileAudio, RotateCcw, Brain, Eye,
   CheckCircle2, Play, Pause, Wand2, Save, Image as ImageIcon,
-  Plus, Scissors, Trash2
+  Plus, Scissors, Star, Trash2
 } from 'lucide-react'
 import { aiExamClient, AIJobStatus, AIQuestion, AIExamResult, AIQuestionOption } from './api/examClient'
 import { examClient } from './api/examClient'
@@ -28,23 +28,21 @@ const LEVEL_COLORS: Record<Level, string> = {
 const STEP_LABELS = ['Upload & Cấu hình', 'AI Đang xử lý', 'Review kết quả', 'Xác nhận & Lưu']
 const ANSWER_LABELS = ['A', 'B', 'C', 'D']
 
-function formatSeconds(seconds?: number) {
-  if (seconds === undefined || seconds === null || Number.isNaN(seconds)) return '--:--'
-  const totalMs = Math.max(0, Math.round(seconds * 1000))
-  const totalSeconds = Math.floor(totalMs / 1000)
-  const hours = Math.floor(totalSeconds / 3600)
-  const minutes = Math.floor((totalSeconds % 3600) / 60)
-  const secs = totalSeconds % 60
-  const ms = totalMs % 1000
-  if (hours > 0) {
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${String(ms).padStart(3, '0')}`
-  }
-  return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${String(ms).padStart(3, '0')}`
+function extractMondaiNumber(label: string) {
+  const match = label.match(/(\d+)/)
+  return match ? Number(match[1]) : 999
+}
+
+function sortByMondaiAndQuestion<T extends { mondai_group: string; question_number: number }>(items: T[]) {
+  return [...items].sort((a, b) => {
+    const mondaiDiff = extractMondaiNumber(a.mondai_group) - extractMondaiNumber(b.mondai_group)
+    if (mondaiDiff !== 0) return mondaiDiff
+    return a.question_number - b.question_number
+  })
 }
 
 function composeExplanation(question: AIQuestion) {
-  const blocks = [question.introduction?.trim(), question.script_text?.trim()].filter(Boolean)
-  return blocks.join('\n\n')
+  return question.script_text?.trim() || ''
 }
 
 function buildAnswerOptions(count: 3 | 4, existing: AIQuestionOption[] = []): AIQuestionOption[] {
@@ -53,6 +51,20 @@ function buildAnswerOptions(count: 3 | 4, existing: AIQuestionOption[] = []): AI
     content: existing[index]?.content ?? '',
     is_correct: existing[index]?.is_correct ?? false,
   }))
+}
+
+function inferDifficulty(question: AIQuestion) {
+  if (question.answers.length === 3) return 1
+
+  const durationSeconds =
+    question.source_start_time !== undefined && question.source_end_time !== undefined
+      ? Math.max(0, question.source_end_time - question.source_start_time)
+      : 0
+
+  if (durationSeconds > 120) return 5
+  if (durationSeconds >= 60) return 4
+  if (question.image_url?.trim()) return 2
+  return 3
 }
 
 // ─── Audio Trimmer ──────────────────────────────────────────────────────────
@@ -503,9 +515,18 @@ interface Step3Props {
 function Step3Review({ editableQuestions, setEditableQuestions, audioFile }: Step3Props) {
   const [activeQIdx, setActiveQIdx] = useState<number>(0)
   const [isEditingAudio, setIsEditingAudio] = useState(false)
+  const imageInputRef = useRef<HTMLInputElement>(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   const updateQuestion = (idx: number, patch: Partial<AIQuestion>) => {
-    setEditableQuestions(editableQuestions.map((q, i) => i === idx ? { ...q, ...patch } : q))
+    setEditableQuestions(editableQuestions.map((q, i) => {
+      if (i !== idx) return q
+      const nextQuestion = { ...q, ...patch }
+      return {
+        ...nextQuestion,
+        difficulty: patch.difficulty ?? inferDifficulty(nextQuestion),
+      }
+    }))
   }
 
   const updateAnswer = (qIdx: number, aIdx: number, patch: { content?: string; is_correct?: boolean }) => {
@@ -551,6 +572,7 @@ function Step3Review({ editableQuestions, setEditableQuestions, audioFile }: Ste
       introduction: '',
       script_text: '',
       question_text: '',
+      difficulty: lastQ?.difficulty ?? 3,
       answers: buildAnswerOptions(4),
       audio_url: lastQ?.audio_url || undefined,
       source_segment_index: lastQ?.source_segment_index,
@@ -559,11 +581,29 @@ function Step3Review({ editableQuestions, setEditableQuestions, audioFile }: Ste
     }
 
     const newQuestions = [...editableQuestions, newQ]
-    setEditableQuestions(newQuestions.sort((a, b) => {
-      if (a.mondai_group !== b.mondai_group) return a.mondai_group.localeCompare(b.mondai_group)
-      return a.question_number - b.question_number
-    }))
+    setEditableQuestions(sortByMondaiAndQuestion(newQuestions))
     setActiveQIdx(newQuestions.indexOf(newQ))
+  }
+
+  const handleAddMondai = () => {
+    const existingMondaiNumbers = editableQuestions.map(q => extractMondaiNumber(q.mondai_group))
+    const nextMondaiNumber = existingMondaiNumbers.length > 0 ? Math.max(...existingMondaiNumbers) + 1 : 1
+    const newQ: AIQuestion = {
+      mondai_group: `Mondai ${nextMondaiNumber}`,
+      question_number: 1,
+      introduction: '',
+      script_text: '',
+      question_text: '',
+      difficulty: 3,
+      answers: buildAnswerOptions(4),
+    }
+
+    const newQuestions = sortByMondaiAndQuestion([...editableQuestions, newQ])
+    setEditableQuestions(newQuestions)
+    setActiveQIdx(newQuestions.findIndex(
+      q => q.mondai_group === newQ.mondai_group && q.question_number === 1,
+    ))
+    setIsEditingAudio(false)
   }
 
   const handleDeleteQuestion = (idx: number) => {
@@ -608,6 +648,19 @@ function Step3Review({ editableQuestions, setEditableQuestions, audioFile }: Ste
     }
   }
 
+  const handleQuestionImagePick = async (file: File | null) => {
+    if (!file) return
+    setUploadingImage(true)
+    try {
+      const localUrl = URL.createObjectURL(file)
+      updateQuestion(activeQIdx, { image_url: localUrl, image_file: file })
+      toast({ title: 'Đã thêm ảnh', description: 'Ảnh sẽ được lưu khi bạn xuất bản hoặc lưu nháp.' })
+    } finally {
+      setUploadingImage(false)
+      if (imageInputRef.current) imageInputRef.current.value = ''
+    }
+  }
+
   const groupedQuestions = editableQuestions.reduce((acc, q, idx) => {
     if (!acc[q.mondai_group]) acc[q.mondai_group] = []
     acc[q.mondai_group].push({ q, idx })
@@ -617,6 +670,9 @@ function Step3Review({ editableQuestions, setEditableQuestions, audioFile }: Ste
   for (const group in groupedQuestions) {
     groupedQuestions[group].sort((a, b) => a.q.question_number - b.q.question_number)
   }
+  const orderedGroupedQuestions = Object.entries(groupedQuestions).sort(
+    ([groupA], [groupB]) => extractMondaiNumber(groupA) - extractMondaiNumber(groupB),
+  )
 
   const activeQ = editableQuestions[activeQIdx]
 
@@ -633,7 +689,7 @@ function Step3Review({ editableQuestions, setEditableQuestions, audioFile }: Ste
           </div>
 
           <div className="flex-1 overflow-y-auto p-5 space-y-8">
-            {Object.entries(groupedQuestions).map(([group, qs]) => (
+            {orderedGroupedQuestions.map(([group, qs]) => (
               <div key={group}>
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">{group}</h4>
@@ -670,6 +726,14 @@ function Step3Review({ editableQuestions, setEditableQuestions, audioFile }: Ste
                 </div>
               </div>
             ))}
+            <button
+              type="button"
+              onClick={handleAddMondai}
+              className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-600 px-4 py-3 text-sm font-bold text-slate-500 hover:border-blue-500 hover:text-blue-500 dark:text-slate-300 dark:hover:text-blue-400 dark:hover:bg-slate-800 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Thêm Mondai mới
+            </button>
           </div>
         </div>
 
@@ -692,20 +756,31 @@ function Step3Review({ editableQuestions, setEditableQuestions, audioFile }: Ste
                         <button onClick={() => updateQuestion(activeQIdx, { question_number: activeQ.question_number + 1 })} className="w-5 h-5 flex items-center justify-center bg-slate-200 dark:bg-slate-600 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-300 font-bold select-none leading-none">+</button>
                       </div>
                     </span>
-                    {(activeQ.source_start_time !== undefined && activeQ.source_end_time !== undefined) && (
-                      <span className="text-xs font-semibold bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-300 px-2.5 py-1 rounded-md">
-                        {formatSeconds(activeQ.source_start_time)} → {formatSeconds(activeQ.source_end_time)}
-                      </span>
-                    )}
                   </div>
                 </div>
-                <button
-                  onClick={() => handleDeleteQuestion(activeQIdx)}
-                  className="w-8 h-8 flex items-center justify-center shrink-0 rounded-lg text-red-500 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
-                  title="Xóa câu hỏi này"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1">
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300 mr-1">IRT</span>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => updateQuestion(activeQIdx, { difficulty: star })}
+                        className={`w-6 h-6 flex items-center justify-center rounded-md transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 ${(activeQ.difficulty || inferDifficulty(activeQ)) >= star ? 'text-amber-400' : 'text-slate-300 dark:text-slate-600'}`}
+                        title={`${star} sao`}
+                      >
+                        <Star className={`w-4 h-4 ${(activeQ.difficulty || inferDifficulty(activeQ)) >= star ? 'fill-current' : ''}`} />
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => handleDeleteQuestion(activeQIdx)}
+                    className="w-8 h-8 flex items-center justify-center shrink-0 rounded-lg text-red-500 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                    title="Xóa câu hỏi này"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -735,34 +810,17 @@ function Step3Review({ editableQuestions, setEditableQuestions, audioFile }: Ste
                   )}
                 </div>
 
-                {/* Introduction */}
+                {/* Question Text */}
                 <div>
                   <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">
-                    Ngữ cảnh mở đầu (Introduction)
+                    Kịch bản thô (Raw Transcript)
                   </label>
                   <textarea
-                    value={activeQ.introduction || ''}
-                    onChange={e => updateQuestion(activeQIdx, { introduction: e.target.value })}
+                    value={activeQ.source_transcript || ''}
+                    onChange={e => updateQuestion(activeQIdx, { source_transcript: e.target.value })}
                     rows={4}
-                    placeholder="Gõ phần mô tả bối cảnh..."
-                    className="w-full min-h-[112px] px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  />
-                </div>
-
-                {/* Script */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                      Kịch bản hội thoại (Script)
-                    </label>
-
-                  </div>
-                  <textarea
-                    value={activeQ.script_text}
-                    onChange={e => updateQuestion(activeQIdx, { script_text: e.target.value })}
-                    rows={6}
-                    placeholder="Gõ nội dung script..."
-                    className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-slate-50 dark:bg-slate-900/60 text-slate-800 dark:text-slate-200 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 font-medium leading-relaxed"
+                    placeholder="Nội dung nghe thô từ audio..."
+                    className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-slate-50 dark:bg-slate-900/60 text-slate-700 dark:text-slate-300 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 leading-relaxed"
                   />
                 </div>
 
@@ -777,6 +835,22 @@ function Step3Review({ editableQuestions, setEditableQuestions, audioFile }: Ste
                     rows={2}
                     placeholder="Gõ nội dung câu hỏi..."
                     className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  />
+                </div>
+
+                {/* Script */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                      Kịch bản hội thoại (Script)
+                    </label>
+                  </div>
+                  <textarea
+                    value={activeQ.script_text}
+                    onChange={e => updateQuestion(activeQIdx, { script_text: e.target.value })}
+                    rows={6}
+                    placeholder="Gõ nội dung script..."
+                    className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-slate-50 dark:bg-slate-900/60 text-slate-800 dark:text-slate-200 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 font-medium leading-relaxed"
                   />
                 </div>
 
@@ -845,11 +919,36 @@ function Step3Review({ editableQuestions, setEditableQuestions, audioFile }: Ste
                   <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">
                     Hình ảnh minh họa (Tùy chọn)
                   </label>
-                  <div className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-8 flex flex-col items-center justify-center bg-slate-50/50 dark:bg-slate-900/30 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer group">
-                    <ImageIcon className="w-8 h-8 text-slate-400 group-hover:text-blue-500 mb-2 transition-colors" />
-                    <p className="text-sm text-slate-500 text-center">
-                      <span className="text-blue-500 font-semibold">Thêm ảnh</span> hoặc kéo thả
-                    </p>
+                  <div className="space-y-3">
+                    {activeQ.image_url ? (
+                      <img
+                        src={activeQ.image_url}
+                        alt="Question illustration"
+                        className="w-full max-h-56 object-cover rounded-xl border border-slate-200 dark:border-slate-700"
+                      />
+                    ) : null}
+                    <input
+                      value={activeQ.image_url || ''}
+                      onChange={e => updateQuestion(activeQIdx, { image_url: e.target.value, image_file: undefined })}
+                      placeholder="Dán URL ảnh hoặc upload bên dưới..."
+                      className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    />
+                    <div
+                      onClick={() => imageInputRef.current?.click()}
+                      className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-6 flex flex-col items-center justify-center bg-slate-50/50 dark:bg-slate-900/30 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer group"
+                    >
+                      <ImageIcon className="w-8 h-8 text-slate-400 group-hover:text-blue-500 mb-2 transition-colors" />
+                      <p className="text-sm text-slate-500 text-center">
+                        <span className="text-blue-500 font-semibold">{uploadingImage ? 'Đang xử lý ảnh...' : 'Thêm ảnh'}</span> hoặc kéo thả
+                      </p>
+                      <input
+                        ref={imageInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={e => handleQuestionImagePick(e.target.files?.[0] ?? null)}
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -903,13 +1002,20 @@ function Step4Save({ questions, level, title, draftId, onBack }: Step4Props) {
           question_number: q.question_number,
           question_text: q.question_text,
           audio_clip_url: q.audio_url,
+          image_url: q.image_url && !q.image_url.startsWith('blob:') ? q.image_url : undefined,
           explanation: composeExplanation(q),
+          difficulty: q.difficulty,
           answers: q.answers.map((a, i) => ({
             question_id: '',
             content: a.content,
             is_correct: a.is_correct,
             order_index: i,
           })),
+        }).then(async (createdQuestion) => {
+          if (q.image_file) {
+            await examClient.uploadQuestionImage(createdQuestion.question_id, q.image_file)
+          }
+          return createdQuestion
         })
       }
 
@@ -1143,7 +1249,10 @@ export default function AICreateExamPage() {
 
   const handleJobDone = (result: AIExamResult) => {
     setAiResult(result)
-    setEditableQuestions(result.questions)
+    setEditableQuestions(result.questions.map((question) => ({
+      ...question,
+      difficulty: inferDifficulty(question),
+    })))
     setStep(3)
   }
 
@@ -1167,13 +1276,20 @@ export default function AICreateExamPage() {
           question_number: q.question_number,
           question_text: q.question_text,
           audio_clip_url: q.audio_url,
+          image_url: q.image_url && !q.image_url.startsWith('blob:') ? q.image_url : undefined,
           explanation: composeExplanation(q),
+          difficulty: q.difficulty,
           answers: q.answers.map((a, i) => ({
             question_id: '',
             content: a.content,
             is_correct: a.is_correct,
             order_index: i,
           })),
+        }).then(async (createdQuestion) => {
+          if (q.image_file) {
+            await examClient.uploadQuestionImage(createdQuestion.question_id, q.image_file)
+          }
+          return createdQuestion
         })
       }
       await examClient.updateExam(exam.exam_id, { is_published: false, current_step: 3 })
