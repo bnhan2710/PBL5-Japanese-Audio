@@ -145,10 +145,13 @@ export const ManualExamBuilder: React.FC = () => {
       alert('Không được tạo quá 70 câu.');
       return;
     }
-    setFormData((prev) => ({ 
-      ...prev, 
-      questions: [...prev.questions, { ...NEW_QUESTION_TEMPLATE }] 
-    }));
+    setFormData((prev) => {
+      const currentMondaiGroup = prev.questions[activeQIdx]?.mondai_group || 'Mondai 1';
+      return { 
+        ...prev, 
+        questions: [...prev.questions, { ...NEW_QUESTION_TEMPLATE, mondai_group: currentMondaiGroup }] 
+      };
+    });
     setActiveQIdx(formData.questions.length); // slides to new
   };
 
@@ -195,6 +198,8 @@ export const ManualExamBuilder: React.FC = () => {
     acc[group].push({ q, idx });
     return acc;
   }, {} as Record<string, { q: QuestionType, idx: number }[]>);
+
+  const sortedGroupEntries = Object.entries(groupedQuestions).sort(([a], [b]) => a.localeCompare(b));
 
   const activeQ = formData.questions[activeQIdx];
   const isLastQuestion = activeQIdx === formData.questions.length - 1;
@@ -309,14 +314,14 @@ export const ManualExamBuilder: React.FC = () => {
                    {Object.entries(groupedQuestions).length === 0 && (
                       <p className="text-sm text-slate-400 text-center">Chưa có câu hỏi nào.</p>
                    )}
-                   {Object.entries(groupedQuestions).map(([group, qs]) => (
+                   {sortedGroupEntries.map(([group, qs]) => (
                      <div key={group}>
                        <div className="flex items-center justify-between mb-4">
                          <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">{group}</h4>
                          <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">{qs.length} câu</span>
                        </div>
                        <div className="flex flex-wrap gap-2.5">
-                         {qs.map(({ idx }) => {
+                         {qs.map(({ idx }, localIdx) => {
                            const isActive = activeQIdx === idx;
                            return (
                              <button
@@ -328,7 +333,7 @@ export const ManualExamBuilder: React.FC = () => {
                                    : 'border-slate-200 text-slate-600 bg-white hover:border-slate-300 dark:border-slate-700 dark:text-slate-300 dark:bg-slate-800'
                                  }`}
                              >
-                               {idx + 1}
+                               {localIdx + 1}
                              </button>
                            )
                          })}
@@ -361,6 +366,7 @@ export const ManualExamBuilder: React.FC = () => {
                 <QuestionEditor 
                   question={activeQ}
                   index={activeQIdx}
+                  localIndex={groupedQuestions[activeQ.mondai_group || 'Mondai 1']?.findIndex(q => q.idx === activeQIdx) || 0}
                   mondaiList={DEFAULT_MONDAI}
                   onChange={(q) => updateQuestion(activeQIdx, q)}
                   onRemove={() => removeQuestion(activeQIdx)}
@@ -429,14 +435,14 @@ export const ManualExamBuilder: React.FC = () => {
                {/* Left Sidebar List */}
                <div className="w-full md:w-[300px] shrink-0 border border-slate-200 dark:border-slate-700 rounded-2xl bg-white dark:bg-slate-800/20 overflow-hidden flex flex-col shadow-sm">
                  <div className="flex-1 overflow-y-auto p-5 space-y-6">
-                    {Object.entries(groupedQuestions).map(([group, qs]) => (
+                    {sortedGroupEntries.map(([group, qs]) => (
                       <div key={group}>
                         <div className="flex items-center justify-between mb-4">
                           <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">{group}</h4>
                           <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">{qs.length} câu</span>
                         </div>
                         <div className="flex flex-wrap gap-2.5">
-                          {qs.map(({ idx }) => {
+                          {qs.map(({ idx }, localIdx) => {
                             const isActive = activeQIdx === idx;
                             const hasAns = formData.questions[idx].answers.some(a => a.is_correct && (a.content || '').trim() !== '');
                             return (
@@ -451,7 +457,7 @@ export const ManualExamBuilder: React.FC = () => {
                                       : 'border-slate-200 text-slate-600 bg-white hover:border-slate-300 dark:border-slate-700 dark:text-slate-300 dark:bg-slate-800'
                                   }`}
                               >
-                                {idx + 1}
+                                {localIdx + 1}
                               </button>
                             )
                           })}
@@ -465,7 +471,7 @@ export const ManualExamBuilder: React.FC = () => {
                {activeQ && (
                  <div className="flex-1 flex flex-col bg-white dark:bg-slate-800 shadow-sm rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
                     <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between bg-slate-50/30 dark:bg-slate-800/50">
-                      <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Câu {activeQIdx + 1} Preview</h2>
+                      <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Câu {(groupedQuestions[activeQ.mondai_group || 'Mondai 1']?.findIndex(q => q.idx === activeQIdx) || 0) + 1} Preview</h2>
                     </div>
 
                     <div className="flex-1 overflow-y-auto p-6 space-y-6 pointer-events-none opacity-80">

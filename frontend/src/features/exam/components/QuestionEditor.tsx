@@ -6,6 +6,7 @@ import { AIImageGenerateButton } from '../../ai-image/components/AIImageGenerate
 interface QuestionEditorProps {
   question: QuestionType;
   index: number;
+  localIndex: number;
   mondaiList: { id: number; label: string; nameJa: string }[];
   onChange: (updated: QuestionType) => void;
   onRemove: () => void;
@@ -15,7 +16,7 @@ interface QuestionEditorProps {
 }
 
 export const QuestionEditor: React.FC<QuestionEditorProps> = ({ 
-  question, index, mondaiList, onChange, onRemove, onNext, isLastQuestion, level 
+  question, index, localIndex, mondaiList, onChange, onRemove, onNext, isLastQuestion, level 
 }) => {
   const audioInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -100,7 +101,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
       {/* Header */}
       <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between bg-slate-50/30 dark:bg-slate-800/50 shrink-0">
         <div className="flex items-center gap-3 w-full max-w-xl">
-          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">Câu {index + 1}</h2>
+          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">Câu {localIndex + 1}</h2>
           
           <select 
             value={question.mondai_group || 'Mondai 1'} 

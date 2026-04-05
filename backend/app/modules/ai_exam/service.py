@@ -411,64 +411,59 @@ class ReazonTranscriber:
 
         if self._model is None:
             self._load_model()
+        audio_format = suffix.lstrip(".") if suffix else "mp3"
+        audio = AudioSegment.from_file(io.BytesIO(audio_bytes), format=audio_format)
 
-        audio = AudioSegment.from_file(BytesIO(audio_bytes), format="mp3")
+        silence_thresh = audio.dBFS - 14 if audio.dBFS != float("-inf") else -50
+        chunks = split_on_silence(
+            audio,
+            min_silence_len=400,
+            silence_thresh=silence_thresh,
+            keep_silence=150,
+        )
+        if not chunks:
+            chunks = [audio]
 
+        chunk_dir = tempfile.mkdtemp(prefix="reazon_chunks_")
+        chunks_data: list[dict] = []
+        raw_parts: list[str] = []
         try:
-            audio = AudioSegment.from_file(tmp_path)
-            silence_thresh = audio.dBFS - 14 if audio.dBFS != float("-inf") else -50
-            chunks = split_on_silence(
-                audio,
-                min_silence_len=400,
-                silence_thresh=silence_thresh,
-                keep_silence=150,
-            )
-            if not chunks:
-                chunks = [audio]
-
-            chunk_dir = tempfile.mkdtemp(prefix="reazon_chunks_")
-            chunks_data: list[dict] = []
-            raw_parts: list[str] = []
-            try:
-                for index, chunk in enumerate(chunks):
-                    if len(chunk) < 300:
+            for index, chunk in enumerate(chunks):
+                if len(chunk) < 300:
+                    continue
+                chunk_path = os.path.join(chunk_dir, f"chunk_{index}.wav")
+                chunk.export(chunk_path, format="wav")
+                try:
+                    audio_content = audio_from_path(chunk_path)
+                    result = transcribe(self._model, audio_content)
+                    text = self._clean_text(result.text if result else "")
+                    if not text:
                         continue
-                    chunk_path = os.path.join(chunk_dir, f"chunk_{index}.wav")
-                    chunk.export(chunk_path, format="wav")
-                    try:
-                        audio_content = audio_from_path(chunk_path)
-                        result = transcribe(self._model, audio_content)
-                        text = self._clean_text(result.text if result else "")
-                        if not text:
-                            continue
-                        gender = self._predict_gender(chunk_path)
-                        raw_parts.append(text)
-                        chunks_data.append({"text": text, "gender": gender})
-                    except Exception as exc:
-                        logger.warning("Chunk %s transcription error: %s", index, exc)
-                    finally:
-                        if os.path.exists(chunk_path):
-                            os.remove(chunk_path)
-            finally:
-                shutil.rmtree(chunk_dir, ignore_errors=True)
-
-            raw_text = "".join(raw_parts)
-            formatted_text = _format_jlpt_master(chunks_data) or raw_text
-            introduction, script_text, question_texts, spoken_number = _parse_formatted_segment(
-                formatted_text,
-                raw_text,
-            )
-            return {
-                "raw_text": raw_text,
-                "formatted_text": formatted_text,
-                "introduction": introduction,
-                "script_text": script_text,
-                "question_texts": question_texts,
-                "spoken_question_number": spoken_number,
-            }
+                    gender = self._predict_gender(chunk_path)
+                    raw_parts.append(text)
+                    chunks_data.append({"text": text, "gender": gender})
+                except Exception as exc:
+                    logger.warning("Chunk %s transcription error: %s", index, exc)
+                finally:
+                    if os.path.exists(chunk_path):
+                        os.remove(chunk_path)
         finally:
-            if os.path.exists(tmp_path):
-                os.unlink(tmp_path)
+            shutil.rmtree(chunk_dir, ignore_errors=True)
+
+        raw_text = "".join(raw_parts)
+        formatted_text = _format_jlpt_master(chunks_data) or raw_text
+        introduction, script_text, question_texts, spoken_number = _parse_formatted_segment(
+            formatted_text,
+            raw_text,
+        )
+        return {
+            "raw_text": raw_text,
+            "formatted_text": formatted_text,
+            "introduction": introduction,
+            "script_text": script_text,
+            "question_texts": question_texts,
+            "spoken_question_number": spoken_number,
+        }
 
 
 class AIExamService:
