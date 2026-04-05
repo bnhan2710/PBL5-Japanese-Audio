@@ -238,6 +238,7 @@ function InlineAudioTrimmer({
 
 export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUpdated }: Props) {
   const navigate = useNavigate()
+  const imageInputRef = useRef<HTMLInputElement>(null)
   const [questions, setQuestions] = useState<QuestionResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [activeQId, setActiveQId] = useState<string | null>(null)
@@ -317,6 +318,11 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
 
   const isDirtyQ = (qId: string) => !!editedQuestions[qId] && Object.keys(editedQuestions[qId]).length > 0
 
+  const getRawTranscriptPreview = (q: QuestionResponse) => {
+    const edited = editedQuestions[q.question_id] as Partial<QuestionResponse> | undefined
+    return edited?.explanation ?? q.explanation ?? ''
+  }
+
   const handleSaveQ = async (q: QuestionResponse) => {
     const patch = editedQuestions[q.question_id]
     if (!patch) return
@@ -377,6 +383,19 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
     }
   }
 
+  const handleUploadQuestionImage = async (questionId: string, file: File | null) => {
+    if (!file) return
+    try {
+      const uploaded = await examClient.uploadQuestionImage(questionId, file)
+      patchQ(questionId, { image_url: uploaded.image_url })
+      toast({ title: 'Đã upload ảnh' })
+    } catch (e: any) {
+      toast({ title: 'Lỗi', description: e.message, variant: 'destructive' })
+    } finally {
+      if (imageInputRef.current) imageInputRef.current.value = ''
+    }
+  }
+
   const handleAddQuestion = async (group: string) => {
     const questionsInGroup = questions.filter(q => q.mondai_group === group)
     const nums = questionsInGroup.map(q => q.question_number || 1).sort((a, b) => a - b)
@@ -402,7 +421,7 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
         mondai_group: group,
         question_number: nextNum,
         question_text: '',
-        explanation: ''
+        explanation: '',
       })
 
       const newAnswers = await Promise.all([0, 1, 2, 3].map(i =>
@@ -630,8 +649,6 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
                     {/* Pane Header */}
                     <div className="px-6 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/30 dark:bg-slate-800/30 shrink-0">
                       <div className="flex items-center gap-2">
-                        <Edit3 className="w-4 h-4 text-slate-500" />
-                        <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">Hiệu đính chi tiết</h2>
                         <div className="flex flex-wrap gap-2 items-center">
                           <span className="text-xs font-semibold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 pl-2.5 pr-1 py-1 rounded-md flex items-center gap-1.5 border border-slate-200 dark:border-slate-600">
                             {activeQ.mondai_group}
@@ -651,6 +668,19 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
                         )}
                       </div>
                       <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1">
+                          <span className="text-xs font-bold text-slate-600 dark:text-slate-300 mr-1">IRT</span>
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              onClick={() => patchQ(activeQ.question_id, { difficulty: star })}
+                              className={`w-6 h-6 flex items-center justify-center rounded-md transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 ${(activeEdited.difficulty || 3) >= star ? 'text-amber-400' : 'text-slate-300 dark:text-slate-600'}`}
+                              title={`${star} sao`}
+                            >
+                              <Star className={`w-4 h-4 ${(activeEdited.difficulty || 3) >= star ? 'fill-current' : ''}`} />
+                            </button>
+                          ))}
+                        </div>
                         {/* Delete Question */}
                         {confirmDeleteQ === activeQ.question_id ? (
                           <div className="flex items-center gap-2">
@@ -697,23 +727,6 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
                     {/* Pane Content */}
                     <div className="flex-1 overflow-y-auto p-6 space-y-5">
 
-                      {/* Difficulty Star Rating */}
-                      <div className="bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl p-4 flex items-center justify-between">
-                        <label className="text-sm font-bold text-slate-800 dark:text-slate-200">Độ khó (IRT Rating)</label>
-                        <div className="flex gap-1">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <button
-                              key={star}
-                              onClick={() => patchQ(activeQ.question_id, { difficulty: star })}
-                              className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 ${(activeEdited.difficulty || 3) >= star ? 'text-amber-400' : 'text-slate-300 dark:text-slate-600'
-                                }`}
-                            >
-                              <Star className={`w-5 h-5 ${(activeEdited.difficulty || 3) >= star ? 'fill-current' : ''}`} />
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
                       {/* Audio */}
                       <div className="bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl p-4">
                         <div className="flex items-center gap-2 mb-2">
@@ -739,9 +752,10 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
                              <button 
                                onClick={() => setIsEditingAudio(activeQ.question_id)} 
                                title="Chỉnh sửa thời gian lấy Audio"
-                               className="w-[46px] h-[46px] shrink-0 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-colors shadow-sm border border-slate-200 dark:border-slate-700"
+                               className="px-3 py-2.5 shrink-0 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center gap-1.5 transition-colors shadow-sm border border-slate-200 dark:border-slate-700 text-xs font-medium"
                              >
                                <Scissors className="w-4 h-4" />
+                               Chỉnh sửa
                              </button>
                           </div>
                         ) : getBaseAudioUrl() ? (
@@ -756,17 +770,16 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
                         )}
                       </div>
 
-                      {/* Question Text: Script */}
                       <div>
                         <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-1.5">
                           <FileText className="w-3.5 h-3.5 text-slate-500" />
-                          Kịch bản hội thoại (Script)
+                          Kịch bản thô (Raw Transcript)
                         </label>
                         <textarea
-                          value={activeEdited.explanation ?? ''}
-                          onChange={e => patchQ(activeQ.question_id, { explanation: e.target.value })}
-                          rows={7}
-                          placeholder="Kịch bản hội thoại, ví dụ: 男：...&#10;女：..."
+                          value={getRawTranscriptPreview(activeQ)}
+                          readOnly
+                          rows={5}
+                          placeholder="Transcript chi tiết, ví dụ: 男：...&#10;女：..."
                           className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-slate-50 dark:bg-slate-900/60 text-slate-800 dark:text-slate-200 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 font-medium leading-relaxed placeholder:text-slate-400 transition-shadow"
                         />
                       </div>
@@ -783,6 +796,21 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
                           rows={2}
                           placeholder="Nhập nội dung câu hỏi..."
                           className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder:text-slate-400 leading-relaxed transition-shadow"
+                        />
+                      </div>
+
+                      {/* Question Text: Script */}
+                      <div>
+                        <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-1.5">
+                          <FileText className="w-3.5 h-3.5 text-slate-500" />
+                          Kịch bản hội thoại (Script)
+                        </label>
+                        <textarea
+                          value={activeEdited.explanation ?? ''}
+                          onChange={e => patchQ(activeQ.question_id, { explanation: e.target.value })}
+                          rows={7}
+                          placeholder="Kịch bản hội thoại, ví dụ: 男：...&#10;女：..."
+                          className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-slate-50 dark:bg-slate-900/60 text-slate-800 dark:text-slate-200 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 font-medium leading-relaxed placeholder:text-slate-400 transition-shadow"
                         />
                       </div>
 
@@ -848,6 +876,43 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
                               </div>
                             </div>
                           ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">
+                          Hình ảnh minh họa
+                        </label>
+                        <div className="space-y-3">
+                          {activeEdited.image_url ? (
+                            <img
+                              src={activeEdited.image_url}
+                              alt="Question illustration"
+                              className="w-full max-h-56 object-cover rounded-xl border border-slate-200 dark:border-slate-700"
+                            />
+                          ) : null}
+                          <input
+                            value={activeEdited.image_url ?? ''}
+                            onChange={e => patchQ(activeQ.question_id, { image_url: e.target.value })}
+                            placeholder="Dán URL ảnh nếu cần..."
+                            className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          />
+                          <div
+                            onClick={() => imageInputRef.current?.click()}
+                            className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-6 flex flex-col items-center justify-center bg-slate-50/50 dark:bg-slate-900/30 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer group"
+                          >
+                            <Edit3 className="w-8 h-8 text-slate-400 group-hover:text-blue-500 mb-2 transition-colors" />
+                            <p className="text-sm text-slate-500 text-center">
+                              <span className="text-blue-500 font-semibold">Thêm ảnh</span> hoặc kéo thả
+                            </p>
+                            <input
+                              ref={imageInputRef}
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={e => handleUploadQuestionImage(activeQ.question_id, e.target.files?.[0] ?? null)}
+                            />
+                          </div>
                         </div>
                       </div>
 
