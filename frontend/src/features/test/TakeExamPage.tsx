@@ -35,6 +35,20 @@ function getQuestionStatus(question: TestQuestion, answers: AnswerMap, reviews: 
   return 'idle'
 }
 
+function getGlobalAudioUrl(exam: TestExamDetail | null): string | undefined {
+  if (!exam) return undefined
+  if (exam.audio_url) return exam.audio_url
+
+  // Fallback: If global audio is missing but we have clipped question audio (from AI generation),
+  // we can reconstruct the full audio URL by removing the Cloudinary trim variables!
+  const firstClip = exam.questions.find(q => q.audio_clip_url)?.audio_clip_url
+  if (firstClip) {
+    // Match segment like /so_10.../ or /eo_20.../ and replace with /
+    return firstClip.replace(/\/?(?:so_[\d.]+|eo_[\d.]+)(?:,(?:so_[\d.]+|eo_[\d.]+))?\//, '/')
+  }
+  return undefined
+}
+
 interface TakeExamContentProps {
   examId: string
   initialAudioMode?: 'practice' | 'simulation'
@@ -44,7 +58,7 @@ interface TakeExamContentProps {
 
 export function TakeExamContent({
   examId,
-  initialAudioMode = 'practice',
+  initialAudioMode,
   onClose,
   standalone = false,
 }: TakeExamContentProps) {
@@ -66,6 +80,22 @@ export function TakeExamContent({
   const countdownIntervalRef = useRef<number | null>(null)
   const startTimeoutRef = useRef<number | null>(null)
   const selectedAudioMode = initialAudioMode || exam?.audio_mode || 'practice'
+  const simulationAudioSrc = useMemo(() => getGlobalAudioUrl(exam), [exam])
+
+  useEffect(() => {
+    if (startPhase !== 'active' || selectedAudioMode !== 'simulation') return
+    const audio = simulationAudioRef.current
+    if (!audio) return
+
+    audio.play().catch((err) => {
+      console.warn('Autoplay failed:', err)
+      toast({
+        title: 'Chưa thể tự phát audio',
+        description: 'Vui lòng nhấp vào trang để tiếp tục nghe.',
+        variant: 'destructive',
+      })
+    })
+  }, [simulationAudioSrc, startPhase, selectedAudioMode])
 
   useEffect(() => {
     if (!examId) {
@@ -171,26 +201,11 @@ export function TakeExamContent({
       })
     }, 1000)
 
-    startTimeoutRef.current = window.setTimeout(async () => {
+    startTimeoutRef.current = window.setTimeout(() => {
       setStartPhase('active')
       setCountdownSeconds(3)
 
-      if (selectedAudioMode === 'simulation') {
-        const audio = simulationAudioRef.current
-        if (audio) {
-          audio.currentTime = 0
-          audio.load()
-          try {
-            await audio.play()
-          } catch {
-            toast({
-              title: 'Không thể tự phát audio',
-              description: 'Trình duyệt đang chặn autoplay. Hãy nhấp một lần trong tab này rồi thử lại.',
-              variant: 'destructive',
-            })
-          }
-        }
-      } else {
+      if (selectedAudioMode !== 'simulation') {
         setAudioAutoPlaySignal((current) => current + 1)
       }
     }, 3000)
@@ -490,8 +505,8 @@ export function TakeExamContent({
         </div>
       </section>
 
-      {selectedAudioMode === 'simulation' && exam.audio_url && (
-        <audio ref={simulationAudioRef} src={exam.audio_url} preload="auto" className="hidden" />
+      {selectedAudioMode === 'simulation' && simulationAudioSrc && (
+        <audio ref={simulationAudioRef} src={simulationAudioSrc} preload="auto" className="hidden" />
       )}
 
       {result && (
@@ -600,7 +615,7 @@ export default function TakeExamPage() {
   const initialAudioMode =
     (searchParams.get('audioMode') as 'practice' | 'simulation' | null)
     || (location.state as { audioMode?: 'practice' | 'simulation' } | null)?.audioMode
-    || 'practice'
+    || undefined
 
   return <TakeExamContent examId={examId} initialAudioMode={initialAudioMode} standalone />
 }

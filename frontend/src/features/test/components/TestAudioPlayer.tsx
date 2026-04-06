@@ -102,31 +102,21 @@ export function TestAudioPlayer({
         <div className="flex items-center gap-4">
           <div
             className={[
-              'flex shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/20',
+              'flex shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 text-white animate-[pulse_2s_ease-in-out_infinite] shadow-lg shadow-blue-500/20',
               compact ? 'h-12 w-12' : 'h-14 w-14',
             ].join(' ')}
           >
             <Headphones className={compact ? 'h-5 w-5' : 'h-6 w-6'} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-slate-500">Audio đang phát</p>
+            <h3 className={compact ? 'text-base font-bold text-slate-800' : 'text-xl font-bold text-slate-800'}>
+              {title}
+            </h3>
+            <p className="text-sm font-medium text-slate-500 mt-0.5">
+              Audio đang phát liên tục trong nền...
+            </p>
           </div>
         </div>
-        <audio
-          ref={audioRef}
-          src={url}
-          preload="auto"
-          autoPlay
-          onEnded={() => {
-            setIsPlaying(false)
-            setProgress(0)
-          }}
-          onTimeUpdate={() => setProgress(audioRef.current?.currentTime ?? 0)}
-          onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? 0)}
-          onPause={() => setIsPlaying(false)}
-          onPlay={() => setIsPlaying(true)}
-          className="hidden"
-        />
       </div>
     )
   }
