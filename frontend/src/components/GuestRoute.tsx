@@ -3,7 +3,7 @@ import { useAuth } from '@/context/AuthContext'
 import { PageLoader } from './ui/PageLoader'
 
 interface GuestRouteProps {
-  children: React.ReactNode
+ children: React.ReactNode
 }
 
 /**
@@ -12,15 +12,15 @@ interface GuestRouteProps {
  * logged in, they will be redirected to the dashboard.
  */
 export function GuestRoute({ children }: GuestRouteProps) {
-  const { isAuthenticated, isLoading } = useAuth()
+ const { isAuthenticated, isLoading } = useAuth()
 
-  if (isLoading) {
-    return <PageLoader />
-  }
+ if (isLoading) {
+ return <PageLoader />
+ }
 
-  if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />
-  }
+ if (isAuthenticated) {
+ return <Navigate to="/dashboard" replace />
+ }
 
-  return <>{children}</>
+ return <>{children}</>
 }

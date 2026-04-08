@@ -10,9 +10,9 @@ const rootElement = document.getElementById('root')
 if (!rootElement) throw new Error('Failed to find the root element')
 
 ReactDOM.createRoot(rootElement).render(
-  <React.StrictMode>
-    <AppProvider>
-      <RouterProvider router={router} />
-    </AppProvider>
-  </React.StrictMode>
+ <React.StrictMode>
+ <AppProvider>
+ <RouterProvider router={router} />
+ </AppProvider>
+ </React.StrictMode>
 )
