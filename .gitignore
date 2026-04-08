@@ -120,3 +120,5 @@ output_v2/
 .DS_Store
 .AppleDouble
 .LSOverride
+
+backend/app/generated/

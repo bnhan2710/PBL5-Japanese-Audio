@@ -1,13 +1,18 @@
+from __future__ import annotations
+
 import base64
 import io
 import logging
 from datetime import datetime
-from pathlib import Path
 from uuid import uuid4
 
 import httpx
 from fastapi import HTTPException
-from PIL import Image
+
+try:
+    from PIL import Image
+except ImportError:  # pragma: no cover - depends on local optional dependency state
+    Image = None
 
 from app.core.config import BASE_DIR, get_settings
 from app.modules.ai_photos.schemas import PhotoType
@@ -17,6 +22,11 @@ logger = logging.getLogger(__name__)
 
 class AIPhotoService:
     def __init__(self):
+        if Image is None:
+            raise HTTPException(
+                status_code=500,
+                detail="Pillow is not installed. Run `pip install -r backend/requirements.txt`.",
+            )
         self.settings = get_settings()
         self.lm_url = self.settings.LM_STUDIO_API_URL
         self.lm_model = self.settings.LM_STUDIO_MODEL
