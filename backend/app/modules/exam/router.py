@@ -3,6 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
+from sqlalchemy.orm import selectinload
 
 from app.db.session import get_db
 from app.core.security import get_current_user
@@ -45,7 +46,7 @@ async def list_exams(
     """List all exams (admin sees all, others see own)."""
     offset = (page - 1) * page_size
 
-    base_query = select(Exam)
+    base_query = select(Exam).options(selectinload(Exam.audio))
     if current_user.role != "admin":
         base_query = base_query.where(Exam.creator_id == current_user.id)
 
@@ -72,7 +73,9 @@ async def get_exam(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    result = await db.execute(select(Exam).where(Exam.exam_id == exam_id))
+    result = await db.execute(
+        select(Exam).options(selectinload(Exam.audio)).where(Exam.exam_id == exam_id)
+    )
     exam = result.scalar_one_or_none()
     if not exam:
         raise HTTPException(status_code=404, detail="Exam not found")
@@ -87,7 +90,9 @@ async def update_exam(
     current_user: User = Depends(get_current_user),
 ):
     """Partially update exam fields (title, time_limit, current_step, is_published …)."""
-    result = await db.execute(select(Exam).where(Exam.exam_id == exam_id))
+    result = await db.execute(
+        select(Exam).options(selectinload(Exam.audio)).where(Exam.exam_id == exam_id)
+    )
     exam = result.scalar_one_or_none()
     if not exam:
         raise HTTPException(status_code=404, detail="Exam not found")

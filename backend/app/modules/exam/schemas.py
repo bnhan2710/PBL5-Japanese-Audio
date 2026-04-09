@@ -31,6 +31,8 @@ class ExamUpdate(BaseModel):
 class ExamResponse(ExamBase):
     exam_id: UUID
     creator_id: Optional[int] = None
+    audio_file_url: Optional[str] = None
+    audio_file_name: Optional[str] = None
     current_step: int
     is_published: bool
     created_at: datetime

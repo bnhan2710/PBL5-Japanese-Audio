@@ -61,6 +61,8 @@ class AISplitSegment(BaseModel):
 
 
 class AIExamResult(BaseModel):
+    audio_id: Optional[str] = None
+    audio_file_url: Optional[str] = None
     raw_transcript: str
     refined_script: str
     split_segments: List[AISplitSegment] = []
