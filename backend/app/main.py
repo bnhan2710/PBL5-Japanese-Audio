@@ -7,6 +7,7 @@ from app.shared.utils import setup_logger
 from app.core.health import router as health_router
 from app.modules.users.router import router as users_router
 from app.modules.auth.router import router as auth_router
+from app.modules.audio.router import router as audio_router
 from app.modules.exam.router import router as exam_router
 from app.modules.questions.router import router as questions_router
 from app.modules.ai_exam.router import router as ai_exam_router
@@ -72,6 +73,10 @@ app = FastAPI(
         {
             "name": "exams",
             "description": "Exam CRUD – create, list, update, delete exam drafts"
+        },
+        {
+            "name": "audio",
+            "description": "Admin audio resource management and listing"
         },
         {
             "name": "questions",
@@ -144,6 +149,7 @@ app.add_middleware(
 app.include_router(health_router, prefix="/api")
 app.include_router(users_router, prefix="/api")
 app.include_router(auth_router, prefix="/api")
+app.include_router(audio_router, prefix="/api")
 app.include_router(exam_router, prefix="/api")
 app.include_router(questions_router, prefix="/api")
 app.include_router(ai_exam_router, prefix="/api")

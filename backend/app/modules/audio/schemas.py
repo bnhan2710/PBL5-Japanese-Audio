@@ -102,3 +102,17 @@ class AudioWithSegmentsResponse(AudioResponse):
     segments: List[TranscriptSegmentResponse] = []
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class AdminAudioResponse(AudioResponse):
+    content_hash: Optional[str] = None
+    exam_count: int = 0
+    segment_count: int = 0
+
+
+class AdminAudioListResponse(BaseModel):
+    audios: List[AdminAudioResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
