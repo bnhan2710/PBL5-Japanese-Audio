@@ -6,237 +6,285 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 // Action types
 export const AUTH_ACTIONS = {
- LOGIN_SUCCESS: 'LOGIN_SUCCESS',
- LOGOUT: 'LOGOUT',
- SET_LOADING: 'SET_LOADING',
- SET_USER: 'SET_USER',
+  LOGIN_SUCCESS: 'LOGIN_SUCCESS',
+  LOGOUT: 'LOGOUT',
+  SET_LOADING: 'SET_LOADING',
+  SET_USER: 'SET_USER',
 } as const
 
 type AuthAction =
- | { type: typeof AUTH_ACTIONS.LOGIN_SUCCESS; payload: { token: string } }
- | { type: typeof AUTH_ACTIONS.LOGOUT }
- | { type: typeof AUTH_ACTIONS.SET_LOADING; payload: boolean }
- | { type: typeof AUTH_ACTIONS.SET_USER; payload: User }
+  | { type: typeof AUTH_ACTIONS.LOGIN_SUCCESS; payload: { token: string } }
+  | { type: typeof AUTH_ACTIONS.LOGOUT }
+  | { type: typeof AUTH_ACTIONS.SET_LOADING; payload: boolean }
+  | { type: typeof AUTH_ACTIONS.SET_USER; payload: User }
 
 const AuthStateContext = createContext<AuthState | null>(null)
 const AuthDispatchContext = createContext<{
- login: (credentials: LoginCredentials) => Promise<AuthResult>
- register: (credentials: RegisterCredentials) => Promise<AuthResult>
- logout: () => void
- fetchUserProfile: () => Promise<void>
+  login: (credentials: LoginCredentials) => Promise<AuthResult>
+  register: (credentials: RegisterCredentials) => Promise<AuthResult>
+  completeOAuthLogin: (tokens: {
+    accessToken: string
+    refreshToken?: string | null
+  }) => Promise<AuthResult>
+  startGoogleLogin: (nextPath?: string) => void
+  logout: () => void
+  fetchUserProfile: () => Promise<void>
 } | null>(null)
 
 const getInitialState = (): AuthState => ({
- isAuthenticated: !!localStorage.getItem('token'),
- token: localStorage.getItem('token'),
- isLoading: true, // Start loading to check token validity
- user: null,
+  isAuthenticated: !!localStorage.getItem('token'),
+  token: localStorage.getItem('token'),
+  isLoading: true, // Start loading to check token validity
+  user: null,
 })
 
 const authReducer = (state: AuthState, action: AuthAction): AuthState => {
- switch (action.type) {
- case AUTH_ACTIONS.LOGIN_SUCCESS:
- return {
- ...state,
- isAuthenticated: true,
- token: action.payload.token,
- isLoading: false,
- }
- case AUTH_ACTIONS.LOGOUT:
- return {
- ...state,
- isAuthenticated: false,
- token: null,
- user: null,
- isLoading: false,
- }
- case AUTH_ACTIONS.SET_LOADING:
- return {
- ...state,
- isLoading: action.payload,
- }
- case AUTH_ACTIONS.SET_USER:
- return {
- ...state,
- user: action.payload,
- }
- default:
- return state
- }
+  switch (action.type) {
+    case AUTH_ACTIONS.LOGIN_SUCCESS:
+      return {
+        ...state,
+        isAuthenticated: true,
+        token: action.payload.token,
+        isLoading: false,
+      }
+    case AUTH_ACTIONS.LOGOUT:
+      return {
+        ...state,
+        isAuthenticated: false,
+        token: null,
+        user: null,
+        isLoading: false,
+      }
+    case AUTH_ACTIONS.SET_LOADING:
+      return {
+        ...state,
+        isLoading: action.payload,
+      }
+    case AUTH_ACTIONS.SET_USER:
+      return {
+        ...state,
+        user: action.payload,
+      }
+    default:
+      return state
+  }
 }
 
 interface AuthProviderProps {
- children: ReactNode
+  children: ReactNode
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
- const [state, dispatch] = useReducer(authReducer, getInitialState())
+  const [state, dispatch] = useReducer(authReducer, getInitialState())
 
- const fetchUserProfile = useCallback(async () => {
- const token = localStorage.getItem('token')
- if (!token) return
+  const persistTokens = useCallback((accessToken: string, refreshToken?: string | null) => {
+    localStorage.setItem('token', accessToken)
+    if (refreshToken) {
+      localStorage.setItem('refresh_token', refreshToken)
+    }
+  }, [])
 
- try {
- const response = await apiFetch(`${API_URL}/api/auth/me`)
+  const fetchUserProfile = useCallback(async () => {
+    const token = localStorage.getItem('token')
+    if (!token) return
 
- if (response.ok) {
- const user = await response.json()
- dispatch({ type: AUTH_ACTIONS.SET_USER, payload: user })
- } else {
- // Token invalid or expired (and refresh also failed)
- localStorage.removeItem('token')
- localStorage.removeItem('refresh_token')
- dispatch({ type: AUTH_ACTIONS.LOGOUT })
- }
- } catch (error) {
- console.error('Failed to fetch user profile:', error)
- localStorage.removeItem('token')
- localStorage.removeItem('refresh_token')
- dispatch({ type: AUTH_ACTIONS.LOGOUT })
- } finally {
- dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false })
- }
- }, [])
+    try {
+      const response = await apiFetch(`${API_URL}/api/auth/me`)
 
- // Register logout callback for apiClient (auto-logout on failed refresh)
- useEffect(() => {
- registerLogoutCallback(() => {
- dispatch({ type: AUTH_ACTIONS.LOGOUT })
- })
- }, [])
+      if (response.ok) {
+        const user = await response.json()
+        dispatch({ type: AUTH_ACTIONS.SET_USER, payload: user })
+      } else {
+        // Token invalid or expired (and refresh also failed)
+        localStorage.removeItem('token')
+        localStorage.removeItem('refresh_token')
+        dispatch({ type: AUTH_ACTIONS.LOGOUT })
+      }
+    } catch (error) {
+      console.error('Failed to fetch user profile:', error)
+      localStorage.removeItem('token')
+      localStorage.removeItem('refresh_token')
+      dispatch({ type: AUTH_ACTIONS.LOGOUT })
+    } finally {
+      dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false })
+    }
+  }, [])
 
- // Check auth status on mount
- useEffect(() => {
- if (localStorage.getItem('token')) {
- fetchUserProfile()
- } else {
- dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false })
- }
- }, [fetchUserProfile])
+  // Register logout callback for apiClient (auto-logout on failed refresh)
+  useEffect(() => {
+    registerLogoutCallback(() => {
+      dispatch({ type: AUTH_ACTIONS.LOGOUT })
+    })
+  }, [])
 
- const login = useCallback(async (credentials: LoginCredentials): Promise<AuthResult> => {
- dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true })
+  // Check auth status on mount
+  useEffect(() => {
+    if (localStorage.getItem('token')) {
+      fetchUserProfile()
+    } else {
+      dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false })
+    }
+  }, [fetchUserProfile])
 
- try {
- const response = await fetch(`${API_URL}/api/auth/login`, {
- method: 'POST',
- headers: {
- 'Content-Type': 'application/json',
- },
- body: JSON.stringify(credentials),
- })
+  const login = useCallback(
+    async (credentials: LoginCredentials): Promise<AuthResult> => {
+      dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true })
 
- const data = await response.json()
+      try {
+        const response = await fetch(`${API_URL}/api/auth/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(credentials),
+        })
 
- if (!response.ok) {
- dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false })
- return {
- success: false,
- error: data.detail || 'Login failed',
- }
- }
+        const data = await response.json()
 
- localStorage.setItem('token', data.access_token)
- if (data.refresh_token) {
- localStorage.setItem('refresh_token', data.refresh_token)
- }
- dispatch({
- type: AUTH_ACTIONS.LOGIN_SUCCESS,
- payload: { token: data.access_token },
- })
- 
- // Fetch user profile immediately after login
- await fetchUserProfile()
+        if (!response.ok) {
+          dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false })
+          return {
+            success: false,
+            error: data.detail || 'Login failed',
+          }
+        }
 
- return { success: true, error: null }
- } catch (error) {
- dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false })
- return {
- success: false,
- error: error instanceof Error ? error.message : 'Login failed',
- }
- }
- }, [fetchUserProfile])
+        persistTokens(data.access_token, data.refresh_token)
+        dispatch({
+          type: AUTH_ACTIONS.LOGIN_SUCCESS,
+          payload: { token: data.access_token },
+        })
 
- const register = useCallback(
- async (credentials: RegisterCredentials): Promise<AuthResult> => {
- dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true })
+        // Fetch user profile immediately after login
+        await fetchUserProfile()
 
- try {
- const { confirmPassword, ...registerData } = credentials
- const response = await fetch(`${API_URL}/api/auth/register`, {
- method: 'POST',
- headers: {
- 'Content-Type': 'application/json',
- },
- body: JSON.stringify(registerData),
- })
+        return { success: true, error: null }
+      } catch (error) {
+        dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false })
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Login failed',
+        }
+      }
+    },
+    [fetchUserProfile, persistTokens]
+  )
 
- const data = await response.json()
+  const register = useCallback(
+    async (credentials: RegisterCredentials): Promise<AuthResult> => {
+      dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true })
 
- if (!response.ok) {
- dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false })
- return {
- success: false,
- error: data.detail || 'Registration failed',
- }
- }
+      try {
+        const { confirmPassword, ...registerData } = credentials
+        const response = await fetch(`${API_URL}/api/auth/register`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(registerData),
+        })
 
- // After successful registration, automatically log in
- return login({
- email: registerData.email,
- password: registerData.password,
- })
- } catch (error) {
- dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false })
- return {
- success: false,
- error: error instanceof Error ? error.message : 'Registration failed',
- }
- }
- },
- [login]
- )
+        const data = await response.json()
 
- const logout = useCallback(() => {
- localStorage.removeItem('token')
- localStorage.removeItem('refresh_token')
- dispatch({ type: AUTH_ACTIONS.LOGOUT })
- }, [])
+        if (!response.ok) {
+          dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false })
+          return {
+            success: false,
+            error: data.detail || 'Registration failed',
+          }
+        }
 
- const value = {
- login,
- register,
- logout,
- fetchUserProfile,
- }
+        // After successful registration, automatically log in
+        return login({
+          email: registerData.email,
+          password: registerData.password,
+        })
+      } catch (error) {
+        dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false })
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Registration failed',
+        }
+      }
+    },
+    [login]
+  )
 
- return (
- <AuthStateContext.Provider value={state}>
- <AuthDispatchContext.Provider value={value}>{children}</AuthDispatchContext.Provider>
- </AuthStateContext.Provider>
- )
+  const completeOAuthLogin = useCallback(
+    async ({
+      accessToken,
+      refreshToken,
+    }: {
+      accessToken: string
+      refreshToken?: string | null
+    }): Promise<AuthResult> => {
+      dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true })
+
+      try {
+        persistTokens(accessToken, refreshToken)
+        dispatch({
+          type: AUTH_ACTIONS.LOGIN_SUCCESS,
+          payload: { token: accessToken },
+        })
+        await fetchUserProfile()
+        return { success: true, error: null }
+      } catch (error) {
+        dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false })
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Google login failed',
+        }
+      }
+    },
+    [fetchUserProfile, persistTokens]
+  )
+
+  const startGoogleLogin = useCallback((nextPath: string = '/dashboard') => {
+    const searchParams = new URLSearchParams({ next: nextPath })
+    window.location.assign(`${API_URL}/api/auth/google/login?${searchParams.toString()}`)
+  }, [])
+
+  const logout = useCallback(() => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('refresh_token')
+    dispatch({ type: AUTH_ACTIONS.LOGOUT })
+  }, [])
+
+  const value = {
+    login,
+    register,
+    completeOAuthLogin,
+    startGoogleLogin,
+    logout,
+    fetchUserProfile,
+  }
+
+  return (
+    <AuthStateContext.Provider value={state}>
+      <AuthDispatchContext.Provider value={value}>{children}</AuthDispatchContext.Provider>
+    </AuthStateContext.Provider>
+  )
 }
 
 export function useAuthState() {
- const context = useContext(AuthStateContext)
- if (!context) {
- throw new Error('useAuthState must be used within an AuthProvider')
- }
- return context
+  const context = useContext(AuthStateContext)
+  if (!context) {
+    throw new Error('useAuthState must be used within an AuthProvider')
+  }
+  return context
 }
 
 export function useAuthDispatch() {
- const context = useContext(AuthDispatchContext)
- if (!context) {
- throw new Error('useAuthDispatch must be used within an AuthProvider')
- }
- return context
+  const context = useContext(AuthDispatchContext)
+  if (!context) {
+    throw new Error('useAuthDispatch must be used within an AuthProvider')
+  }
+  return context
 }
 
 export function useAuth() {
- return {
- ...useAuthState(),
- ...useAuthDispatch(),
- }
+  return {
+    ...useAuthState(),
+    ...useAuthDispatch(),
+  }
 }
