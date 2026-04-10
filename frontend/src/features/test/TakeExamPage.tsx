@@ -10,6 +10,7 @@ import {
  Loader2,
  PlayCircle,
  Send,
+ Sparkles,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/Button'
@@ -17,6 +18,7 @@ import { toast } from '@/hooks/use-toast'
 import { TestAudioPlayer } from './components/TestAudioPlayer'
 import { testClient } from './api/testClient'
 import { TestExamDetail, TestQuestion, TestSubmitResult } from './types'
+import { CompetencyAnalysisModal } from './components/CompetencyAnalysisModal'
 
 type AnswerMap = Record<string, string>
 type ReviewMap = Record<string, boolean>
@@ -72,6 +74,7 @@ export function TakeExamContent({
  const [remainingSeconds, setRemainingSeconds] = useState(0)
  const [submitting, setSubmitting] = useState(false)
  const [result, setResult] = useState<TestSubmitResult | null>(null)
+ const [showAnalysis, setShowAnalysis] = useState(false)
  const [autoSubmitted, setAutoSubmitted] = useState(false)
  const [startPhase, setStartPhase] = useState<'ready' | 'countdown' | 'active'>('ready')
  const [countdownSeconds, setCountdownSeconds] = useState(3)
@@ -555,6 +558,13 @@ export function TakeExamContent({
  {onClose ? 'Tiếp tục xem' : 'Ở lại trang này'}
  </Button>
  <Button
+ className="rounded-2xl bg-indigo-600 px-5 font-bold text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700"
+ onClick={() => setShowAnalysis(true)}
+ >
+ <Sparkles className="mr-2 h-4 w-4" />
+ Xem đánh giá năng lực (AI)
+ </Button>
+ <Button
  className="rounded-2xl bg-blue-600 px-5 hover:bg-blue-700"
  onClick={() => (onClose ? onClose() : navigate('/exam'))}
  >
@@ -563,6 +573,13 @@ export function TakeExamContent({
  </div>
  </div>
  </div>
+ )}
+
+ {showAnalysis && result && (
+ <CompetencyAnalysisModal
+ resultId={result.result_id}
+ onClose={() => setShowAnalysis(false)}
+ />
  )}
 
  {startPhase !== 'active' && !result && (

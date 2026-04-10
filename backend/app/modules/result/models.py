@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, Integer, Float, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, Float, DateTime, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -21,3 +21,19 @@ class UserResult(Base):
 
     # Relationships
     exam = relationship("Exam", back_populates="results")
+    competency_analysis = relationship("CompetencyAnalysis", back_populates="result", uselist=False, cascade="all, delete-orphan")
+
+class CompetencyAnalysis(Base):
+    __tablename__ = "competency_analysis"
+
+    analysis_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    result_id = Column(UUID(as_uuid=True), ForeignKey("user_results.result_id", ondelete="CASCADE"), nullable=False, unique=True)
+    overview = Column(Text, nullable=True) # Text overview
+    strengths = Column(JSONB, nullable=True) # Array of strings
+    weaknesses_analysis = Column(Text, nullable=True) # Deep analysis
+    actionable_advice = Column(JSONB, nullable=True) # Array of strings
+    skill_metrics = Column(JSONB, nullable=True) # Dict mapping skill to percentage
+    created_at = Column(DateTime, server_default=func.now())
+
+    # Relationships
+    result = relationship("UserResult", back_populates="competency_analysis")
