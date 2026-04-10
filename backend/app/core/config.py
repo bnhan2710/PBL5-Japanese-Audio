@@ -2,13 +2,15 @@ import os
 from pathlib import Path
 from functools import lru_cache
 from typing import Optional, List
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from dotenv import load_dotenv
 
 load_dotenv()
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True, extra="ignore")
+
     APP_VERSION: str = "1.0.0"
     APP_NAME: str = "Japanese Aduio"
     APP_DESCRIPTION: str = "Japanese Aduio Template"
@@ -69,11 +71,6 @@ class Settings(BaseSettings):
     AI_PHOTO_HEIGHT: int = 512
     AI_PHOTO_STEPS: int = 25
     AI_PHOTO_CFG_SCALE: float = 7.0
-
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
-
 
 @lru_cache()
 def get_settings() -> Settings:
