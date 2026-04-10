@@ -5,11 +5,14 @@ from typing import Optional, List
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from dotenv import load_dotenv
 
-load_dotenv()
+BACKEND_DIR = Path(__file__).resolve().parents[2]
+ENV_FILE = BACKEND_DIR / ".env"
+
+load_dotenv(ENV_FILE)
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True, extra="ignore")
+    model_config = SettingsConfigDict(env_file=ENV_FILE, case_sensitive=True, extra="ignore")
 
     APP_VERSION: str = "1.0.0"
     APP_NAME: str = "Japanese Aduio"
@@ -19,6 +22,7 @@ class Settings(BaseSettings):
     TEST_DATABASE_URL: Optional[str] = "sqlite+aiosqlite:///./test_app.db"
     CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]
     API_PREFIX: str = "/api"
+    FRONTEND_URL: str = "http://localhost:5173"
 
     # Database settings
     DB_NAME: Optional[str] = None
@@ -56,6 +60,7 @@ class Settings(BaseSettings):
     # Google OAuth Settings
     GOOGLE_CLIENT_ID: Optional[str] = None
     GOOGLE_CLIENT_SECRET: Optional[str] = None
+    GOOGLE_REDIRECT_URI: Optional[str] = None
 
     # n8n Automation Settings
     N8N_WEBHOOK_URL: Optional[str] = os.getenv("N8N_WEBHOOK_URL")

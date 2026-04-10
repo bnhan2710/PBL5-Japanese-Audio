@@ -9,6 +9,7 @@ const Home = lazy(() => import('../pages/Home'))
 const Dashboard = lazy(() => import('../pages/Dashboard'))
 const Login = lazy(() => import('../pages/Login'))
 const Register = lazy(() => import('../pages/Register'))
+const GoogleOAuthCallbackPage = lazy(() => import('../features/auth/GoogleOAuthCallbackPage'))
 const UsersPage = lazy(() => import('../features/admin/users/UsersPage'))
 const AudioLibraryPage = lazy(() => import('../features/admin/audio/AudioLibraryPage'))
 const ProfilePage = lazy(() => import('../features/profile/ProfilePage'))
@@ -59,6 +60,10 @@ const routes = {
     {
       path: 'register',
       element: <Register />,
+    },
+    {
+      path: 'auth/google/callback',
+      element: <GoogleOAuthCallbackPage />,
     },
     {
       path: 'forgot-password',

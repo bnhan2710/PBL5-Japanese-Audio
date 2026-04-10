@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
+from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import EmailStr
 
@@ -40,6 +41,48 @@ async def login(
     Login and receive JWT access token.
     """
     return await service.authenticate_user(login_data)
+
+
+@router.get("/google/login", include_in_schema=False)
+async def google_login(
+    request: Request,
+    next: str = Query("/dashboard"),
+    service: AuthService = Depends(get_auth_service),
+):
+    """Redirect the user to Google's OAuth consent screen."""
+    redirect_uri = str(request.url_for("google_auth_callback"))
+    auth_url = service.get_google_authorization_url(redirect_uri, next)
+    return RedirectResponse(auth_url, status_code=307)
+
+
+@router.get("/google/callback", name="google_auth_callback", include_in_schema=False)
+async def google_callback(
+    request: Request,
+    code: str | None = Query(None),
+    state: str | None = Query(None),
+    error: str | None = Query(None),
+    service: AuthService = Depends(get_auth_service),
+):
+    """Handle Google OAuth callback and redirect back to the frontend."""
+    if error:
+        redirect_url = service.build_frontend_oauth_redirect(error=error)
+        return RedirectResponse(redirect_url, status_code=303)
+
+    if not code or not state:
+        redirect_url = service.build_frontend_oauth_redirect(error="missing_google_oauth_payload")
+        return RedirectResponse(redirect_url, status_code=303)
+
+    try:
+        redirect_url = await service.authenticate_google_callback(
+            code=code,
+            state=state,
+            redirect_uri=str(request.url_for("google_auth_callback")),
+        )
+    except Exception as exc:
+        message = getattr(exc, "detail", None) or "google_oauth_failed"
+        redirect_url = service.build_frontend_oauth_redirect(error=str(message))
+
+    return RedirectResponse(redirect_url, status_code=303)
 
 @router.post("/refresh", response_model=Token)
 async def refresh_token(
@@ -117,4 +160,3 @@ async def reset_password(
     Reset password using verification code.
     """
     return await service.reset_password(token, new_password)
-
