@@ -1104,64 +1104,51 @@ function Step2({ questions, examId, onQuestionsChange, onBack }: Step2Props) {
  </div>
  </div>
 
- <div>
- <div className="mb-2 flex items-center justify-between gap-3">
- <label className="block text-sm font-bold text-card-foreground">
- Hình ảnh minh họa
- </label>
- {q.image_url ? (
- <button
- type="button"
- onClick={handleRemoveQuestionImage}
- className="inline-flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 transition-colors hover:bg-red-100 dark:bg-red-950/30 dark:text-red-300 dark:hover:bg-red-950/50"
- >
- <Trash2 className="h-3.5 w-3.5" />
- Xoá ảnh
- </button>
- ) : null}
- </div>
- <div className="space-y-3">
- {q.image_url ? (
- <img
- src={q.image_url}
- alt="Question illustration"
- className="w-full max-h-56 object-cover rounded-xl border border-border"
- />
- ) : null}
- <input
- value={q.image_url || ''}
- onChange={e => updateQ({ image_url: e.target.value, image_file: undefined })}
- placeholder="Dán URL ảnh hoặc upload bên dưới..."
- className="w-full px-4 py-3 border border-border rounded-xl text-sm bg-card text-card-foreground focus:outline-none focus:ring-2 focus:ring-blue-400"
- />
- <div
- onClick={() => imageInputRef.current?.click()}
- className="border-2 border-dashed border-border rounded-xl p-6 flex flex-col items-center justify-center bg-muted/50/50 hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer group"
- >
- <ImageIcon className="w-8 h-8 text-muted-foreground group-hover:text-blue-500 mb-2 transition-colors" />
- <p className="text-sm text-muted-foreground text-center">
- <span className="text-blue-500 font-semibold">Thêm ảnh</span> hoặc kéo thả
- </p>
- <input
- ref={imageInputRef}
- type="file"
- accept="image/*"
- className="hidden"
- onChange={e => handleQuestionImagePick(e.target.files?.[0] ?? null)}
- />
- </div>
- <AIPhotoGenerator
- currentImageUrl={q.image_url}
- questionText={q.question_text}
- scriptText={q.script_text}
- answers={q.answers}
- onSelectImage={(file, previewUrl) => updateQ({ image_url: previewUrl, image_file: file })}
- onRemoveImage={handleRemoveQuestionImage}
- />
- </div>
- </div>
- </div>
-
+  <div>
+  <div className="mb-2 flex items-center gap-2">
+  <label className="block text-sm font-bold text-card-foreground">Hình ảnh minh họa</label>
+  {q.image_url ? (
+  <button
+  type="button"
+  onClick={handleRemoveQuestionImage}
+  className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 transition-colors hover:bg-red-100 dark:bg-red-950/30 dark:text-red-300 dark:hover:bg-red-950/50"
+  >
+  <Trash2 className="h-3.5 w-3.5" />
+  Xoá ảnh
+  </button>
+  ) : null}
+  </div>
+  <div className="space-y-3">
+  {q.image_url ? (
+  <div className="w-full overflow-hidden rounded-xl border border-border bg-muted">
+  <img src={q.image_url} alt="Question illustration" className="w-full h-auto object-contain" />
+  </div>
+  ) : null}
+  <input
+  value={q.image_url || ''}
+  onChange={e => updateQ({ image_url: e.target.value, image_file: undefined })}
+  placeholder="Dán URL ảnh hoặc upload bên dưới..."
+  className="w-full px-4 py-3 border border-border rounded-xl text-sm bg-card text-card-foreground focus:outline-none focus:ring-2 focus:ring-blue-400"
+  />
+  <div
+  onClick={() => imageInputRef.current?.click()}
+  className="border-2 border-dashed border-border rounded-xl p-6 flex flex-col items-center justify-center bg-muted/50 hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer group"
+  >
+  <ImageIcon className="w-8 h-8 text-muted-foreground group-hover:text-blue-500 mb-2 transition-colors" />
+  <p className="text-sm text-muted-foreground text-center">
+  <span className="text-blue-500 font-semibold">Thêm ảnh</span> hoặc kéo thả
+  </p>
+  <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={e => handleQuestionImagePick(e.target.files?.[0] ?? null)} />
+  </div>
+  <AIPhotoGenerator
+  questionText={q.question_text}
+  scriptText={q.script_text}
+  answers={q.answers}
+  onSelectImage={(file, previewUrl) => updateQ({ image_url: previewUrl, image_file: file })}
+  />
+  </div>
+  </div>
+  </div>
  {/* Footer */}
  <div className="flex items-center justify-between px-6 py-3 border-t border-border bg-muted shrink-0">
  {error && <p className="text-xs text-red-500">{error}</p>}
