@@ -1,8 +1,8 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.pool import AsyncAdaptedQueuePool
-from app.utils.logger import setup_logger
-from app.config import get_settings
+from app.shared.utils import setup_logger
+from app.core.config import get_settings
 from urllib.parse import quote_plus
 
 settings = get_settings()
