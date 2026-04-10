@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
  X, Headphones, Clock, Layers, Loader2,
  Trash2, Save, Brain, AlertCircle, Play, Pause,
- Edit3, FileText, ChevronLeft, ExternalLink, Plus, Star, Scissors, Download
+ Edit3, FileText, ChevronLeft, ExternalLink, Plus, Star, Scissors, Download, QrCode
 } from 'lucide-react'
 import { examClient, ExamResponse, QuestionResponse, AnswerResponse } from './api/examClient'
 import AIPhotoGenerator from './components/AIPhotoGenerator'
@@ -18,6 +18,29 @@ interface Props {
 
 type EditableQuestionPatch = Partial<QuestionResponse> & {
  image_file?: File | null
+}
+
+function buildCloudinaryDownloadUrl(value?: string | null) {
+ if (!value) return null
+ if (value.includes('res.cloudinary.com') && value.includes('/upload/')) {
+ return value.replace('/upload/', '/upload/fl_attachment/')
+ }
+ return value
+}
+
+function extractFileName(value?: string | null) {
+ if (!value) return 'audio-listening.mp3'
+ const normalized = value.split('?')[0]?.split('#')[0] ?? value
+ const segments = normalized.split('/')
+ return segments[segments.length - 1] || 'audio-listening.mp3'
+}
+
+function buildQrCodeUrl(value: string) {
+ const searchParams = new URLSearchParams({
+ size: '280x280',
+ data: value,
+ })
+ return `https://api.qrserver.com/v1/create-qr-code/?${searchParams.toString()}`
 }
 
 function AudioPlayer({ url }: { url: string }) {
@@ -262,6 +285,7 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  const [deletingQ, setDeletingQ] = useState<string | null>(null)
  const [confirmDeleteQ, setConfirmDeleteQ] = useState<string | null>(null)
  const [isEditingAudio, setIsEditingAudio] = useState<string | null>(null)
+ const [showAudioQr, setShowAudioQr] = useState(false)
 
  const handleOpenPdfExport = () => {
  window.open(`/exam/${exam.exam_id}/pdf?autoprint=1`, '_blank', 'noopener,noreferrer')
@@ -382,14 +406,26 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  }
 
  const getBaseAudioUrl = (): string | null => {
- const clipUrl = questions.find(q => q.audio_clip_url)?.audio_clip_url
- if (!clipUrl) return null
- let base = clipUrl
+ const sourceUrl = exam.audio_file_url || questions.find(q => q.audio_clip_url)?.audio_clip_url
+ if (!sourceUrl) return null
+ let base = sourceUrl
  base = base.replace(/so_[\d.]+,?/, '')
  base = base.replace(/eo_[\d.]+,?/, '')
  base = base.replace('upload//', 'upload/')
  return base
  }
+
+ const listeningFile = (() => {
+ const baseUrl = getBaseAudioUrl()
+ if (!baseUrl) return null
+
+ const downloadUrl = buildCloudinaryDownloadUrl(baseUrl) || baseUrl
+ return {
+ fileName: exam.audio_file_name || extractFileName(downloadUrl),
+ url: downloadUrl,
+ qrCodeUrl: buildQrCodeUrl(downloadUrl),
+ }
+ })()
 
  const handleDeleteQ = async (qId: string) => {
  setDeletingQ(qId)
@@ -561,6 +597,14 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  </div>
 
  <div className="flex items-center gap-2 shrink-0">
+ <button
+ onClick={() => setShowAudioQr(true)}
+ disabled={!listeningFile}
+ className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-900/20 rounded-lg transition-colors disabled:opacity-50 disabled:hover:bg-transparent"
+ >
+ <QrCode className="w-3.5 h-3.5" />
+ QR Audio
+ </button>
  <button
  onClick={handleOpenPdfExport}
  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-stone-700 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800 rounded-lg transition-colors"
@@ -1007,6 +1051,91 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  )}
  </div>
  </div>
+
+ {showAudioQr && listeningFile && (
+ <div
+ className="absolute inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px]"
+ onClick={() => setShowAudioQr(false)}
+ >
+ <div
+ className="w-full max-w-xl rounded-[28px] border border-emerald-100 bg-white shadow-2xl"
+ onClick={(e) => e.stopPropagation()}
+ >
+ <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-5">
+ <div>
+ <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-600">Audio QR</p>
+ <h3 className="mt-2 text-2xl font-bold text-slate-900">Quét mã để mở file nghe</h3>
+ <p className="mt-2 text-sm leading-6 text-muted-foreground">
+ Dùng QR này để tải hoặc mở nhanh file audio của đề thi, tương tự flow xuất PDF.
+ </p>
+ </div>
+ <button
+ onClick={() => setShowAudioQr(false)}
+ className="mt-1 flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+ >
+ <X className="h-4 w-4" />
+ </button>
+ </div>
+
+ <div className="grid gap-6 px-6 py-6 md:grid-cols-[minmax(0,1fr)_260px]">
+ <div>
+ <div className="rounded-2xl border border-border bg-muted/40 px-4 py-4">
+ <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+ Tên file
+ </p>
+ <p className="mt-2 break-all text-sm font-semibold text-foreground">{listeningFile.fileName}</p>
+ </div>
+
+ <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950 px-4 py-4">
+ <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+ URL tải file nghe
+ </p>
+ <p className="mt-3 break-all font-mono text-xs leading-6 text-slate-100">{listeningFile.url}</p>
+ </div>
+
+ <div className="mt-4 flex flex-wrap gap-3">
+ <a
+ href={listeningFile.url}
+ target="_blank"
+ rel="noreferrer"
+ download={listeningFile.fileName}
+ className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600"
+ >
+ <Download className="h-4 w-4" />
+ Mở / tải file nghe
+ </a>
+ <button
+ onClick={() => {
+ navigator.clipboard.writeText(listeningFile.url)
+ .then(() => toast({ title: 'Đã copy link audio' }))
+ .catch(() => toast({ title: 'Không thể copy link', variant: 'destructive' }))
+ }}
+ className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-muted"
+ >
+ <FileText className="h-4 w-4" />
+ Copy link
+ </button>
+ </div>
+ </div>
+
+ <div className="rounded-[24px] border border-emerald-100 bg-emerald-50/60 p-5 text-center">
+ <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Scan To Listen</p>
+ <div className="mt-4 overflow-hidden rounded-3xl border border-white bg-white p-3 shadow-sm">
+ <img
+ src={listeningFile.qrCodeUrl}
+ alt="Mã QR mở file nghe"
+ className="mx-auto aspect-square w-full max-w-[280px] object-contain"
+ />
+ </div>
+ <p className="mt-4 text-sm font-semibold text-slate-900">Quét QR để mở file nghe</p>
+ <p className="mt-2 text-xs leading-5 text-muted-foreground">
+ Nếu máy không tải trực tiếp, hãy mở URL rồi dùng chức năng tải xuống của trình phát.
+ </p>
+ </div>
+ </div>
+ </div>
+ </div>
+ )}
  </div>
  )
 }
