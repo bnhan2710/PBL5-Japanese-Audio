@@ -158,6 +158,8 @@ async def _run_pipeline(
                 audio.raw_transcript = result.raw_transcript
 
             cache.audio_id = audio.audio_id
+            result.audio_id = str(audio.audio_id)
+            result.audio_file_url = audio.file_url
             cache.source_filename = filename
             cache.status = "completed"
             cache.ai_model = svc.model_name

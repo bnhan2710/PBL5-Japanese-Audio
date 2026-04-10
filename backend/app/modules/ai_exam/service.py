@@ -521,6 +521,23 @@ class BellAudioSplitter:
 
         return valid_bell_times_ms
 
+    def _build_full_audio_segment(self, audio_path: str) -> SplitAudioChunk:
+        from pydub import AudioSegment
+
+        audio = AudioSegment.from_file(audio_path)
+        if len(audio) < self.min_segment_length_ms:
+            raise RuntimeError("Audio is too short to process.")
+
+        buffer = io.BytesIO()
+        audio.export(buffer, format="wav")
+        return SplitAudioChunk(
+            segment_index=1,
+            file_name="segment_01.wav",
+            start_ms=0,
+            end_ms=len(audio),
+            audio_bytes=buffer.getvalue(),
+        )
+
     def split_audio(self, audio_bytes: bytes, suffix: str = ".mp3") -> list[SplitAudioChunk]:
         from pydub import AudioSegment
 
@@ -531,7 +548,10 @@ class BellAudioSplitter:
         try:
             bell_times_ms = self.find_question_starts(tmp_path)
             if not bell_times_ms:
-                raise RuntimeError("No valid bell timestamps found in audio.")
+                logger.warning(
+                    "No valid bell timestamps found in audio. Falling back to a single full-length segment."
+                )
+                return [self._build_full_audio_segment(tmp_path)]
 
             audio = AudioSegment.from_file(tmp_path)
             segments: list[SplitAudioChunk] = []

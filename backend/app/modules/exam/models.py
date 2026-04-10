@@ -25,3 +25,17 @@ class Exam(Base):
     audio = relationship("Audio", back_populates="exams")
     questions = relationship("Question", back_populates="exam", cascade="all, delete-orphan")
     results = relationship("UserResult", back_populates="exam", cascade="all, delete-orphan")
+
+    @property
+    def audio_file_url(self) -> str | None:
+        audio = self.__dict__.get("audio")
+        if audio is None:
+            return None
+        return getattr(audio, "file_url", None)
+
+    @property
+    def audio_file_name(self) -> str | None:
+        audio = self.__dict__.get("audio")
+        if audio is None:
+            return None
+        return getattr(audio, "file_name", None)

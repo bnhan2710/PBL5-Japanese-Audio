@@ -51,6 +51,28 @@ def test_bell_splitter_ignores_bell_2baku_trap():
     assert timestamps[0] < timestamps[1]
 
 
+def test_bell_splitter_falls_back_to_full_audio_when_no_bell_detected():
+    tone = Sine(440).to_audio_segment(duration=2200).apply_gain(-10)
+
+    with tempfile.NamedTemporaryFile(suffix=".wav") as tmp:
+        tone.export(tmp.name, format="wav")
+        audio_bytes = Path(tmp.name).read_bytes()
+
+    splitter = BellAudioSplitter(
+        threshold_percent=0.8,
+        min_distance_sec=1,
+        trap_window_sec=4.0,
+        min_segment_length_ms=500,
+    )
+    segments = splitter.split_audio(audio_bytes, suffix=".wav")
+
+    assert len(segments) == 1
+    assert segments[0].segment_index == 1
+    assert segments[0].start_ms == 0
+    assert segments[0].end_ms >= 2000
+    assert segments[0].audio_bytes
+
+
 class _FakeSplitter:
     def split_audio(self, audio_bytes: bytes, suffix: str = ".mp3"):
         return [
