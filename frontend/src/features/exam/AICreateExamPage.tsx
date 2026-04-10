@@ -32,6 +32,7 @@ import {
 } from './api/examClient'
 import { examClient } from './api/examClient'
 import AIPhotoGenerator from './components/AIPhotoGenerator'
+import { AIFeedbackModal } from '@/components/AIFeedbackModal'
 import { toast } from '@/hooks/use-toast'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -1615,6 +1616,7 @@ export default function AICreateExamPage() {
   const [savingDraft, setSavingDraft] = useState(false)
 
   const [step, setStep] = useState<WizardStep>(1)
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
 
   const handleStartAI = async () => {
     if (!audioFile || !title.trim()) return
@@ -1731,6 +1733,12 @@ export default function AICreateExamPage() {
         {step >= 3 && step < 4 && (
           <div className="flex items-center gap-3 mt-2 md:mt-0">
             <button
+              onClick={() => setShowFeedbackModal(true)}
+              className="px-5 py-2.5 bg-indigo-50 border border-indigo-200 text-indigo-600 dark:bg-indigo-900/20 dark:border-indigo-800 dark:text-indigo-400 rounded-xl text-sm font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors shadow-sm"
+            >
+              <Star className="w-4 h-4 inline mr-2 text-amber-500" /> Đánh giá AI
+            </button>
+            <button
               onClick={handleSaveDraft}
               disabled={savingDraft}
               className="flex items-center gap-2 px-5 py-2.5 bg-card border border-border text-muted-foreground rounded-xl text-sm font-bold hover:bg-accent hover:text-accent-foreground transition-colors shadow-sm disabled:opacity-50"
@@ -1815,6 +1823,13 @@ export default function AICreateExamPage() {
           />
         )}
       </div>
+
+      <AIFeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+        contentId={jobId || '00000000-0000-0000-0000-000000000000'}
+        aiVersion="ReazonSpeech_Gemini"
+      />
     </div>
   )
 }
