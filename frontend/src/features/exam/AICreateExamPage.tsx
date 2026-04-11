@@ -1268,14 +1268,14 @@ function Step3Review({ editableQuestions, setEditableQuestions, audioFile }: Ste
                       />
                     </div>
                     <AIPhotoGenerator
-                      currentImageUrl={activeQ.image_url}
+                      
                       questionText={activeQ.question_text}
                       scriptText={activeQ.script_text}
                       answers={activeQ.answers}
                       onSelectImage={(file, previewUrl) =>
                         updateQuestion(activeQIdx, { image_url: previewUrl, image_file: file })
                       }
-                      onRemoveImage={handleRemoveQuestionImage}
+                      
                     />
                   </div>
                 </div>

@@ -1001,12 +1001,12 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  />
  </div>
  <AIPhotoGenerator
- currentImageUrl={activeEdited.image_url}
+ 
  questionText={activeEdited.question_text}
  scriptText={activeEdited.explanation}
  answers={activeEdited.answers}
  onSelectImage={(file, previewUrl) => patchQ(activeQ.question_id, { image_url: previewUrl, image_file: file })}
- onRemoveImage={() => handleRemoveQuestionImage(activeQ.question_id)}
+ 
  />
  </div>
  </div>
