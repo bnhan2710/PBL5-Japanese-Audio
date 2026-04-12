@@ -45,7 +45,7 @@ class UserListFilters(BaseModel):
     """Filters for listing users."""
     email: Optional[str] = None
     username: Optional[str] = None
-    role: Optional[str] = Field(None, pattern="^(admin|user|guest)$")
+    role: Optional[str] = Field(None, pattern="^(admin|user)$")
     is_active: Optional[bool] = None
 
 
@@ -62,7 +62,7 @@ class UserCreateByAdmin(BaseModel):
     """Schema for admin creating a new user."""
     email: EmailStr = Field(..., description="New user email")
     username: str = Field(..., min_length=3, max_length=50, description="Username")
-    role: str = Field("user", pattern="^(admin|user|guest)$", description="Role")
+    role: str = Field("user", pattern="^(admin|user)$", description="Role")
     password: Optional[str] = Field(None, min_length=8, description="Password (leave empty to auto-generate)")
     first_name: Optional[str] = Field(None, description="First name")
     last_name: Optional[str] = Field(None, description="Last name")
@@ -84,7 +84,7 @@ class UserUpdate(BaseModel):
     """Schema for updating user information."""
     email: Optional[EmailStr] = Field(None, description="New email")
     username: Optional[str] = Field(None, min_length=3, max_length=50, description="New username")
-    role: Optional[str] = Field(None, pattern="^(admin|user|guest)$", description="New role")
+    role: Optional[str] = Field(None, pattern="^(admin|user)$", description="New role")
     is_active: Optional[bool] = Field(None, description="Active status")
     first_name: Optional[str] = Field(None, description="New first name")
     last_name: Optional[str] = Field(None, description="New last name")
