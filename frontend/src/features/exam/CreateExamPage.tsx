@@ -619,10 +619,10 @@ function AudioDropZone({ question, onUpload, onEdit }: AudioZoneProps) {
 // ─── Step 2: Edit Questions ──────────────────────────────────────────────────
 
 interface Step2Props {
- questions: LocalQuestion[]
- examId: string
- onQuestionsChange: (qs: LocalQuestion[]) => void
- onBack: () => void
+  questions: LocalQuestion[]
+  examId: string
+  onQuestionsChange: React.Dispatch<React.SetStateAction<LocalQuestion[]>>
+  onBack: () => void
 }
 
 function Step2({ questions, examId, onQuestionsChange, onBack }: Step2Props) {
@@ -643,9 +643,9 @@ function Step2({ questions, examId, onQuestionsChange, onBack }: Step2Props) {
  }, new Map<string, Array<{ question: LocalQuestion; index: number }>>())
  ).sort(([a], [b]) => extractMondaiNumber(a) - extractMondaiNumber(b))
 
- const updateQ = (patch: Partial<LocalQuestion>) => {
- onQuestionsChange(questions.map((item, i) => i === selectedIdx ? { ...item, ...patch } : item))
- }
+  const updateQ = (patch: Partial<LocalQuestion>) => {
+    onQuestionsChange(prev => prev.map((item, i) => i === selectedIdx ? { ...item, ...patch } : item))
+  }
 
  const updateAnswer = (answerId: string, patch: Partial<LocalAnswer>) => {
  updateQ({ answers: q.answers.map(a => a.id === answerId ? { ...a, ...patch } : a) })
@@ -1421,6 +1421,10 @@ export default function CreateExamPage() {
  const handlePublish = async () => {
  setPublishing(true)
  try {
+ if (questions.some(q => q.audio_clip_url || q.audioFile)) {
+ toast({ title: 'Đang xử lý', description: 'Đang gộp file âm thanh đề thi, quá trình này có thể tốn một chút thời gian...' })
+ await examClient.mergeExamAudio(examId)
+ }
  await examClient.updateExam(examId, { is_published: true, current_step: 3 })
  toast({ title: 'Xuất bản thành công! 🎉', description: 'Đề thi đã được xuất bản và sẵn sàng sử dụng.' })
  navigate('/exam')

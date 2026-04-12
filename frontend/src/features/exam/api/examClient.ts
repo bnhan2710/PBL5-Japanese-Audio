@@ -121,6 +121,11 @@ export const examClient = {
   getExam: (examId: string) =>
     apiFetch(`${API_BASE}/api/exams/${examId}`).then((r) => handleResponse<ExamResponse>(r)),
 
+  mergeExamAudio: (examId: string) =>
+    apiFetch(`${API_BASE}/api/exams/${examId}/merge-audio`, {
+      method: 'POST',
+    }).then((r) => handleResponse<ExamResponse>(r)),
+
   deleteExam: (examId: string) => apiFetch(`${API_BASE}/api/exams/${examId}`, { method: 'DELETE' }),
 
   listExams: () =>

@@ -392,7 +392,7 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  }
 
  const getBaseAudioUrl = (): string | null => {
- const sourceUrl = exam.audio_file_url || questions.find(q => q.audio_clip_url)?.audio_clip_url
+ const sourceUrl = exam.audio_file_url
  if (!sourceUrl) return null
  let base = sourceUrl
  base = base.replace(/so_[\d.]+,?/, '')
