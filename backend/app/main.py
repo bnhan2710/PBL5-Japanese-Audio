@@ -15,6 +15,8 @@ from app.modules.ai_photos.router import router as ai_photos_router
 from app.modules.test.router import router as test_router
 from app.modules.result.router import router as result_router
 from app.modules.ai_feedback.router import router as ai_feedback_router
+from app.modules.system_feedback.router import router as system_feedback_router
+from app.modules.ai_chat.router import router as ai_chat_router
 from app.db.session import init_db, engine
 from app.core.config import get_settings
 
@@ -24,6 +26,7 @@ from app.modules.ai_exam.models import AIExamCache  # noqa: F401
 from app.modules.questions.models import Question, Answer  # noqa: F401
 from app.modules.result.models import UserResult  # noqa: F401
 from app.modules.ai_feedback.models import AIFeedback  # noqa: F401
+from app.modules.system_feedback.models import SystemFeedback  # noqa: F401
 
 settings = get_settings()
 logger = setup_logger(__name__)
@@ -95,6 +98,14 @@ app = FastAPI(
         {
             "name": "ai-feedbacks",
             "description": "AI feedback tracking for automatically generated content"
+        },
+        {
+            "name": "system-feedbacks",
+            "description": "System-wide user feedback for product quality and analytics"
+        },
+        {
+            "name": "ai-chat",
+            "description": "Chat completion proxy from app to LM Studio Gemma model"
         }
     ],
     swagger_ui_parameters={
@@ -163,5 +174,7 @@ app.include_router(ai_photos_router, prefix="/api")
 app.include_router(test_router, prefix="/api")
 app.include_router(result_router, prefix="/api")
 app.include_router(ai_feedback_router, prefix="/api")
+app.include_router(system_feedback_router, prefix="/api")
+app.include_router(ai_chat_router, prefix="/api")
 
 logger.info("Application routes configured")

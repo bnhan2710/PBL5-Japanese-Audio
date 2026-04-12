@@ -912,7 +912,7 @@ class AIExamService:
                     source_question_index=structured.source_question_index,
                     source_start_time=source.start_ms / 1000.0,
                     source_end_time=source.end_ms / 1000.0,
-                    source_transcript=source.refined_transcript or source.transcript,
+                    source_transcript=source.transcript,
                     answers=answers,
                 )
             )

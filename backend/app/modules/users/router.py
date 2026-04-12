@@ -47,6 +47,7 @@ async def list_users(
         filters["role"] = role
     if is_active is not None:
         filters["is_active"] = is_active
+    filters["exclude_guest"] = True
 
     return await service.list_users(filters, page, page_size)
 

@@ -63,7 +63,10 @@ export interface QuestionPayload {
   audio_clip_url?: string
   question_text?: string
   image_url?: string | null
+  script_text?: string
   explanation?: string
+  raw_transcript?: string
+  hide_question_text?: boolean
   difficulty?: number
   answers?: AnswerPayload[]
 }
@@ -76,7 +79,10 @@ export interface QuestionResponse {
   audio_clip_url?: string
   question_text?: string
   image_url?: string | null
+  script_text?: string
   explanation?: string
+  raw_transcript?: string
+  hide_question_text?: boolean
   difficulty?: number
   answers: AnswerResponse[]
 }
@@ -191,6 +197,7 @@ export interface AIQuestion {
   question_number: number
   introduction?: string
   script_text: string
+  explanation?: string
   question_text: string
   difficulty?: number
   image_url?: string
@@ -201,6 +208,7 @@ export interface AIQuestion {
   source_start_time?: number
   source_end_time?: number
   source_transcript?: string
+  hide_question_text?: boolean
   answers: AIQuestionOption[]
 }
 

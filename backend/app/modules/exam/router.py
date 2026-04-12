@@ -10,8 +10,17 @@ from app.core.security import get_current_user
 from app.modules.users.models import User
 from app.modules.exam.models import Exam
 from app.modules.exam.schemas import ExamCreate, ExamUpdate, ExamResponse, ExamListResponse
+from app.modules.audio.models import Audio
 
 router = APIRouter(prefix="/exams", tags=["exams"])
+
+
+async def _resolve_audio_id(db: AsyncSession, audio_id: Optional[UUID]) -> Optional[UUID]:
+    """Return audio_id only when it exists, otherwise detach exam from missing audio."""
+    if audio_id is None:
+        return None
+    audio = await db.get(Audio, audio_id)
+    return audio.audio_id if audio else None
 
 
 @router.post("", response_model=ExamResponse, status_code=201)
@@ -26,7 +35,7 @@ async def create_exam(
         title=payload.title,
         description=payload.description,
         time_limit=payload.time_limit,
-        audio_id=payload.audio_id,
+        audio_id=await _resolve_audio_id(db, payload.audio_id),
         current_step=1,
         is_published=False,
     )
@@ -98,6 +107,9 @@ async def update_exam(
         raise HTTPException(status_code=404, detail="Exam not found")
 
     for field, value in payload.model_dump(exclude_unset=True).items():
+        if field == "audio_id":
+            exam.audio_id = await _resolve_audio_id(db, value)
+            continue
         setattr(exam, field, value)
 
     await db.commit()

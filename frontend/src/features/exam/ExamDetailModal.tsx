@@ -2,8 +2,8 @@ import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
  X, Headphones, Clock, Layers, Loader2,
- Trash2, Save, Brain, AlertCircle, Play, Pause,
- Edit3, FileText, ChevronLeft, ExternalLink, Plus, Star, Scissors, Download, QrCode
+ Trash2, Save, Brain, AlertCircle,
+ Edit3, FileText, ChevronLeft, ExternalLink, Plus, Star, Scissors, Download, QrCode, Play, Pause
 } from 'lucide-react'
 import { examClient, ExamResponse, QuestionResponse, AnswerResponse } from './api/examClient'
 import AIPhotoGenerator from './components/AIPhotoGenerator'
@@ -18,6 +18,14 @@ interface Props {
 
 type EditableQuestionPatch = Partial<QuestionResponse> & {
  image_file?: File | null
+}
+
+const MONDAI_OPTIONS = [1, 2, 3, 4, 5]
+
+function extractMondaiNumber(label?: string | null) {
+ if (!label) return -1
+ const match = label.match(/(\d+)/)
+ return match ? Number(match[1]) : -1
 }
 
 function buildCloudinaryDownloadUrl(value?: string | null) {
@@ -43,81 +51,30 @@ function buildQrCodeUrl(value: string) {
  return `https://api.qrserver.com/v1/create-qr-code/?${searchParams.toString()}`
 }
 
-function AudioPlayer({ url }: { url: string }) {
- const audioRef = useRef<HTMLAudioElement>(null)
- const [playing, setPlaying] = useState(false)
- const [progress, setProgress] = useState(0)
- const [duration, setDuration] = useState(0)
-
- // Reset player state whenever the audio URL changes
- useEffect(() => {
- if (audioRef.current) {
- audioRef.current.pause()
- audioRef.current.load() // force reload with new src
- }
- setPlaying(false)
- setProgress(0)
- setDuration(0)
- }, [url])
-
- const toggle = () => {
- if (!audioRef.current) return
- if (playing) { audioRef.current.pause(); setPlaying(false) }
- else { audioRef.current.play().catch(() => { }); setPlaying(true) }
- }
-
- const fmt = (s: number) => {
- const m = Math.floor(s / 60)
- const sec = Math.floor(s % 60)
- return `${m}:${sec.toString().padStart(2, '0')}`
- }
-
- const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
- const t = parseFloat(e.target.value)
- if (audioRef.current) audioRef.current.currentTime = t
- setProgress(t)
- }
-
+ function AudioPlayer({ url }: { url: string }) {
  return (
- <div className="space-y-2">
- <div className="flex items-center gap-3 bg-muted border border-border rounded-xl px-4 py-3">
- <button
- onClick={toggle}
- className="w-9 h-9 rounded-full bg-blue-500 hover:bg-blue-600 flex items-center justify-center text-white transition-colors shrink-0 shadow-sm shadow-blue-500/30"
- >
- {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
- </button>
- <div className="flex-1 min-w-0">
- <input
- type="range"
- min={0}
- max={duration || 1}
- step={0.01}
- value={progress}
- onChange={handleSeek}
- className="w-full h-1.5 appearance-none rounded-full bg-muted [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-500 accent-blue-500 cursor-pointer"
- />
- <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
- <span>{fmt(progress)}</span>
- <span>{duration > 0 ? fmt(duration) : '--:--'}</span>
- </div>
- </div>
  <audio
- ref={audioRef}
  src={url}
- onEnded={() => { setPlaying(false); setProgress(0) }}
- onTimeUpdate={() => setProgress(audioRef.current?.currentTime ?? 0)}
- onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? 0)}
- onError={() => setPlaying(false)}
+ controls
  preload="metadata"
- className="hidden"
+ className="w-full"
  />
- </div>
- </div>
  )
 }
 
-// ─── Inline Audio Trimmer ─────────────────────────────────────────────────────
+function RawTranscriptDisplay({ text }: { text: string }) {
+ return (
+ <textarea
+ value={text || ''}
+ readOnly
+ rows={6}
+ placeholder="Nội dung nghe thô từ audio..."
+ className="w-full px-4 py-3 border border-border rounded-xl text-sm bg-muted text-slate-700 dark:text-muted-foreground resize-none focus:outline-none focus:ring-1 focus:ring-blue-400 leading-relaxed cursor-default"
+ />
+ )
+}
+
+// ─── Inline Audio Trimmer ─────────────────────────────────────────────────────�───────────────────────────────────────────
 
 function InlineAudioTrimmer({
  initialUrl,
@@ -339,6 +296,35 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  setEditedQuestions(prev => ({ ...prev, [qId]: { ...(prev[qId] ?? {}), ...patch } }))
  }
 
+ const isHideQuestionEnabled = (question: QuestionResponse) => {
+ const patched = editedQuestions[question.question_id]
+ if (patched && Object.prototype.hasOwnProperty.call(patched, 'hide_question_text')) {
+ return !!patched.hide_question_text
+ }
+ return !!question.hide_question_text
+ }
+
+ const hiddenMondaiNumbers = Array.from(
+ new Set(
+ questions
+ .filter((q) => isHideQuestionEnabled(q))
+ .map((q) => extractMondaiNumber(q.mondai_group))
+ .filter((n) => n > 0)
+ )
+ ).sort((a, b) => a - b)
+
+ const toggleHideQuestionByMondai = (mondaiNumber: number) => {
+ const shouldHide = !hiddenMondaiNumbers.includes(mondaiNumber)
+ setEditedQuestions((prev) => {
+ const next = { ...prev }
+ for (const q of questions) {
+ if (extractMondaiNumber(q.mondai_group) !== mondaiNumber) continue
+ next[q.question_id] = { ...(next[q.question_id] ?? {}), hide_question_text: shouldHide }
+ }
+ return next
+ })
+ }
+
  const patchAnswer = (qId: string, aIdx: number, patch: Partial<AnswerResponse>) => {
  const q = questions.find(x => x.question_id === qId)!
  const base = editedQuestions[qId] ?? {}
@@ -353,7 +339,7 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
 
  const getRawTranscriptPreview = (q: QuestionResponse) => {
  const edited = editedQuestions[q.question_id] as Partial<QuestionResponse> | undefined
- return edited?.explanation ?? q.explanation ?? ''
+ return edited?.raw_transcript ?? q.raw_transcript ?? ''
  }
 
  const handleSaveQ = async (q: QuestionResponse) => {
@@ -481,6 +467,9 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  mondai_group: group,
  question_number: nextNum,
  question_text: '',
+ script_text: '',
+ raw_transcript: '',
+ hide_question_text: hiddenMondaiNumbers.includes(extractMondaiNumber(group)),
  explanation: '',
  })
 
@@ -654,13 +643,41 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  <>
  {/* Left Sidebar */}
  <div className="w-[260px] shrink-0 border-r border-border flex flex-col overflow-hidden">
- <div className="px-4 py-3 border-b border-border flex items-center justify-between bg-slate-50/50">
+ <div className="px-4 py-3 border-b border-border flex items-center justify-between bg-muted/30">
  <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Danh sách câu hỏi</h3>
- <span className="text-[10px] font-bold bg-slate-200/60 text-muted-foreground px-2 py-0.5 rounded-full">
+ <span className="text-[10px] font-bold bg-muted text-muted-foreground px-2 py-0.5 rounded-full border border-border">
  {questions.length} câu
  </span>
  </div>
  <div className="flex-1 overflow-y-auto p-4 space-y-6">
+ <div className="rounded-xl border border-border bg-muted/20 p-3.5">
+ <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">
+ Ẩn phần câu hỏi theo Mondai
+ </p>
+ <p className="mt-1 text-xs text-muted-foreground">
+ Chọn Mondai cần ẩn nội dung câu hỏi khi làm bài thi (chỉ hiện A/B/C/D).
+ </p>
+ <div className="mt-3 flex flex-wrap gap-2">
+ {MONDAI_OPTIONS.map((mondaiNumber) => {
+ const selected = hiddenMondaiNumbers.includes(mondaiNumber)
+ return (
+ <button
+ key={mondaiNumber}
+ type="button"
+ onClick={() => toggleHideQuestionByMondai(mondaiNumber)}
+ className={`h-8 min-w-8 rounded-full border px-2.5 text-xs font-bold transition-colors ${
+ selected
+ ? 'border-blue-500 bg-blue-500 text-white'
+ : 'border-border bg-card text-muted-foreground hover:border-blue-300'
+ }`}
+ >
+ {mondaiNumber}
+ </button>
+ )
+ })}
+ </div>
+ </div>
+
  {Object.entries(groupedQuestions).map(([group, qs]) => (
  <div key={group}>
  <div className="flex items-center justify-between mb-3">
@@ -671,12 +688,12 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  {qs.map(q => {
  const isActive = activeQId === q.question_id
  const hasAnswer = q.answers?.some(a => a.is_correct)
- const dirty = isDirtyQ(q.question_id)
+ const hideQuestionText = isHideQuestionEnabled(q)
  return (
  <button
  key={q.question_id}
  onClick={() => setActiveQId(q.question_id)}
- title={q.question_text || `Câu ${q.question_number}`}
+ title={hideQuestionText ? 'Ẩn câu hỏi khi thi' : 'Hiện câu hỏi khi thi'}
  className={`relative w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-200
  ${isActive
  ? 'border-blue-500 bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400 shadow-sm'
@@ -686,9 +703,6 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  }`}
  >
  {q.question_number ?? '?'}
- {dirty && (
- <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-amber-400 border-2 border-white rounded-full" />
- )}
  </button>
  )
  })}
@@ -722,7 +736,7 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  {activeQ && activeEdited ? (
  <>
  {/* Pane Header */}
- <div className="px-6 py-3.5 border-b border-border flex items-center justify-between bg-slate-50/30 shrink-0">
+ <div className="px-6 py-3.5 border-b border-border flex items-center justify-between bg-muted/20 shrink-0">
  <div className="flex items-center gap-2">
  <div className="flex flex-wrap gap-2 items-center">
  <span className="text-xs font-semibold bg-muted text-muted-foreground pl-2.5 pr-1 py-1 rounded-md flex items-center gap-1.5 border border-border">
@@ -827,7 +841,7 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  <button 
  onClick={() => setIsEditingAudio(activeQ.question_id)} 
  title="Chỉnh sửa thời gian lấy Audio"
- className="px-3 py-2.5 shrink-0 rounded-xl bg-slate-100 hover:bg-muted text-muted-foreground flex items-center justify-center gap-1.5 transition-colors shadow-sm border border-border text-xs font-medium"
+ className="px-3 py-2.5 shrink-0 rounded-xl bg-muted/60 hover:bg-muted text-muted-foreground flex items-center justify-center gap-1.5 transition-colors shadow-sm border border-border text-xs font-medium"
  >
  <Scissors className="w-4 h-4" />
  Chỉnh sửa
@@ -836,7 +850,7 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  ) : getBaseAudioUrl() ? (
  <div className="flex items-center justify-between gap-4">
  <p className="text-sm text-muted-foreground italic">Chưa lấy audio cho câu này từ file gốc</p>
- <button onClick={() => setIsEditingAudio(activeQ.question_id)} className="text-xs px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-muted text-muted-foreground font-medium shrink-0 flex items-center gap-1.5 transition-colors border border-border mt-2">
+ <button onClick={() => setIsEditingAudio(activeQ.question_id)} className="text-xs px-3 py-1.5 rounded-lg bg-muted/50 hover:bg-muted text-muted-foreground font-medium shrink-0 flex items-center gap-1.5 transition-colors border border-border mt-2">
  <Scissors className="w-3.5 h-3.5" /> Lấy từ bản gốc
  </button>
  </div>
@@ -850,16 +864,11 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  <FileText className="w-3.5 h-3.5 text-muted-foreground" />
  Kịch bản thô (Raw Transcript)
  </label>
- <textarea
- value={getRawTranscriptPreview(activeQ)}
- readOnly
- rows={5}
- placeholder="Transcript chi tiết, ví dụ: 男：...&#10;女：..."
- className="w-full px-4 py-3 border border-border rounded-xl text-sm bg-muted text-card-foreground resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 font-medium leading-relaxed placeholder:text-muted-foreground transition-shadow"
+ <RawTranscriptDisplay
+ text={activeEdited.raw_transcript ?? getRawTranscriptPreview(activeQ)}
  />
  </div>
 
- {/* Question Text: Content */}
  <div>
  <label className="block text-sm font-bold text-card-foreground mb-2 flex items-center gap-1.5">
  <FileText className="w-3.5 h-3.5 text-muted-foreground" />
@@ -881,10 +890,25 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  Kịch bản hội thoại (Script)
  </label>
  <textarea
+ value={activeEdited.script_text ?? ''}
+ onChange={e => patchQ(activeQ.question_id, { script_text: e.target.value })}
+ rows={7}
+ placeholder="Nhập nội dung hội thoại tiếng Nhật..."
+ className="w-full px-4 py-3 border border-border rounded-xl text-sm bg-muted text-card-foreground resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 font-medium leading-relaxed placeholder:text-muted-foreground transition-shadow"
+ />
+ </div>
+
+ {/* Question Text: Explanation */}
+ <div>
+ <label className="block text-sm font-bold text-card-foreground mb-2 flex items-center gap-1.5">
+ <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+ Giải thích (Explanation)
+ </label>
+ <textarea
  value={activeEdited.explanation ?? ''}
  onChange={e => patchQ(activeQ.question_id, { explanation: e.target.value })}
  rows={7}
- placeholder="Kịch bản hội thoại, ví dụ: 男：...&#10;女：..."
+ placeholder="Nhập giải thích cho câu hỏi và đáp án đúng..."
  className="w-full px-4 py-3 border border-border rounded-xl text-sm bg-muted text-card-foreground resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 font-medium leading-relaxed placeholder:text-muted-foreground transition-shadow"
  />
  </div>
@@ -986,7 +1010,7 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  />
  <div
  onClick={() => imageInputRef.current?.click()}
- className="border-2 border-dashed border-border rounded-xl p-6 flex flex-col items-center justify-center bg-slate-50/50 hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer group"
+ className="border-2 border-dashed border-border rounded-xl p-6 flex flex-col items-center justify-center bg-muted/10 hover:bg-muted/20 transition-colors cursor-pointer group"
  >
  <Edit3 className="w-8 h-8 text-muted-foreground group-hover:text-blue-500 mb-2 transition-colors" />
  <p className="text-sm text-muted-foreground text-center">
@@ -1003,7 +1027,7 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  <AIPhotoGenerator
  
  questionText={activeEdited.question_text}
- scriptText={activeEdited.explanation}
+ scriptText={activeEdited.script_text}
  answers={activeEdited.answers}
  onSelectImage={(file, previewUrl) => patchQ(activeQ.question_id, { image_url: previewUrl, image_file: file })}
  
@@ -1014,7 +1038,7 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  </div>
 
  {/* Pane Footer */}
- <div className="px-6 py-3 border-t border-border shrink-0 flex justify-end gap-2 bg-slate-50/50">
+ <div className="px-6 py-3 border-t border-border shrink-0 flex justify-end gap-2 bg-muted/30">
  {isDirtyQ(activeQ.question_id) ? (
  <>
  <button
@@ -1058,13 +1082,13 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  onClick={() => setShowAudioQr(false)}
  >
  <div
- className="w-full max-w-xl rounded-[28px] border border-emerald-100 bg-white shadow-2xl"
+ className="w-full max-w-xl rounded-[28px] border border-border bg-card shadow-2xl"
  onClick={(e) => e.stopPropagation()}
  >
  <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-5">
  <div>
  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-600">Audio QR</p>
- <h3 className="mt-2 text-2xl font-bold text-slate-900">Quét mã để mở file nghe</h3>
+ <h3 className="mt-2 text-2xl font-bold text-foreground">Quét mã để mở file nghe</h3>
  <p className="mt-2 text-sm leading-6 text-muted-foreground">
  Dùng QR này để tải hoặc mở nhanh file audio của đề thi, tương tự flow xuất PDF.
  </p>
@@ -1086,7 +1110,7 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  <p className="mt-2 break-all text-sm font-semibold text-foreground">{listeningFile.fileName}</p>
  </div>
 
- <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950 px-4 py-4">
+ <div className="mt-4 rounded-2xl border border-border bg-muted/50 px-4 py-4">
  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
  URL tải file nghe
  </p>
@@ -1099,7 +1123,7 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  target="_blank"
  rel="noreferrer"
  download={listeningFile.fileName}
- className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600"
+ className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 shadow-md shadow-blue-500/20"
  >
  <Download className="h-4 w-4" />
  Mở / tải file nghe
@@ -1110,7 +1134,7 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  .then(() => toast({ title: 'Đã copy link audio' }))
  .catch(() => toast({ title: 'Không thể copy link', variant: 'destructive' }))
  }}
- className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-muted"
+ className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted"
  >
  <FileText className="h-4 w-4" />
  Copy link
@@ -1118,7 +1142,7 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  </div>
  </div>
 
- <div className="rounded-[24px] border border-emerald-100 bg-emerald-50/60 p-5 text-center">
+ <div className="rounded-[24px] border border-emerald-100 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 p-5 text-center">
  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Scan To Listen</p>
  <div className="mt-4 overflow-hidden rounded-3xl border border-white bg-white p-3 shadow-sm">
  <img
@@ -1127,7 +1151,7 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  className="mx-auto aspect-square w-full max-w-[280px] object-contain"
  />
  </div>
- <p className="mt-4 text-sm font-semibold text-slate-900">Quét QR để mở file nghe</p>
+ <p className="mt-4 text-sm font-semibold text-foreground">Quét QR để mở file nghe</p>
  <p className="mt-2 text-xs leading-5 text-muted-foreground">
  Nếu máy không tải trực tiếp, hãy mở URL rồi dùng chức năng tải xuống của trình phát.
  </p>

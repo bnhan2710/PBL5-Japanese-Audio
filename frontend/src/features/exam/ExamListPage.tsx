@@ -28,7 +28,8 @@ interface ExamCardProps {
 }
 
 function ExamCard({ exam, onClick }: ExamCardProps) {
- const date = new Date(exam.created_at).toLocaleDateString('vi-VN', {
+ const safeTitle = typeof exam.title === 'string' && exam.title.trim() ? exam.title : 'Đề chưa đặt tên'
+ const date = new Date(exam.created_at || '').toLocaleDateString('vi-VN', {
  day: '2-digit', month: '2-digit', year: 'numeric',
  })
 
@@ -40,7 +41,7 @@ function ExamCard({ exam, onClick }: ExamCardProps) {
  {/* Top row */}
  <div className="flex items-start justify-between gap-3 mb-2">
  <h3 className="text-sm font-semibold text-card-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
- {exam.title}
+ {safeTitle}
  </h3>
  <span className={`flex items-center gap-1 shrink-0 text-xs font-medium px-2 py-0.5 rounded-full
  ${exam.is_published
@@ -87,7 +88,18 @@ export default function ExamListPage() {
  const fetchExams = () => {
  setLoading(true)
  examClient.listExams()
- .then(data => setExams(Array.isArray(data) ? data : []))
+ .then(data => {
+ const normalized = Array.isArray(data)
+ ? data
+ .filter((item): item is ExamResponse => !!item && typeof item === 'object')
+ .map((item) => ({
+ ...item,
+ title: typeof item.title === 'string' ? item.title : '',
+ created_at: typeof item.created_at === 'string' ? item.created_at : '',
+ }))
+ : []
+ setExams(normalized)
+ })
  .catch(e => setError(e.message || 'Không thể tải danh sách đề thi'))
  .finally(() => setLoading(false))
  }
@@ -97,15 +109,19 @@ export default function ExamListPage() {
  }, [])
 
  const filteredExams = exams.filter(exam => {
- if (searchQuery && !exam.title.toLowerCase().includes(searchQuery.toLowerCase())) {
+ const safeTitle = typeof exam.title === 'string' ? exam.title : ''
+ const safeCreatedAt = typeof exam.created_at === 'string' ? exam.created_at : ''
+
+ if (searchQuery && !safeTitle.toLowerCase().includes(searchQuery.toLowerCase())) {
  return false
  }
- if (levelFilter !== 'all' && !exam.title.includes(levelFilter)) {
+ if (levelFilter !== 'all' && !safeTitle.includes(levelFilter)) {
  return false
  }
  
  if (dateFilter !== 'all') {
- const examDate = new Date(exam.created_at)
+ const examDate = new Date(safeCreatedAt)
+ if (Number.isNaN(examDate.getTime())) return false
  const now = new Date()
  if (dateFilter === 'today') {
  if (examDate.toDateString() !== now.toDateString()) return false
@@ -136,6 +152,7 @@ export default function ExamListPage() {
  Quản lý và xem lại toàn bộ đề thi bạn đã tạo
  </p>
  </div>
+ {!loading && exams.length > 0 && (
  <div className="flex items-center gap-3">
  <button
  onClick={() => navigate('/exam/ai-create')}
@@ -152,6 +169,7 @@ export default function ExamListPage() {
  Tạo thủ công
  </button>
  </div>
+ )}
  </div>
 
  {/* Filters & Search */}

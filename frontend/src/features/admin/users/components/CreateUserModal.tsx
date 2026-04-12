@@ -166,7 +166,6 @@ export function CreateUserModal({ isOpen, onClose, onSubmit }: CreateUserModalPr
  >
  <option value="user">User</option>
  <option value="admin">Admin</option>
- <option value="guest">Guest</option>
  </select>
  </div>
 

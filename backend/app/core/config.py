@@ -76,6 +76,11 @@ class Settings(BaseSettings):
     AI_PHOTO_HEIGHT: int = 512
     AI_PHOTO_STEPS: int = 25
     AI_PHOTO_CFG_SCALE: float = 7.0
+    AI_PHOTO_SAMPLER: str = "DPM++ 2M Karras"
+    AI_PHOTO_SEED: int = -1
+    AI_PHOTO_BATCH_SIZE: int = 1
+    AI_PHOTO_N_ITER: int = 1
+    AI_PHOTO_USE_NEGATIVE_PROMPT: bool = False
 
 @lru_cache()
 def get_settings() -> Settings:

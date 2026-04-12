@@ -26,6 +26,7 @@ async def generate_ai_photo(
         result = await service.generate(
             photo_type=request.photo_type,
             description=request.description,
+            question_text=request.question_text,
             script=request.script,
             answers=request.answers,
         )

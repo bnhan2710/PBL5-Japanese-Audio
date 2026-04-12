@@ -20,6 +20,7 @@ class TestQuestionResponse(BaseModel):
     question_number: Optional[int] = None
     audio_clip_url: Optional[str] = None
     question_text: Optional[str] = None
+    hide_question_text: bool = False
     image_url: Optional[str] = None
     difficulty: Optional[int] = Field(None, description="IRT difficulty (1-5 stars)")
     answers: List[TestAnswerOptionResponse]

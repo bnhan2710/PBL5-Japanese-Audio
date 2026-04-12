@@ -41,7 +41,6 @@ export function UserFilters({
  <option value="">Tất cả vai trò</option>
  <option value="admin">Admin</option>
  <option value="user">User</option>
- <option value="guest">Guest</option>
  </select>
  <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
  </div>

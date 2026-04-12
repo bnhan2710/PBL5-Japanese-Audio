@@ -35,6 +35,23 @@ function extractFileName(value?: string | null) {
   return segments[segments.length - 1] || 'audio-listening.mp3'
 }
 
+function shortenFileName(value: string, maxLength = 32) {
+  if (value.length <= maxLength) return value
+
+  const dotIndex = value.lastIndexOf('.')
+  const extension = dotIndex > 0 ? value.slice(dotIndex) : ''
+  const nameWithoutExtension = dotIndex > 0 ? value.slice(0, dotIndex) : value
+  const availableLength = Math.max(8, maxLength - extension.length - 3)
+
+  if (nameWithoutExtension.length <= availableLength) {
+    return `${nameWithoutExtension}${extension}`
+  }
+
+  const startLength = Math.ceil(availableLength / 2)
+  const endLength = Math.floor(availableLength / 2)
+  return `${nameWithoutExtension.slice(0, startLength)}...${nameWithoutExtension.slice(-endLength)}${extension}`
+}
+
 function buildQrCodeUrl(value: string) {
   const searchParams = new URLSearchParams({
     size: '220x220',
@@ -95,6 +112,17 @@ export default function ExamPrintPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [hasTriggeredPrint, setHasTriggeredPrint] = useState(false)
+
+  useEffect(() => {
+    if (!exam?.title) return
+
+    const previousTitle = document.title
+    document.title = exam.title
+
+    return () => {
+      document.title = previousTitle
+    }
+  }, [exam?.title])
 
   useEffect(() => {
     if (!examId) {
@@ -329,8 +357,8 @@ export default function ExamPrintPage() {
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-500">
                     Tên file
                   </p>
-                  <p className="mt-2 text-base font-semibold text-stone-900">
-                    {listeningFile.fileName}
+                  <p className="mt-2 max-w-full truncate text-base font-semibold text-stone-900" title={listeningFile.fileName}>
+                    {shortenFileName(listeningFile.fileName, 34)}
                   </p>
                 </div>
 
@@ -416,21 +444,7 @@ export default function ExamPrintPage() {
                               Câu {question.question_number || '?'}
                             </h3>
                           </div>
-                          <div className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
-                            Độ khó {question.difficulty ?? 3}/5
-                          </div>
                         </div>
-
-                        {question.explanation && (
-                          <div className="mt-5 rounded-2xl border border-border bg-card px-4 py-4">
-                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-500">
-                              Script
-                            </p>
-                            <p className="mt-3 whitespace-pre-line text-sm leading-7 tracking-normal text-stone-700">
-                              {normalizePrintText(question.explanation)}
-                            </p>
-                          </div>
-                        )}
 
                         <div className="mt-5">
                           <p className="text-sm font-semibold text-stone-900">Nội dung câu hỏi</p>
@@ -485,6 +499,84 @@ export default function ExamPrintPage() {
                               : 'Chưa thiết lập'}
                           </span>
                         </div>
+                      </article>
+                    )
+                  })}
+                </div>
+              </section>
+            ))}
+          </div>
+        </section>
+
+        <section className="page-break border-t border-dashed border-stone-300 bg-stone-50 px-8 py-8">
+          <div className="mb-6 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-rose-500">
+                Appendix
+              </p>
+              <h2 className="mt-2 text-2xl font-bold text-stone-900">
+                Script, giải thích và đáp án
+              </h2>
+            </div>
+            <div className="rounded-full bg-card px-4 py-2 text-xs font-semibold text-muted-foreground shadow-sm">
+              {questions.length} câu
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            {Object.entries(groupedQuestions).map(([groupName, groupQuestions]) => (
+              <section key={groupName} className="rounded-[28px] border border-border bg-card p-5">
+                <div className="flex items-center justify-between gap-4">
+                  <h3 className="text-lg font-bold text-stone-900">{groupName}</h3>
+                  <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-muted-foreground">
+                    {groupQuestions.length} câu
+                  </span>
+                </div>
+
+                <div className="mt-5 space-y-5">
+                  {groupQuestions.map((question) => {
+                    const correctAnswerIndex = question.answers.findIndex(
+                      (answer) => answer.is_correct
+                    )
+
+                    return (
+                      <article
+                        key={question.question_id}
+                        className="rounded-[24px] border border-border bg-stone-50 p-5"
+                      >
+                        <div className="flex items-center justify-between gap-4">
+                          <p className="text-sm font-semibold text-stone-900">
+                            Câu {question.question_number || '?'}
+                          </p>
+                          <span className="rounded-full bg-stone-900 px-3 py-1 text-xs font-bold text-white">
+                            Đáp án đúng:{' '}
+                            {correctAnswerIndex >= 0
+                              ? String.fromCharCode(65 + correctAnswerIndex)
+                              : 'Chưa thiết lập'}
+                          </span>
+                        </div>
+
+                        {question.script_text && (
+                          <div className="mt-4 rounded-2xl border border-border bg-card px-4 py-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-500">
+                              Script
+                            </p>
+                            <p className="mt-3 whitespace-pre-line text-sm leading-7 tracking-normal text-stone-700">
+                              {normalizePrintText(question.script_text)}
+                            </p>
+                          </div>
+                        )}
+
+                        {question.explanation && (
+                          <div className="mt-4 rounded-2xl border border-border bg-card px-4 py-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-500">
+                              Giải thích
+                            </p>
+                            <p className="mt-3 whitespace-pre-line text-sm leading-7 tracking-normal text-stone-700">
+                              {normalizePrintText(question.explanation)}
+                            </p>
+                          </div>
+                        )}
                       </article>
                     )
                   })}

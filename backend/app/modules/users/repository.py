@@ -68,6 +68,9 @@ class UserRepository:
         
         if filters.get("role"):
             query = query.filter(User.role == filters["role"])
+
+        if filters.get("exclude_guest"):
+            query = query.filter(User.role != "guest")
         
         if filters.get("is_active") is not None:
             query = query.filter(User.is_active == filters["is_active"])
@@ -99,6 +102,9 @@ class UserRepository:
         
         if filters.get("role"):
             query = query.filter(User.role == filters["role"])
+
+        if filters.get("exclude_guest"):
+            query = query.filter(User.role != "guest")
         
         if filters.get("is_active") is not None:
             query = query.filter(User.is_active == filters["is_active"])

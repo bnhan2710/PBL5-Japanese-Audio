@@ -3,12 +3,13 @@ from __future__ import annotations
 import base64
 import io
 import logging
+import json
 from datetime import datetime
 from typing import List
 from uuid import uuid4
 
-import httpx
 from fastapi import HTTPException
+import httpx
 
 try:
     from PIL import Image, ImageDraw, ImageFont
@@ -47,6 +48,11 @@ class AIPhotoService:
         self.height = self.settings.AI_PHOTO_HEIGHT
         self.steps = self.settings.AI_PHOTO_STEPS
         self.cfg_scale = self.settings.AI_PHOTO_CFG_SCALE
+        self.sampler = self.settings.AI_PHOTO_SAMPLER
+        self.seed = self.settings.AI_PHOTO_SEED
+        self.batch_size = self.settings.AI_PHOTO_BATCH_SIZE
+        self.n_iter = self.settings.AI_PHOTO_N_ITER
+        self.use_negative_prompt = self.settings.AI_PHOTO_USE_NEGATIVE_PROMPT
         self.output_dir = (BASE_DIR / self.settings.AI_PHOTO_OUTPUT_DIR).resolve()
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -54,98 +60,252 @@ class AIPhotoService:
     # Prompt optimization
     # ------------------------------------------------------------------
 
-    async def _build_context_prompt(
-        self, description: str, script: str | None, answers: list[str] | None
+    def _clean_text(self, value: str | None) -> str:
+        return value.strip() if value and value.strip() else ""
+
+    def _format_lm_input(
+        self,
+        *,
+        description: str,
+        question_text: str | None,
+        script: str | None,
+        answers: list[str] | None,
+        answer_focus: str | None = None,
     ) -> str:
-        """Translate user inputs to an English SD prompt via LM Studio."""
-        parts = []
-        if script and script.strip():
-            parts.append(f"Script: {script.strip()}")
-        if answers:
-            parts.append("Answer choices: " + ", ".join(a for a in answers if a))
-        parts.append(f"Description: {description.strip()}")
-        combined = "\n".join(parts)
+        """Compose LM input from user-entered prompt only (no extra semantic context)."""
+        user_prompt = self._clean_text(description)
+        if not user_prompt:
+            user_prompt = "No description provided."
+        return f"Primary user prompt (must follow this exactly): {user_prompt}"
+
+    def _extract_lm_bundle(self, data: dict) -> tuple[str, str]:
+        """Extract prompt/negative_prompt from OpenAI-compatible response variants."""
+        choices = data.get("choices") or []
+        if not choices:
+            return "", ""
+
+        first = choices[0] or {}
+
+        # Chat-completions style
+        message = first.get("message") or {}
+        message_content = message.get("content")
+        if isinstance(message_content, str):
+            content = message_content.strip()
+            if content.startswith("{") and content.endswith("}"):
+                try:
+                    parsed = json.loads(content)
+                    prompt = parsed.get("prompt")
+                    negative = parsed.get("negative_prompt")
+                    if isinstance(prompt, str) and prompt.strip():
+                        return prompt.strip(), negative.strip() if isinstance(negative, str) else ""
+                except Exception:
+                    pass
+            return content, ""
+        if isinstance(message_content, list):
+            text_parts: list[str] = []
+            for item in message_content:
+                if isinstance(item, dict) and isinstance(item.get("text"), str):
+                    text_parts.append(item["text"])
+            merged = " ".join(part.strip() for part in text_parts if part and part.strip())
+            if merged:
+                if merged.startswith("{") and merged.endswith("}"):
+                    try:
+                        parsed = json.loads(merged)
+                        prompt = parsed.get("prompt")
+                        negative = parsed.get("negative_prompt")
+                        if isinstance(prompt, str) and prompt.strip():
+                            return prompt.strip(), negative.strip() if isinstance(negative, str) else ""
+                    except Exception:
+                        pass
+                return merged, ""
+
+        # Legacy completions style
+        legacy_text = first.get("text")
+        if isinstance(legacy_text, str):
+            return legacy_text.strip(), ""
+
+        # Some LM Studio model adapters may place text here
+        reasoning_text = message.get("reasoning_content")
+        if isinstance(reasoning_text, str):
+            return reasoning_text.strip(), ""
+
+        return "", ""
+
+    def _extract_reasoning_content(self, data: dict) -> str:
+        choices = data.get("choices") or []
+        if not choices:
+            return ""
+        first = choices[0] or {}
+        message = first.get("message") or {}
+        reasoning = message.get("reasoning_content")
+        if isinstance(reasoning, str):
+            return reasoning.strip()
+        return ""
+
+    def _build_fallback_prompt_bundle(self, for_action: bool) -> tuple[str, str]:
+        """Fallback uses generic drawing-style constraints plus a simple safe scene."""
+        fallback_prompt = (
+            "simple jlpt worksheet illustration, monochrome black lineart on white background, "
+            "clean outline, minimal scene, clear human figures"
+        )
+        if for_action:
+            fallback_prompt += ", focus on one clear action"
+
+        fallback_negative = (
+            "color, gradient, shading, grayscale tones, rough sketch, noisy texture, text, watermark, "
+            "logo, 3d, photorealistic, blur, distortion, bad anatomy"
+        )
+        return fallback_prompt, fallback_negative
+
+    async def _build_english_prompt(self, lm_input: str, for_action: bool) -> tuple[str, str]:
+        style_positive = self._clean_text(self.base_prompt) or (
+            "strictly monochrome, black lines on pure white background, clean lineart, "
+            "simple outline, high contrast, no shading, no grayscale"
+        )
+        style_negative = self._clean_text(self.negative_prompt) or (
+            "color, gradient, shading, grayscale tones, rough sketch, noisy texture, text, watermark, "
+            "logo, 3d, photorealistic, blur, distortion, bad anatomy"
+        )
 
         system = (
-            "You are a Stable Diffusion prompt writer for JLPT listening exam illustrations. "
-            "The model is Animagine XL v3.1. "
-            "Translate the user's Vietnamese/Japanese input into a concise English Stable Diffusion prompt. "
-            "Focus on the SCENE and SETTING. "
-            "Return ONLY comma-separated English visual tags. No explanation."
+            "You are a Stable Diffusion prompt writer for JLPT listening illustrations. "
+            "Use the primary user prompt as the main content. "
+            "Generate English prompt + negative_prompt in JSON. "
+            "Output JSON only with exactly these keys: {\"prompt\":\"...\",\"negative_prompt\":\"...\"}. "
+            "Prompt must describe scene according to user request; keep composition clear and natural. "
+            f"Always include these global style tags in prompt: {style_positive}. "
+            f"Always include these global negative tags in negative_prompt: {style_negative}. "
+            "No markdown, no explanation."
         )
-        return await self._call_lm_studio(system, combined, fallback=description)
+        if for_action:
+            system += " Focus on one key action if action mode is requested."
 
-    async def _build_action_prompt_for_answer(
-        self, description: str, script: str | None, answer: str
-    ) -> str:
-        """Translate one answer into its own English SD prompt via LM Studio."""
-        parts = []
-        if script and script.strip():
-            parts.append(f"Script: {script.strip()}")
-        parts.append(f"Description: {description.strip()}")
-        parts.append(f"Illustrate this specific action/answer: {answer.strip()}")
-        combined = "\n".join(parts)
+        payloads = [
+            {
+                "model": self.lm_model,
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": lm_input},
+                ],
+                "temperature": 0.35,
+                "max_tokens": 360,
+            },
+            {
+                "model": self.lm_model,
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": (
+                            system
+                            + " Do not return empty response. Keep strict JLPT monochrome worksheet style."
+                        ),
+                    },
+                    {"role": "user", "content": lm_input},
+                ],
+                "temperature": 0.2,
+                "max_tokens": 260,
+            },
+        ]
 
-        system = (
-            "You are a Stable Diffusion prompt writer for JLPT listening exam illustrations. "
-            "The model is Animagine XL v3.1. "
-            "Translate the user's Vietnamese/Japanese input into a concise English Stable Diffusion prompt. "
-            "Illustrate ONLY the specific answer/action, not the whole scene. "
-            "Return ONLY comma-separated English visual tags. No explanation."
-        )
-        return await self._call_lm_studio(system, combined, fallback=f"{description}, {answer}")
-
-    async def _call_lm_studio(self, system: str, user_input: str, fallback: str) -> str:
-        """Call LM Studio chat API. Falls back to raw input if LM Studio is unavailable."""
-        payload = {
-            "model": self.lm_model,
-            "messages": [
-                {"role": "system", "content": system},
-                {"role": "user", "content": user_input},
-            ],
-            "temperature": 0.4,
-            "max_tokens": 180,
-        }
+        last_error_detail = ""
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.post(self.lm_url, json=payload)
-                response.raise_for_status()
-                data = response.json()
-        except httpx.HTTPError as exc:
-            logger.warning("LM Studio unavailable, using raw input as prompt: %s", exc)
-            return fallback
+            async with httpx.AsyncClient(timeout=45.0) as client:
+                for index, payload in enumerate(payloads):
+                    try:
+                        response = await client.post(self.lm_url, json=payload)
+                        response.raise_for_status()
+                    except httpx.HTTPStatusError as exc:
+                        response_text = exc.response.text[:400] if exc.response is not None else ""
+                        last_error_detail = f"HTTP {exc.response.status_code}: {response_text}" if exc.response is not None else str(exc)
+                        logger.warning("LM Studio attempt %s failed: %s", index + 1, last_error_detail)
+                        continue
 
-        content = (
-            data.get("choices", [{}])[0]
-            .get("message", {})
-            .get("content", "")
-            .strip()
-            .strip('"')
-            .strip("'")
-        )
-        return content or fallback
+                    data = response.json()
+                    prompt, negative_prompt = self._extract_lm_bundle(data)
+                    prompt = prompt.strip().strip('"').strip("'")
+                    negative_prompt = negative_prompt.strip().strip('"').strip("'")
+                    if prompt:
+                        final_prompt = prompt
+                        final_negative = negative_prompt or ""
+                        if style_positive and style_positive.lower() not in final_prompt.lower():
+                            final_prompt = f"{style_positive}, {final_prompt}"
+                        if style_negative and style_negative.lower() not in final_negative.lower():
+                            final_negative = f"{style_negative}, {final_negative}".strip().strip(",")
+                        return final_prompt, final_negative
+
+                    reasoning = self._extract_reasoning_content(data)
+                    if reasoning:
+                        logger.warning("LM Studio returned reasoning_content without prompt on attempt %s", index + 1)
+                        recover_payload = {
+                            "model": self.lm_model,
+                            "messages": [
+                                {
+                                    "role": "system",
+                                    "content": (
+                                        "Convert the provided analysis into final JSON with prompt and negative_prompt for Stable Diffusion. "
+                                        "Return only {\"prompt\":\"...\",\"negative_prompt\":\"...\"}."
+                                    ),
+                                },
+                                {"role": "user", "content": reasoning},
+                            ],
+                            "temperature": 0.1,
+                            "max_tokens": 180,
+                        }
+                        try:
+                            recover_response = await client.post(self.lm_url, json=recover_payload)
+                            recover_response.raise_for_status()
+                            recover_data = recover_response.json()
+                            recovered_prompt, recovered_negative = self._extract_lm_bundle(recover_data)
+                            recovered_prompt = recovered_prompt.strip().strip('"').strip("'")
+                            recovered_negative = recovered_negative.strip().strip('"').strip("'")
+                            if recovered_prompt:
+                                final_prompt = recovered_prompt
+                                final_negative = recovered_negative or ""
+                                if style_positive and style_positive.lower() not in final_prompt.lower():
+                                    final_prompt = f"{style_positive}, {final_prompt}"
+                                if style_negative and style_negative.lower() not in final_negative.lower():
+                                    final_negative = f"{style_negative}, {final_negative}".strip().strip(",")
+                                return final_prompt, final_negative
+                        except httpx.HTTPStatusError as exc:
+                            response_text = exc.response.text[:400] if exc.response is not None else ""
+                            last_error_detail = f"HTTP {exc.response.status_code}: {response_text}" if exc.response is not None else str(exc)
+                            logger.warning("LM Studio recover attempt failed: %s", last_error_detail)
+
+                    logger.warning("LM Studio returned empty prompt on attempt %s", index + 1)
+        except httpx.HTTPError as exc:
+            logger.error("LM Studio request failed: %s", exc)
+            raise HTTPException(
+                status_code=500,
+                detail="Không thể kết nối LM Studio (Gemma 4) để tạo prompt tiếng Anh.",
+            ) from exc
+
+        if last_error_detail:
+            raise HTTPException(
+                status_code=500,
+                detail=f"LM Studio trả lỗi khi tạo prompt: {last_error_detail}",
+            )
+
+        logger.warning("LM Studio returned empty prompt after retries. Using JLPT fallback prompt bundle.")
+        return self._build_fallback_prompt_bundle(for_action)
 
 
     # ------------------------------------------------------------------
     # Draw Things generation
     # ------------------------------------------------------------------
 
-    async def _generate_single_image(self, lm_prompt: str) -> Image.Image:
-        """Prepend base_prompt then call Draw Things.
+    async def _generate_single_image(self, lm_prompt: str, negative_prompt: str | None = None) -> Image.Image:
+        """Send only Gemma-generated prompt so Draw Things uses its own saved preset/config."""
+        final_prompt = lm_prompt.strip()
+        if not final_prompt:
+            raise HTTPException(status_code=500, detail="Prompt từ Gemma 4 đang rỗng.")
 
-        Only prompt + negative_prompt are sent so that Draw Things uses
-        all other settings (steps, sampler, CFG, size, etc.) from its own
-        app configuration — specifically tuned for Animagine XL v3.1.
-        """
-        # Prepend style tags from config (base_prompt) in front of LM-generated prompt
-        final_prompt = ", ".join(
-            part for part in [self.base_prompt.strip(), lm_prompt.strip()] if part
-        )
         logger.info("Draw Things final prompt: %s", final_prompt)
 
+        # Intentionally pass only prompt to let Draw Things keep all runtime settings
+        # (model/sampler/steps/cfg/size/negative prompt/seed) from its own UI preset.
         payload: dict = {"prompt": final_prompt}
-        if self.negative_prompt:
-            payload["negative_prompt"] = self.negative_prompt
+        if negative_prompt and negative_prompt.strip():
+            payload["negative_prompt"] = negative_prompt.strip()
 
         try:
             async with httpx.AsyncClient(timeout=180.0) as client:
@@ -227,12 +387,20 @@ class AIPhotoService:
         self,
         photo_type: PhotoType,
         description: str,
+        question_text: str | None,
         script: str | None,
         answers: list[str] | None,
     ) -> dict:
         if photo_type == PhotoType.context:
-            lm_prompt = await self._build_context_prompt(description, script, answers)
-            image = await self._generate_single_image(lm_prompt)
+            lm_input = self._format_lm_input(
+                description=description,
+                question_text=question_text,
+                script=script,
+                answers=answers,
+            )
+            lm_prompt, lm_negative = await self._build_english_prompt(lm_input, for_action=False)
+            image = await self._generate_single_image(lm_prompt, lm_negative)
+            lm_info = f"prompt: {lm_prompt}\nnegative_prompt: {lm_negative}"
 
         else:
             if not answers or len(answers) < 4:
@@ -243,15 +411,22 @@ class AIPhotoService:
             panels: List[Image.Image] = []
             prompts: List[str] = []
             for answer in answers[:4]:
-                p = await self._build_action_prompt_for_answer(description, script, answer)
-                prompts.append(p)
-                panels.append(await self._generate_single_image(p))
-            lm_prompt = " | ".join(prompts)
+                lm_input = self._format_lm_input(
+                    description=description,
+                    question_text=question_text,
+                    script=script,
+                    answers=answers[:4],
+                    answer_focus=answer,
+                )
+                p, n = await self._build_english_prompt(lm_input, for_action=True)
+                prompts.append(f"prompt: {p} || negative_prompt: {n}")
+                panels.append(await self._generate_single_image(p, n))
+            lm_info = "\n---\n".join(prompts)
             image = self._create_2x2_grid(panels)
 
         storage_path = self._save_image(image, photo_type)
         return {
             "b64_image": self._encode_image_to_data_url(image),
-            "info": lm_prompt,
+            "info": lm_info,
             "storage_path": storage_path,
         }

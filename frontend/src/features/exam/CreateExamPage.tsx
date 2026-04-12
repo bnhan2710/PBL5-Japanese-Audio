@@ -722,7 +722,8 @@ function Step2({ questions, examId, onQuestionsChange, onBack }: Step2Props) {
  question_number: q.question_number,
  question_text: q.question_text,
  image_url: q.image_file ? null : (q.image_url && !q.image_url.startsWith('blob:') ? q.image_url : null),
- explanation: q.script_text,
+                script_text: q.script_text,
+                explanation: q.explanation,
  difficulty: q.difficulty,
  answers: q.answers.map(a => ({
  question_id: '', // will be set by server
@@ -738,14 +739,18 @@ function Step2({ questions, examId, onQuestionsChange, onBack }: Step2Props) {
  updateQ({
  question_id: questionId,
  saved: true,
- answers: q.answers.map((a, i) => ({ ...a, answer_id: serverAnswers[i]?.answer_id })),
+ answers: q.answers.map((a) => ({
+ ...a,
+ answer_id: serverAnswers.find((sa: any) => sa.order_index === a.order_index)?.answer_id,
+ })),
  })
  } else {
  // Update question
  await examClient.updateQuestion(questionId, {
  question_text: q.question_text,
  image_url: q.image_file ? null : (q.image_url && !q.image_url.startsWith('blob:') ? q.image_url : null),
- explanation: q.script_text,
+                script_text: q.script_text,
+                explanation: q.explanation,
  difficulty: q.difficulty,
  })
  // Update answers
@@ -1052,6 +1057,19 @@ function Step2({ questions, examId, onQuestionsChange, onBack }: Step2Props) {
  className="w-full px-3 py-2.5 border border-border rounded-lg text-sm bg-card text-card-foreground resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent placeholder:text-muted-foreground dark:placeholder:text-muted-foreground" />
  </div>
 
+ <div>
+ <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
+ Giải thích (Explanation) <span className="text-muted-foreground font-normal">– Lý do đáp án đúng</span>
+ </label>
+ <textarea
+ value={q.explanation}
+ onChange={e => updateQ({ explanation: e.target.value })}
+ rows={4}
+ placeholder="Nhập giải thích cho câu hỏi và đáp án đúng..."
+ className="w-full px-3 py-2.5 border border-border rounded-lg text-sm bg-card text-card-foreground resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent placeholder:text-muted-foreground dark:placeholder:text-muted-foreground"
+ />
+ </div>
+
  {/* Answers */}
  <div>
  <div className="flex items-center justify-between mb-3">
@@ -1301,6 +1319,11 @@ function Step3({ questions, examTitle, onBack, onPublish, publishing }: Step3Pro
  <div>
  <label className="mb-1.5 block text-xs font-semibold text-muted-foreground">Script (Tiếng Nhật)</label>
  <textarea value={q.script_text} readOnly rows={5} className="w-full resize-none rounded-lg border border-border bg-muted/50 px-3 py-2.5 text-sm text-foreground outline-none dark:text-muted-foreground" />
+ </div>
+
+ <div>
+ <label className="mb-1.5 block text-xs font-semibold text-muted-foreground">Giải thích (Explanation)</label>
+ <textarea value={q.explanation} readOnly rows={4} className="w-full resize-none rounded-lg border border-border bg-muted/50 px-3 py-2.5 text-sm text-foreground outline-none dark:text-muted-foreground" />
  </div>
 
  <div>

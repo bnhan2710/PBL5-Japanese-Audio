@@ -54,7 +54,10 @@ async def create_question(
         audio_clip_url=payload.audio_clip_url,
         question_text=payload.question_text,
         image_url=payload.image_url,
+        script_text=payload.script_text,
         explanation=payload.explanation,
+        raw_transcript=payload.raw_transcript,
+        hide_question_text=payload.hide_question_text,
         difficulty=payload.difficulty,
     )
     db.add(question)

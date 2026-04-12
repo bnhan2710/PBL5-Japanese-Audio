@@ -233,6 +233,11 @@ async def generate_exam_from_audio(
     if cache and cache.status == "completed" and cache.result_json:
         job_id = str(uuid.uuid4())
         result = AIExamResult.model_validate_json(cache.result_json)
+        if result.audio_id:
+            existing_audio = await db.get(Audio, uuid.UUID(result.audio_id))
+            if existing_audio is None:
+                result.audio_id = None
+                result.audio_file_url = None
         _jobs[job_id] = _job_from_result(
             job_id,
             result,
@@ -328,11 +333,17 @@ async def get_job_status(
         raise HTTPException(status_code=404, detail="Job not found")
 
     if cache.status == "completed" and cache.result_json:
+        result = AIExamResult.model_validate_json(cache.result_json)
+        if result.audio_id:
+            existing_audio = await db.get(Audio, uuid.UUID(result.audio_id))
+            if existing_audio is None:
+                result.audio_id = None
+                result.audio_file_url = None
         return AIJobStatusResponse(
             job_id=job_id,
             status="done",
             progress_message="Loaded completed AI result from persistent cache.",
-            result=AIExamResult.model_validate_json(cache.result_json),
+            result=result,
         )
     if cache.status == "failed":
         return AIJobStatusResponse(

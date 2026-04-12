@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import {
   Users,
   BookOpen,
-  BarChart2,
   Plus,
   FileText,
   Sparkles,
@@ -54,13 +53,7 @@ const ADMIN_SHORTCUTS = [
     path: '/exam',
     color: 'bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400',
   },
-  {
-    title: 'Phân tích học tập',
-    description: 'Thống kê và báo cáo kết quả học tập',
-    icon: BarChart2,
-    path: '/analytics',
-    color: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400',
-  },
+
   {
     title: 'Bài thi đã làm',
     description: 'Xem kết quả và lịch sử làm bài thi của bạn',
@@ -99,13 +92,7 @@ const USER_SHORTCUTS = [
     path: '/exam',
     color: 'bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400',
   },
-  {
-    title: 'Phân tích học tập',
-    description: 'Xem tiến độ và kết quả luyện tập của bạn',
-    icon: BarChart2,
-    path: '/analytics',
-    color: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400',
-  },
+
   {
     title: 'Bài thi đã làm',
     description: 'Xem kết quả và lịch sử làm bài thi của bạn',

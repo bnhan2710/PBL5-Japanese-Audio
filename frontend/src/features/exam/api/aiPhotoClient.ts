@@ -15,6 +15,7 @@ export type AIPhotoType = 'context' | 'action'
 export interface AIPhotoGeneratePayload {
   photo_type: AIPhotoType
   description: string
+  question_text?: string | null
   script?: string | null
   answers?: string[] | null
 }

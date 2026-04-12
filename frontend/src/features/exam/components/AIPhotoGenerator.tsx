@@ -46,6 +46,17 @@ export default function AIPhotoGenerator({
   const hasFourAnswers = normalizedAnswers.length >= 4
 
   const handleGenerate = async () => {
+    const userPrompt = detailPrompt.trim()
+
+    if (!userPrompt) {
+      toast({
+        title: 'Thiếu prompt sinh ảnh',
+        description: 'Hãy nhập prompt mô tả cảnh cần sinh ảnh trước khi tạo.',
+        variant: 'destructive',
+      })
+      return
+    }
+
     if (photoType === 'action' && !hasFourAnswers) {
       toast({
         title: 'Chưa đủ 4 lựa chọn',
@@ -61,7 +72,8 @@ export default function AIPhotoGenerator({
     try {
       const result = await aiPhotoClient.generate({
         photo_type: photoType,
-        description: detailPrompt.trim() || questionText?.trim() || 'Không có mô tả',
+        description: userPrompt,
+        question_text: questionText?.trim() || null,
         script: scriptText?.trim() || null,
         answers: photoType === 'action' ? normalizedAnswers.slice(0, 4) : normalizedAnswers,
       })

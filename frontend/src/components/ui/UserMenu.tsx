@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { LogOut, Settings, User as UserIcon } from 'lucide-react';
+import { LogOut, MessageSquare, Settings, User as UserIcon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { SystemFeedbackModal } from '../SystemFeedbackModal';
 
 export function UserMenu() {
  const { user, logout } = useAuth();
  const navigate = useNavigate();
  const [isOpen, setIsOpen] = useState(false);
+ const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
  const menuRef = useRef<HTMLDivElement>(null);
 
  const toggleMenu = () => setIsOpen(!isOpen);
@@ -29,9 +31,15 @@ export function UserMenu() {
  navigate('/login');
  };
 
+ const handleOpenFeedback = () => {
+ setIsOpen(false);
+ setIsFeedbackOpen(true);
+ };
+
  if (!user) return null;
 
  return (
+ <>
  <div className="relative" ref={menuRef}>
  <button
  onClick={toggleMenu}
@@ -73,6 +81,14 @@ export function UserMenu() {
  </Link>
 
  <button
+ onClick={handleOpenFeedback}
+ className="w-full flex items-center px-4 py-2 text-sm text-foreground hover:bg-accent hover:text-accent-foreground transition-colors text-left"
+ >
+ <MessageSquare size={16} className="mr-2" />
+ Đánh giá hệ thống
+ </button>
+
+ <button
  onClick={handleLogout}
  className="w-full flex items-center px-4 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors text-left"
  >
@@ -82,5 +98,11 @@ export function UserMenu() {
  </div>
  )}
  </div>
+ <SystemFeedbackModal
+ isOpen={isFeedbackOpen}
+ onClose={() => setIsFeedbackOpen(false)}
+ sourcePage={window.location.pathname}
+ />
+ </>
  );
 }

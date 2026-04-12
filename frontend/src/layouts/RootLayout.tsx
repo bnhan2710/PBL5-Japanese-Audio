@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext'
 import { Button } from '../components/ui/Button'
 import { UserMenu } from '../components/ui/UserMenu'
 import { Toaster } from '../components/ui/toaster'
+import { AIChatWidget } from '../components/AIChatWidget'
 
 const publicNavLinks = [{ to: '/', label: 'Home' }] as const
 
@@ -111,6 +112,7 @@ function Navigation() {
 export default function RootLayout() {
   const currentYear = new Date().getFullYear()
   const { t } = useTranslation()
+  const { isAuthenticated } = useAuth()
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors">
@@ -127,6 +129,7 @@ export default function RootLayout() {
       </footer>
       <Notification />
       <Toaster />
+      {isAuthenticated && <AIChatWidget />}
     </div>
   )
 }

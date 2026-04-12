@@ -11,6 +11,7 @@ export interface TestQuestion {
  question_number?: number | null
  audio_clip_url?: string | null
  question_text?: string | null
+ hide_question_text?: boolean
  image_url?: string | null
  difficulty?: number | null
  answers: TestAnswerOption[]

@@ -4,7 +4,6 @@ import {
   LayoutDashboard,
   PlusCircle,
   BookOpen,
-  BarChart2,
   Settings,
   Headphones,
   FileAudio,
@@ -23,7 +22,6 @@ function Sidebar() {
     { to: '/question-bank', label: 'Ngân hàng câu hỏi', icon: BookOpen },
     ...(isAdmin ? [{ to: '/admin/users', label: 'Quản lý người dùng', icon: Users }] : []),
     ...(isAdmin ? [{ to: '/admin/audio-library', label: 'Tài nguyên nghe', icon: FileAudio }] : []),
-    { to: '/analytics', label: 'Phân tích học tập', icon: BarChart2 },
     { to: '/settings', label: 'Cài đặt', icon: Settings },
   ]
 

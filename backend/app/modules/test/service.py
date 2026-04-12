@@ -158,6 +158,7 @@ class TestService:
                     question_number=question.question_number,
                     audio_clip_url=question.audio_clip_url,
                     question_text=question.question_text,
+                    hide_question_text=bool(question.hide_question_text),
                     image_url=question.image_url,
                     difficulty=question.difficulty,
                     answers=[
@@ -233,6 +234,7 @@ class TestService:
                     question_number=question.question_number,
                     audio_clip_url=question.audio_clip_url,
                     question_text=question.question_text,
+                    hide_question_text=bool(question.hide_question_text),
                     image_url=question.image_url,
                     difficulty=question.difficulty,
                     answers=[

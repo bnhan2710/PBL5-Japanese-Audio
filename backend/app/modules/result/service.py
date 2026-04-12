@@ -22,10 +22,19 @@ class ResultService:
         page: int = 1,
         page_size: int = 10,
     ) -> UserResultListResponse:
-        """Fetch exam attempts for the current user."""
+        """Fetch exam attempts for the current user - showing only the latest per exam."""
         
-        # Base query for results belonging to user
-        base_query = select(UserResult).where(UserResult.user_id == current_user.id)
+        # 1. Subquery to pick only the latest result per exam for this user
+        latest_ids_subq = (
+            select(UserResult.result_id)
+            .distinct(UserResult.exam_id)
+            .where(UserResult.user_id == current_user.id)
+            .order_by(UserResult.exam_id, desc(UserResult.completed_at))
+            .subquery()
+        )
+        
+        # 2. Main query filtered by these IDs
+        base_query = select(UserResult).where(UserResult.result_id.in_(select(latest_ids_subq.c.result_id)))
         
         # Get total count
         count_query = select(func.count()).select_from(base_query.subquery())

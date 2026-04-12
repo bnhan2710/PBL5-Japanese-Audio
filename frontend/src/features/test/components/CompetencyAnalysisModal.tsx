@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   BrainCircuit,
   X,
@@ -61,7 +61,7 @@ export function CompetencyAnalysisModal({ resultId, onClose }: CompetencyAnalysi
         onClick={onClose} 
       />
 
-      <div className="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-[32px] border border-white/20 bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-300">
+      <div className="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-[32px] border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-300">
         
         {/* Header Section with Gradient Background */}
         <div className="relative shrink-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-violet-700 px-6 py-8 text-white sm:px-10">
@@ -93,7 +93,7 @@ export function CompetencyAnalysisModal({ resultId, onClose }: CompetencyAnalysi
         </div>
 
         {/* Content Body */}
-        <div className="min-h-[300px] flex-1 overflow-y-auto bg-slate-50/50 px-6 py-8 sm:px-10">
+        <div className="min-h-[300px] flex-1 overflow-y-auto bg-muted/20 px-6 py-8 sm:px-10">
           {loading && (
             <div className="flex h-full flex-col items-center justify-center space-y-4 py-12">
               <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-indigo-100 shadow-inner">
@@ -112,8 +112,8 @@ export function CompetencyAnalysisModal({ resultId, onClose }: CompetencyAnalysi
               <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-rose-100 text-rose-600">
                 <AlertTriangle className="h-8 w-8" />
               </div>
-              <h3 className="text-xl font-bold text-slate-800">Ups! Có lỗi xảy ra</h3>
-              <p className="mt-2 max-w-md text-slate-600">{error}</p>
+              <h3 className="text-xl font-bold text-foreground">Ups! Có lỗi xảy ra</h3>
+              <p className="mt-2 max-w-md text-muted-foreground">{error}</p>
               <Button onClick={onClose} className="mt-6 rounded-full px-8">Đóng</Button>
             </div>
           )}
@@ -123,7 +123,7 @@ export function CompetencyAnalysisModal({ resultId, onClose }: CompetencyAnalysi
               
               {/* Overview panel */}
               {data.overview && (
-                <div className="relative overflow-hidden rounded-[24px] border border-indigo-100 bg-white p-6 shadow-sm">
+                <div className="relative overflow-hidden rounded-[24px] border border-indigo-100 dark:border-indigo-900/30 bg-card p-6 shadow-sm">
                   <div className="absolute -left-4 -top-4 rounded-full bg-indigo-50 p-6 opacity-50 blur-2xl"></div>
                   <div className="relative flex gap-4">
                     <div className="mt-1 shrink-0 text-indigo-500">
@@ -131,7 +131,7 @@ export function CompetencyAnalysisModal({ resultId, onClose }: CompetencyAnalysi
                     </div>
                     <div>
                       <h4 className="text-sm font-black uppercase tracking-widest text-indigo-400">Tổng quan năng lực</h4>
-                      <p className="mt-2 text-[15px] leading-[1.8] text-slate-700">
+                      <p className="mt-2 text-[15px] leading-[1.8] text-card-foreground">
                         {data.overview}
                       </p>
                     </div>
@@ -141,10 +141,10 @@ export function CompetencyAnalysisModal({ resultId, onClose }: CompetencyAnalysi
 
               {/* Spider Chart / Radar Chart */}
               {data.skill_metrics && Object.keys(data.skill_metrics).length > 1 && (
-                <div className="rounded-[24px] border border-border bg-white p-6 shadow-sm">
+                <div className="rounded-[24px] border border-border bg-card p-6 shadow-sm">
                   <div className="mb-2 text-center">
-                    <h4 className="text-xl font-black text-slate-800">Bản đồ Năng lực Đồng bộ</h4>
-                    <p className="text-sm text-slate-500">Đánh giá độ phủ kiến thức đa chiều</p>
+                    <h4 className="text-xl font-black text-foreground">Bản đồ Năng lực Đồng bộ</h4>
+                    <p className="text-sm text-muted-foreground">Đánh giá độ phủ kiến thức đa chiều</p>
                   </div>
                   <div className="mx-auto h-[350px] w-full max-w-lg">
                     <ResponsiveContainer width="100%" height="100%">
@@ -158,8 +158,8 @@ export function CompetencyAnalysisModal({ resultId, onClose }: CompetencyAnalysi
                           fullMark: 100,
                         }))}
                       >
-                        <PolarGrid stroke="#e2e8f0" strokeDasharray="3 3" />
-                        <PolarAngleAxis dataKey="subject" tick={{ fill: '#475569', fontSize: 13, fontWeight: 600 }} />
+                        <PolarGrid stroke="var(--border)" strokeDasharray="3 3" />
+                        <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--muted-foreground)', fontSize: 13, fontWeight: 600 }} />
                         <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} />
                         <RechartsTooltip formatter={(value: any) => [`${value}%`, 'Tỷ lệ đúng']} />
                         <Radar
@@ -179,16 +179,16 @@ export function CompetencyAnalysisModal({ resultId, onClose }: CompetencyAnalysi
               <div className="grid gap-6 md:grid-cols-2">
                 {/* Strengths */}
                 {data.strengths && data.strengths.length > 0 && (
-                  <div className="rounded-[24px] border border-border bg-white px-6 py-6 shadow-sm">
+                  <div className="rounded-[24px] border border-border bg-card px-6 py-6 shadow-sm">
                     <div className="mb-5 flex items-center gap-3">
                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
                         <ShieldCheck className="h-5 w-5" />
                       </div>
-                      <h4 className="text-lg font-black text-slate-800">Điểm sáng nổi bật</h4>
+                      <h4 className="text-lg font-black text-foreground">Điểm sáng nổi bật</h4>
                     </div>
                     <ul className="space-y-3">
                       {data.strengths.map((str, i) => (
-                        <li key={i} className="flex gap-3 text-slate-700">
+                        <li key={i} className="flex gap-3 text-card-foreground">
                           <Trophy className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
                           <span className="text-sm leading-relaxed">{str}</span>
                         </li>
@@ -199,16 +199,16 @@ export function CompetencyAnalysisModal({ resultId, onClose }: CompetencyAnalysi
 
                 {/* Advice List */}
                 {data.actionable_advice && data.actionable_advice.length > 0 && (
-                  <div className="rounded-[24px] border border-border bg-white px-6 py-6 shadow-sm">
+                  <div className="rounded-[24px] border border-border bg-card px-6 py-6 shadow-sm">
                     <div className="mb-5 flex items-center gap-3">
                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-600">
                         <Target className="h-5 w-5" />
                       </div>
-                      <h4 className="text-lg font-black text-slate-800">Lộ trình bứt phá</h4>
+                      <h4 className="text-lg font-black text-foreground">Lộ trình bứt phá</h4>
                     </div>
                     <ul className="space-y-3">
                       {data.actionable_advice.map((adv, i) => (
-                        <li key={i} className="flex gap-3 text-slate-700">
+                        <li key={i} className="flex gap-3 text-card-foreground">
                           <Zap className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
                           <span className="text-sm leading-relaxed">{adv}</span>
                         </li>
@@ -220,7 +220,7 @@ export function CompetencyAnalysisModal({ resultId, onClose }: CompetencyAnalysi
 
               {/* Deep Weakness Analysis */}
               {data.weaknesses_analysis && (
-                <div className="rounded-[24px] border border-rose-100 bg-rose-50/40 px-6 py-6">
+                <div className="rounded-[24px] border border-rose-100 dark:border-rose-900/30 bg-rose-50 dark:bg-rose-950/20 px-6 py-6">
                   <div className="mb-4 flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-100 text-rose-600">
                       <Lightbulb className="h-5 w-5" />
@@ -240,7 +240,7 @@ export function CompetencyAnalysisModal({ resultId, onClose }: CompetencyAnalysi
         <div className="shrink-0 border-t border-border bg-card px-6 py-5 sm:px-10">
           <div className="flex justify-end">
             <Button
-              className="rounded-full bg-slate-900 px-8 py-6 font-bold hover:bg-slate-800"
+              className="rounded-full bg-primary text-primary-foreground px-8 py-6 font-bold hover:opacity-90 transition-opacity shadow-lg shadow-primary/20"
               onClick={onClose}
             >
               Đã hiểu & Không ngừng cố gắng

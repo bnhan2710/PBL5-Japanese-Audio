@@ -15,6 +15,9 @@ class AIPhotoRequest(BaseModel):
     description: str = Field(
         ..., description="User's narrative description to guide the image generation"
     )
+    question_text: Optional[str] = Field(
+        None, description="The listening question text shown to the learner"
+    )
     script: Optional[str] = Field(
         None, description="The JLPT listening exam script/conversation text"
     )

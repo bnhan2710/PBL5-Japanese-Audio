@@ -31,6 +31,10 @@ function formatCountdown(totalSeconds: number) {
  return [hours, minutes, seconds].map((value) => value.toString().padStart(2, '0')).join(':')
 }
 
+function getOptionLabel(index: number) {
+	return String.fromCharCode(65 + index)
+}
+
 function getQuestionStatus(question: TestQuestion, answers: AnswerMap, reviews: ReviewMap) {
  if (reviews[question.question_id]) return 'review'
  if (answers[question.question_id]) return 'answered'
@@ -414,11 +418,13 @@ export function TakeExamContent({
  </div>
  )}
 
+ {!activeQuestion.hide_question_text && (
  <div className="rounded-[24px] border border-border bg-card px-6 py-6 shadow-sm">
  <p className="text-base leading-[1.7] text-foreground sm:text-lg">
  {activeQuestion.question_text || 'Câu hỏi chưa có nội dung'}
  </p>
  </div>
+ )}
 
  {activeQuestion.image_url && (
  <div className="mt-6 overflow-hidden rounded-[24px] border border-border bg-card">
@@ -434,13 +440,16 @@ export function TakeExamContent({
  <div className="space-y-4">
  {activeQuestion.answers.map((answer, index) => {
  const selected = answers[activeQuestion.question_id] === answer.answer_id
+ const compactAnswerMode = !!activeQuestion.hide_question_text
  return (
  <button
  key={answer.answer_id}
  type="button"
  onClick={() => chooseAnswer(activeQuestion.question_id, answer.answer_id)}
  className={[
- 'flex w-full items-center gap-5 rounded-[28px] border bg-card px-6 py-5 text-left transition-all',
+ compactAnswerMode
+ ? 'flex w-full items-center gap-4 rounded-[22px] border bg-card px-4 py-4 text-left transition-all'
+ : 'flex w-full items-center gap-5 rounded-[28px] border bg-card px-6 py-5 text-left transition-all',
  selected
  ? 'border-emerald-400 shadow-lg shadow-emerald-100'
  : 'border-border hover:border-emerald-300 hover:shadow-sm',
@@ -448,14 +457,17 @@ export function TakeExamContent({
  >
  <span
  className={[
- 'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-4 text-xs font-black',
+ compactAnswerMode
+ ? 'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-sm font-black'
+ : 'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-4 text-xs font-black',
  selected
  ? 'border-emerald-400 bg-emerald-400 text-white'
  : 'border-border text-muted-foreground',
  ].join(' ')}
  >
- {index + 1}
+ {getOptionLabel(index)}
  </span>
+ {!compactAnswerMode && (
  <div className="flex-1">
  <p className="text-sm leading-[1.6] text-foreground sm:text-base">
  {answer.content || 'Đáp án dạng hình ảnh'}
@@ -468,6 +480,7 @@ export function TakeExamContent({
  />
  )}
  </div>
+ )}
  </button>
  )
  })}
