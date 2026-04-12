@@ -8,6 +8,7 @@ import {
   Sparkles,
   History,
   FileAudio,
+  Shuffle,
 } from 'lucide-react'
 
 const ADMIN_SHORTCUTS = [
@@ -47,6 +48,13 @@ const ADMIN_SHORTCUTS = [
     color: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400',
   },
   {
+    title: 'Sinh đề ngẫu nhiên',
+    description: 'Tạo đề thi bằng cách random hoá các câu hỏi hiện có',
+    icon: Shuffle,
+    path: '/exam/random-create',
+    color: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400',
+  },
+  {
     title: 'Đề thi của tôi',
     description: 'Xem lại các đề thi đã tạo và xuất bản',
     icon: FileText,
@@ -84,6 +92,13 @@ const USER_SHORTCUTS = [
     icon: Sparkles,
     path: '/exam/ai-create',
     color: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400',
+  },
+  {
+    title: 'Sinh đề ngẫu nhiên',
+    description: 'Tạo đề thi bằng cách random hoá các câu hỏi hiện có',
+    icon: Shuffle,
+    path: '/exam/random-create',
+    color: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400',
   },
   {
     title: 'Đề thi của tôi',

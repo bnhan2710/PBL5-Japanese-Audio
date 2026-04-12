@@ -17,6 +17,7 @@ from app.modules.result.router import router as result_router
 from app.modules.ai_feedback.router import router as ai_feedback_router
 from app.modules.system_feedback.router import router as system_feedback_router
 from app.modules.ai_chat.router import router as ai_chat_router
+from app.modules.random_exam.router import router as random_exam_router
 from app.db.session import init_db, engine
 from app.core.config import get_settings
 
@@ -78,6 +79,10 @@ app = FastAPI(
         {
             "name": "exams",
             "description": "Exam CRUD – create, list, update, delete exam drafts"
+        },
+        {
+            "name": "random-exams",
+            "description": "Random exam generation – select and shuffle questions from question bank"
         },
         {
             "name": "audio",
@@ -168,6 +173,7 @@ app.include_router(users_router, prefix="/api")
 app.include_router(auth_router, prefix="/api")
 app.include_router(audio_router, prefix="/api")
 app.include_router(exam_router, prefix="/api")
+app.include_router(random_exam_router, prefix="/api")
 app.include_router(questions_router, prefix="/api")
 app.include_router(ai_exam_router, prefix="/api")
 app.include_router(ai_photos_router, prefix="/api")

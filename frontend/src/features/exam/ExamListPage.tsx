@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, BookOpen, Clock, Layers, FileText, CheckCircle2, AlertCircle, Sparkles, Search, Filter, Calendar } from 'lucide-react'
+import { Plus, BookOpen, Clock, Layers, FileText, CheckCircle2, AlertCircle, Sparkles, Search, Filter, Calendar, Shuffle } from 'lucide-react'
 import { examClient, ExamResponse } from './api/examClient'
 import ExamDetailModal from './ExamDetailModal'
 
@@ -162,6 +162,13 @@ export default function ExamListPage() {
  Tạo bằng AI
  </button>
  <button
+ onClick={() => navigate('/exam/random-create')}
+ className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-lg text-sm font-semibold hover:from-emerald-600 hover:to-teal-700 transition-all shadow-lg shadow-emerald-500/30"
+ >
+ <Shuffle className="w-4 h-4" />
+ Sinh ngẫu nhiên
+ </button>
+ <button
  onClick={() => navigate('/exam/create')}
  className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm"
  >
@@ -250,6 +257,12 @@ export default function ExamListPage() {
  className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-lg text-sm font-semibold hover:from-violet-600 hover:to-purple-700 transition-all shadow-lg shadow-violet-500/30"
  >
  <Sparkles className="w-4 h-4" /> Tạo bằng AI
+ </button>
+ <button
+ onClick={() => navigate('/exam/random-create')}
+ className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-lg text-sm font-semibold hover:from-emerald-600 hover:to-teal-700 transition-all shadow-lg shadow-emerald-500/30"
+ >
+ <Shuffle className="w-4 h-4" /> Sinh ngẫu nhiên
  </button>
  <button
  onClick={() => navigate('/exam/create')}

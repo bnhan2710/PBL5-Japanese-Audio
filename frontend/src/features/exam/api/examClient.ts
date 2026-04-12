@@ -6,7 +6,21 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }))
-    throw new Error(err.detail || 'API error')
+    let message: string
+    if (typeof err?.detail === 'string') {
+      message = err.detail
+    } else if (Array.isArray(err?.detail)) {
+      message = err.detail
+        .map((item: any) => (typeof item === 'string' ? item : item?.msg || JSON.stringify(item)))
+        .join('; ')
+    } else if (err?.detail && typeof err.detail === 'object') {
+      message = err.detail.msg || JSON.stringify(err.detail)
+    } else if (typeof err?.message === 'string') {
+      message = err.message
+    } else {
+      message = res.statusText || 'API error'
+    }
+    throw new Error(message)
   }
   return res.json()
 }
@@ -283,4 +297,102 @@ export const aiExamClient = {
   /** Cleanup job from server memory. */
   deleteJob: (jobId: string): Promise<void> =>
     apiFetch(`${API_BASE}/api/ai/job/${jobId}`, { method: 'DELETE' }).then(() => undefined),
+}
+
+// --------------- Random Exam Generation Types ---------------
+
+export interface MondaiCountConfig {
+  mondai_id: number
+  count: number
+}
+
+export interface RandomExamGenerateRequest {
+  title: string
+  description?: string
+  jlpt_level: 'N5' | 'N4' | 'N3' | 'N2' | 'N1'
+  mondai_config: MondaiCountConfig[]
+}
+
+export interface RandomExamGenerateResponse {
+  exam_id: string
+  job_id: string
+  status: 'pending' | 'processing' | 'done' | 'failed'
+  progress_message: string
+  title: string
+  description?: string
+  level: 'N5' | 'N4' | 'N3' | 'N2' | 'N1'
+  total_questions: number
+  mondai_summary?: Record<string, number>
+  questions?: QuestionResponse[]
+  error?: string
+}
+
+// --------------- Random Exam Generation API Methods ---------------
+
+export const randomExamClient = {
+  /**
+   * Start random exam generation process
+   * Returns job_id for tracking progress
+   */
+  generateRandomExam: (data: RandomExamGenerateRequest): Promise<RandomExamGenerateResponse> =>
+    apiFetch(`${API_BASE}/api/exams/random/generate`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }).then((r) => handleResponse<RandomExamGenerateResponse>(r)),
+
+  /**
+   * Poll job status for random exam generation
+   */
+  getRandomExamJobStatus: (
+    jobId: string
+  ): Promise<RandomExamGenerateResponse> =>
+    apiFetch(`${API_BASE}/api/exams/random/job/${jobId}`).then((r) =>
+      handleResponse<RandomExamGenerateResponse>(r)
+    ),
+
+  /**
+   * Get list of all available questions grouped by level and mondai
+   * for random selection
+   */
+  getAvailableQuestions: (
+    jlpt_level: 'N5' | 'N4' | 'N3' | 'N2' | 'N1'
+  ): Promise<Record<string, QuestionResponse[]>> =>
+    apiFetch(`${API_BASE}/api/exams/random/available-questions?level=${jlpt_level}`).then(
+      (r) => handleResponse<Record<string, QuestionResponse[]>>(r)
+    ),
+
+  /**
+   * Create exam from random generation result with merged audio
+   */
+  createExamFromRandom: (data: {
+    exam_id?: string
+    title: string
+    description?: string
+    question_ids: string[]
+    audio_file_url?: string
+  }): Promise<ExamResponse> =>
+    apiFetch(`${API_BASE}/api/exams/random/create`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }).then((r) => handleResponse<ExamResponse>(r)),
+
+  /**
+   * Cleanup job from server memory
+   */
+  deleteRandomExamJob: (jobId: string): Promise<void> =>
+    apiFetch(`${API_BASE}/api/exams/random/job/${jobId}`, { method: 'DELETE' }).then(
+      () => undefined
+    ),
+  /**
+   * Merge multiple audio files with silence gaps
+   * Returns merged audio URL
+   */
+  mergeAudioFiles: (data: {
+    audio_urls: string[]
+    silence_duration: number // seconds
+  }): Promise<{ merged_audio_url: string }> =>
+    apiFetch(`${API_BASE}/api/exams/random/merge-audio`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }).then((r) => handleResponse<{ merged_audio_url: string }>(r)),
 }

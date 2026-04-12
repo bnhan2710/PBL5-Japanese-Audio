@@ -83,6 +83,7 @@ export function TakeExamContent({
  const [startPhase, setStartPhase] = useState<'ready' | 'countdown' | 'active'>('ready')
  const [countdownSeconds, setCountdownSeconds] = useState(3)
  const [audioAutoPlaySignal, setAudioAutoPlaySignal] = useState(0)
+ const [simulationAudioBlocked, setSimulationAudioBlocked] = useState(false)
  const simulationAudioRef = useRef<HTMLAudioElement>(null)
  const countdownIntervalRef = useRef<number | null>(null)
  const startTimeoutRef = useRef<number | null>(null)
@@ -94,14 +95,22 @@ export function TakeExamContent({
  const audio = simulationAudioRef.current
  if (!audio) return
 
- audio.play().catch((err) => {
+ const tryPlay = async () => {
+ try {
+ await audio.play()
+ setSimulationAudioBlocked(false)
+ } catch (err) {
  console.warn('Autoplay failed:', err)
+ setSimulationAudioBlocked(true)
  toast({
  title: 'Chưa thể tự phát audio',
- description: 'Vui lòng nhấp vào trang để tiếp tục nghe.',
+ description: 'Vui lòng nhấp vào nút "Tiếp tục phát audio" để nghe.',
  variant: 'destructive',
  })
- })
+ }
+ }
+
+ void tryPlay()
  }, [simulationAudioSrc, startPhase, selectedAudioMode])
 
  useEffect(() => {
@@ -122,6 +131,7 @@ export function TakeExamContent({
  setStartPhase('ready')
  setCountdownSeconds(3)
  setAudioAutoPlaySignal(0)
+ setSimulationAudioBlocked(false)
  })
  .catch((err: Error) => setError(err.message || 'Không tải được bài thi'))
  .finally(() => setLoading(false))
@@ -192,6 +202,22 @@ export function TakeExamContent({
  if (countdownIntervalRef.current) window.clearInterval(countdownIntervalRef.current)
  if (startTimeoutRef.current) window.clearTimeout(startTimeoutRef.current)
 
+ // Prime simulation audio in a direct user gesture to avoid autoplay block after countdown.
+ if (selectedAudioMode === 'simulation' && simulationAudioRef.current) {
+ const audio = simulationAudioRef.current
+ audio.muted = true
+ void audio.play()
+ .then(() => {
+ audio.pause()
+ audio.currentTime = 0
+ audio.muted = false
+ setSimulationAudioBlocked(false)
+ })
+ .catch(() => {
+ audio.muted = false
+ })
+ }
+
  setCountdownSeconds(3)
  setStartPhase('countdown')
 
@@ -224,6 +250,21 @@ export function TakeExamContent({
  if (!autoSubmit) {
  const confirmed = window.confirm('Bạn có chắc muốn nộp bài thi ngay bây giờ?')
  if (!confirmed) return
+ }
+
+ const handleResumeSimulationAudio = async () => {
+ const audio = simulationAudioRef.current
+ if (!audio) return
+ try {
+ await audio.play()
+ setSimulationAudioBlocked(false)
+ } catch (err: any) {
+ toast({
+ title: 'Không thể phát audio',
+ description: err?.message || 'Vui lòng thử lại.',
+ variant: 'destructive',
+ })
+ }
  }
 
  setSubmitting(true)
@@ -523,6 +564,18 @@ export function TakeExamContent({
 
  {selectedAudioMode === 'simulation' && simulationAudioSrc && (
  <audio ref={simulationAudioRef} src={simulationAudioSrc} preload="auto" className="hidden" />
+ )}
+
+ {selectedAudioMode === 'simulation' && startPhase === 'active' && simulationAudioBlocked && (
+ <div className="fixed bottom-6 right-6 z-40">
+ <Button
+ className="rounded-full bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 hover:bg-blue-700"
+ onClick={() => void handleResumeSimulationAudio()}
+ >
+ <PlayCircle className="mr-2 h-4 w-4" />
+ Tiếp tục phát audio
+ </Button>
+ </div>
  )}
 
  {result && (

@@ -17,6 +17,7 @@ const ForgotPasswordPage = lazy(() => import('../pages/ForgotPasswordPage'))
 const ResetPasswordPage = lazy(() => import('../pages/ResetPasswordPage'))
 const CreateExamPage = lazy(() => import('../features/exam/CreateExamPage'))
 const AICreateExamPage = lazy(() => import('../features/exam/AICreateExamPage'))
+const RandomExamPage = lazy(() => import('../features/exam/RandomExamPage'))
 const ExamListPage = lazy(() => import('../features/exam/ExamListPage'))
 const ExamPrintPage = lazy(() => import('../features/exam/ExamPrintPage'))
 const TestExamDetailPage = lazy(() => import('../features/test/TestExamDetailPage'))
@@ -102,6 +103,10 @@ const routes = {
     {
       path: 'exam/ai-create',
       element: <AICreateExamPage />,
+    },
+    {
+      path: 'exam/random-create',
+      element: <RandomExamPage />,
     },
     {
       path: 'test/exams/:examId',
