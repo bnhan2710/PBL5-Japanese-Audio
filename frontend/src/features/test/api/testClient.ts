@@ -17,9 +17,13 @@ export const testClient = {
  handleResponse<TestExamDetail>(response)
  ),
 
- submitExam: (examId: string, payload: TestSubmitPayload) =>
- apiFetch(`${API_BASE}/api/test/exams/${examId}/submit`, {
- method: 'POST',
- body: JSON.stringify(payload),
- }).then((response) => handleResponse<TestSubmitResult>(response)),
+    submitExam: (examId: string, payload: TestSubmitPayload) =>
+        apiFetch(`${API_BASE}/api/test/exams/${examId}/submit`, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        }).then((response) => handleResponse<TestSubmitResult>(response)),
+
+    getCompetencyAnalysis: (resultId: string) =>
+        apiFetch(`${API_BASE}/api/results/${resultId}/competency`)
+        .then((response) => handleResponse<import('../types').CompetencyAnalysisResponse>(response)),
 }

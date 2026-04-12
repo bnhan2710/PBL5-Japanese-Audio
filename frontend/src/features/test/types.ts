@@ -78,3 +78,14 @@ export interface TestResultReviewResponse {
  exam: TestExamReviewDetail
  user_answers: Record<string, string>
 }
+
+export interface CompetencyAnalysisResponse {
+ analysis_id: string
+ result_id: string
+ overview?: string | null
+ strengths?: string[] | null
+ weaknesses_analysis?: string | null
+ actionable_advice?: string[] | null
+ skill_metrics?: Record<string, number> | null
+ created_at: string
+}

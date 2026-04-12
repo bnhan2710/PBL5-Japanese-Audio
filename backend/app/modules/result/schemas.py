@@ -54,3 +54,17 @@ class ExamSummaryResponse(BaseModel):
     average_score: Optional[float]
     highest_score: Optional[float]
     lowest_score: Optional[float]
+
+class CompetencyAnalysisResponse(BaseModel):
+    analysis_id: UUID
+    result_id: UUID
+    overview: Optional[str] = None
+    strengths: Optional[List[str]] = None
+    weaknesses_analysis: Optional[str] = None
+    actionable_advice: Optional[List[str]] = None
+    skill_metrics: Optional[dict] = None
+    skill_metrics: Optional[dict] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+

@@ -29,3 +29,22 @@ async def get_my_results(
         page=page,
         page_size=page_size
     )
+
+from uuid import UUID
+from app.modules.result.schemas import CompetencyAnalysisResponse
+from app.modules.result.competency_service import CompetencyAnalysisService
+
+def get_competency_service(db: AsyncSession = Depends(get_db)) -> CompetencyAnalysisService:
+    return CompetencyAnalysisService(db)
+
+@router.get("/{result_id}/competency", response_model=CompetencyAnalysisResponse)
+async def get_competency_analysis(
+    result_id: UUID,
+    service: CompetencyAnalysisService = Depends(get_competency_service),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Retrieve or generate the competency analysis for a specific exam result.
+    Uses AI if not already generated.
+    """
+    return await service.get_or_create_analysis(result_id, current_user)
