@@ -60,13 +60,41 @@ interface RandomExamResult {
 
 // ─── Constants ────────────────────────────────────────────────────────────
 
-const DEFAULT_MONDAI: MondaiConfig[] = [
-  { id: 1, label: 'Mondai 1: Task-based Comprehension', nameJa: 'Kadairikai (課題理解)', enabled: true, count: 2 },
-  { id: 2, label: 'Mondai 2: Point Comprehension', nameJa: 'Pointorikai (ポイント理解)', enabled: true, count: 3 },
-  { id: 3, label: 'Mondai 3: Summary Comprehension', nameJa: 'Gaiyourikai (概要理解)', enabled: true, count: 2 },
-  { id: 4, label: 'Mondai 4: Quick Response', nameJa: 'Sokujioutou (即時応答)', enabled: true, count: 4 },
-  { id: 5, label: 'Mondai 5: Integrated Comprehension', nameJa: 'Sougourikai (統合理解)', enabled: true, count: 2 },
-]
+const MONDAI_CONFIG_BY_LEVEL: Record<Level, MondaiConfig[]> = {
+  N5: [
+    { id: 1, label: 'Mondai 1: Task-based Comprehension', nameJa: 'Kadairikai (課題理解)', enabled: true, count: 7 },
+    { id: 2, label: 'Mondai 2: Point Comprehension', nameJa: 'Pointorikai (ポイント理解)', enabled: true, count: 6 },
+    { id: 3, label: 'Mondai 3: Verbal Expressions', nameJa: 'Hatsuwa Hyougen (発話表現)', enabled: true, count: 5 },
+    { id: 4, label: 'Mondai 4: Quick Response', nameJa: 'Sokujioutou (即時応答)', enabled: true, count: 6 },
+  ],
+  N4: [
+    { id: 1, label: 'Mondai 1: Task-based Comprehension', nameJa: 'Kadairikai (課題理解)', enabled: true, count: 8 },
+    { id: 2, label: 'Mondai 2: Point Comprehension', nameJa: 'Pointorikai (ポイント理解)', enabled: true, count: 7 },
+    { id: 3, label: 'Mondai 3: Verbal Expressions', nameJa: 'Hatsuwa Hyougen (発話表現)', enabled: true, count: 5 },
+    { id: 4, label: 'Mondai 4: Quick Response', nameJa: 'Sokujioutou (即時応答)', enabled: true, count: 8 },
+  ],
+  N3: [
+    { id: 1, label: 'Mondai 1: Task-based Comprehension', nameJa: 'Kadairikai (課題理解)', enabled: true, count: 6 },
+    { id: 2, label: 'Mondai 2: Point Comprehension', nameJa: 'Pointorikai (ポイント理解)', enabled: true, count: 6 },
+    { id: 3, label: 'Mondai 3: Summary Comprehension', nameJa: 'Gaiyourikai (概要理解)', enabled: true, count: 3 },
+    { id: 4, label: 'Mondai 4: Verbal Expressions', nameJa: 'Hatsuwa Hyougen (発話表現)', enabled: true, count: 4 },
+    { id: 5, label: 'Mondai 5: Quick Response', nameJa: 'Sokujioutou (即時応答)', enabled: true, count: 9 },
+  ],
+  N2: [
+    { id: 1, label: 'Mondai 1: Task-based Comprehension', nameJa: 'Kadairikai (課題理解)', enabled: true, count: 5 },
+    { id: 2, label: 'Mondai 2: Point Comprehension', nameJa: 'Pointorikai (ポイント理解)', enabled: true, count: 6 },
+    { id: 3, label: 'Mondai 3: Summary Comprehension', nameJa: 'Gaiyourikai (概要理解)', enabled: true, count: 5 },
+    { id: 4, label: 'Mondai 4: Quick Response', nameJa: 'Sokujioutou (即時応答)', enabled: true, count: 12 },
+    { id: 5, label: 'Mondai 5: Integrated Comprehension', nameJa: 'Sougourikai (統合理解)', enabled: true, count: 3 },
+  ],
+  N1: [
+    { id: 1, label: 'Mondai 1: Task-based Comprehension', nameJa: 'Kadairikai (課題理解)', enabled: true, count: 6 },
+    { id: 2, label: 'Mondai 2: Point Comprehension', nameJa: 'Pointorikai (ポイント理解)', enabled: true, count: 7 },
+    { id: 3, label: 'Mondai 3: Summary Comprehension', nameJa: 'Gaiyourikai (概要理解)', enabled: true, count: 6 },
+    { id: 4, label: 'Mondai 4: Quick Response', nameJa: 'Sokujioutou (即時応答)', enabled: true, count: 14 },
+    { id: 5, label: 'Mondai 5: Integrated Comprehension', nameJa: 'Sougourikai (統合理解)', enabled: true, count: 4 },
+  ],
+}
 
 const LEVELS: Level[] = ['N5', 'N4', 'N3', 'N2', 'N1']
 
@@ -170,7 +198,7 @@ function Step1_Configuration({ config, onConfigChange, onNext }: Step1Props) {
   }
 
   const handleLevelChange = (level: Level) => {
-    onConfigChange({ ...config, level })
+    onConfigChange({ ...config, level, mondaiConfig: MONDAI_CONFIG_BY_LEVEL[level] })
   }
 
   const handleTimeLimitChange = (minutes: number) => {
@@ -412,6 +440,7 @@ function Step2_Progress({ config, onComplete, onBack }: Step2Props) {
               exam_id: statusResponse.exam_id,
               title: statusResponse.title,
               level: statusResponse.level,
+              time_limit: config.timeLimit,
               total_questions: statusResponse.total_questions,
               questions: (statusResponse.questions || []) as GeneratedQuestion[],
               mondai_summary: statusResponse.mondai_summary || {},
@@ -1130,7 +1159,7 @@ export default function RandomExamPage() {
     description: '',
     level: 'N2',
     timeLimit: 60,
-    mondaiConfig: DEFAULT_MONDAI,
+    mondaiConfig: MONDAI_CONFIG_BY_LEVEL['N2'],
   })
   const [result, setResult] = useState<RandomExamResult | null>(null)
 

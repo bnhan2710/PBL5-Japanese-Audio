@@ -52,13 +52,41 @@ interface LocalQuestion {
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
-const DEFAULT_MONDAI: MondaiConfig[] = [
+const MONDAI_CONFIG_BY_LEVEL: Record<Level, MondaiConfig[]> = {
+ N5: [
+ { id: 1, label: 'Mondai 1: Task-based Comprehension', nameJa: 'Kadairikai (課題理解)', enabled: true, count: 7 },
+ { id: 2, label: 'Mondai 2: Point Comprehension', nameJa: 'Pointorikai (ポイント理解)', enabled: true, count: 6 },
+ { id: 3, label: 'Mondai 3: Verbal Expressions', nameJa: 'Hatsuwa Hyougen (発話表現)', enabled: true, count: 5 },
+ { id: 4, label: 'Mondai 4: Quick Response', nameJa: 'Sokujioutou (即時応答)', enabled: true, count: 6 },
+ ],
+ N4: [
+ { id: 1, label: 'Mondai 1: Task-based Comprehension', nameJa: 'Kadairikai (課題理解)', enabled: true, count: 8 },
+ { id: 2, label: 'Mondai 2: Point Comprehension', nameJa: 'Pointorikai (ポイント理解)', enabled: true, count: 7 },
+ { id: 3, label: 'Mondai 3: Verbal Expressions', nameJa: 'Hatsuwa Hyougen (発話表現)', enabled: true, count: 5 },
+ { id: 4, label: 'Mondai 4: Quick Response', nameJa: 'Sokujioutou (即時応答)', enabled: true, count: 8 },
+ ],
+ N3: [
+ { id: 1, label: 'Mondai 1: Task-based Comprehension', nameJa: 'Kadairikai (課題理解)', enabled: true, count: 6 },
+ { id: 2, label: 'Mondai 2: Point Comprehension', nameJa: 'Pointorikai (ポイント理解)', enabled: true, count: 6 },
+ { id: 3, label: 'Mondai 3: Summary Comprehension', nameJa: 'Gaiyourikai (概要理解)', enabled: true, count: 3 },
+ { id: 4, label: 'Mondai 4: Verbal Expressions', nameJa: 'Hatsuwa Hyougen (発話表現)', enabled: true, count: 4 },
+ { id: 5, label: 'Mondai 5: Quick Response', nameJa: 'Sokujioutou (即時応答)', enabled: true, count: 9 },
+ ],
+ N2: [
  { id: 1, label: 'Mondai 1: Task-based Comprehension', nameJa: 'Kadairikai (課題理解)', enabled: true, count: 5 },
  { id: 2, label: 'Mondai 2: Point Comprehension', nameJa: 'Pointorikai (ポイント理解)', enabled: true, count: 6 },
  { id: 3, label: 'Mondai 3: Summary Comprehension', nameJa: 'Gaiyourikai (概要理解)', enabled: true, count: 5 },
  { id: 4, label: 'Mondai 4: Quick Response', nameJa: 'Sokujioutou (即時応答)', enabled: true, count: 12 },
+ { id: 5, label: 'Mondai 5: Integrated Comprehension', nameJa: 'Sougourikai (統合理解)', enabled: true, count: 3 },
+ ],
+ N1: [
+ { id: 1, label: 'Mondai 1: Task-based Comprehension', nameJa: 'Kadairikai (課題理解)', enabled: true, count: 6 },
+ { id: 2, label: 'Mondai 2: Point Comprehension', nameJa: 'Pointorikai (ポイント理解)', enabled: true, count: 7 },
+ { id: 3, label: 'Mondai 3: Summary Comprehension', nameJa: 'Gaiyourikai (概要理解)', enabled: true, count: 6 },
+ { id: 4, label: 'Mondai 4: Quick Response', nameJa: 'Sokujioutou (即時応答)', enabled: true, count: 14 },
  { id: 5, label: 'Mondai 5: Integrated Comprehension', nameJa: 'Sougourikai (統合理解)', enabled: true, count: 4 },
-]
+ ],
+}
 
 const LEVELS: Level[] = ['N5', 'N4', 'N3', 'N2', 'N1']
 
@@ -1383,7 +1411,12 @@ export default function CreateExamPage() {
  const [title, setTitle] = useState('')
  const [description, setDescription] = useState('')
  const [timeLimit, setTimeLimit] = useState(50)
- const [mondai, setMondai] = useState<MondaiConfig[]>(DEFAULT_MONDAI)
+ const [mondai, setMondai] = useState<MondaiConfig[]>(MONDAI_CONFIG_BY_LEVEL['N2'])
+
+ const handleSetLevel = (newLevel: Level) => {
+   setLevel(newLevel)
+   setMondai(MONDAI_CONFIG_BY_LEVEL[newLevel])
+ }
 
  // Step 2 state
  const [examId, setExamId] = useState('')
@@ -1452,7 +1485,7 @@ export default function CreateExamPage() {
  <StepIndicator step={step} />
  {step === 1 && (
  <Step1
- level={level} setLevel={setLevel}
+ level={level} setLevel={handleSetLevel}
  title={title} setTitle={setTitle}
  description={description} setDescription={setDescription}
  timeLimit={timeLimit} setTimeLimit={setTimeLimit}
