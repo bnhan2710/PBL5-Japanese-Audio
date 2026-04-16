@@ -110,12 +110,13 @@ export default function ExamListPage() {
 
  const filteredExams = exams.filter(exam => {
  const safeTitle = typeof exam.title === 'string' ? exam.title : ''
+ const safeDescription = typeof exam.description === 'string' ? exam.description : ''
  const safeCreatedAt = typeof exam.created_at === 'string' ? exam.created_at : ''
 
- if (searchQuery && !safeTitle.toLowerCase().includes(searchQuery.toLowerCase())) {
+ if (searchQuery && !safeTitle.toLowerCase().includes(searchQuery.toLowerCase()) && !safeDescription.toLowerCase().includes(searchQuery.toLowerCase())) {
  return false
  }
- if (levelFilter !== 'all' && !safeTitle.includes(levelFilter)) {
+ if (levelFilter !== 'all' && !safeTitle.includes(levelFilter) && !safeDescription.includes(levelFilter)) {
  return false
  }
  
