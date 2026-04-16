@@ -161,6 +161,9 @@ class TestService:
                     hide_question_text=bool(question.hide_question_text),
                     image_url=question.image_url,
                     difficulty=question.difficulty,
+                    explanation=question.explanation,
+                    script_text=question.script_text,
+                    raw_transcript=question.raw_transcript,
                     answers=[
                         TestAnswerOptionResponse(
                             answer_id=answer.answer_id,
@@ -237,6 +240,9 @@ class TestService:
                     hide_question_text=bool(question.hide_question_text),
                     image_url=question.image_url,
                     difficulty=question.difficulty,
+                    explanation=question.explanation,
+                    script_text=question.script_text,
+                    raw_transcript=question.raw_transcript,
                     answers=[
                         TestAnswerOptionReviewResponse(
                             answer_id=answer.answer_id,

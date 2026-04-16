@@ -14,6 +14,9 @@ export interface TestQuestion {
  hide_question_text?: boolean
  image_url?: string | null
  difficulty?: number | null
+ explanation?: string | null
+ script_text?: string | null
+ raw_transcript?: string | null
  answers: TestAnswerOption[]
 }
 

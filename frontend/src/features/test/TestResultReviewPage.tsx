@@ -7,7 +7,9 @@ import {
   ChevronRight,
   Loader2,
   Sparkles,
-  XCircle
+  XCircle,
+  FileText,
+  Brain
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/Button'
@@ -309,6 +311,34 @@ export default function TestResultReviewPage() {
                     )
                   })}
                 </div>
+
+                {(activeQuestion.script_text || activeQuestion.explanation) && (
+                  <div className="space-y-5 pt-4 border-t border-slate-200/60 mt-6">
+                    {activeQuestion.script_text && (
+                      <div className="rounded-[24px] border border-blue-100 bg-blue-50/50 p-6 shadow-sm">
+                        <h4 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-blue-800">
+                          <FileText className="h-4 w-4" />
+                          Audio Script
+                        </h4>
+                        <div className="prose prose-sm prose-slate max-w-none text-slate-700 whitespace-pre-wrap leading-relaxed font-medium">
+                          {activeQuestion.script_text}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {activeQuestion.explanation && (
+                      <div className="rounded-[24px] border border-indigo-100 bg-indigo-50/50 p-6 shadow-sm">
+                        <h4 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-indigo-800">
+                          <Brain className="h-4 w-4" />
+                          Lời giải thích
+                        </h4>
+                        <div className="prose prose-sm prose-slate max-w-none text-slate-700 whitespace-pre-wrap leading-relaxed font-medium">
+                          {activeQuestion.explanation}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </main>
           </div>

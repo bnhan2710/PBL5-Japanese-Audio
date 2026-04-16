@@ -23,6 +23,9 @@ class TestQuestionResponse(BaseModel):
     hide_question_text: bool = False
     image_url: Optional[str] = None
     difficulty: Optional[int] = Field(None, description="IRT difficulty (1-5 stars)")
+    explanation: Optional[str] = None
+    script_text: Optional[str] = None
+    raw_transcript: Optional[str] = None
     answers: List[TestAnswerOptionResponse]
 
     model_config = ConfigDict(from_attributes=True)
