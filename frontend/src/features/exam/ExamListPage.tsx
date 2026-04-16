@@ -87,7 +87,7 @@ export default function ExamListPage() {
 
  const fetchExams = () => {
  setLoading(true)
- examClient.listExams()
+ examClient.listExams(true)
  .then(data => {
  const normalized = Array.isArray(data)
  ? data

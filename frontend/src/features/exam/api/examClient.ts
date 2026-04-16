@@ -142,8 +142,8 @@ export const examClient = {
 
   deleteExam: (examId: string) => apiFetch(`${API_BASE}/api/exams/${examId}`, { method: 'DELETE' }),
 
-  listExams: () =>
-    apiFetch(`${API_BASE}/api/exams`)
+  listExams: (meOnly: boolean = false) =>
+    apiFetch(`${API_BASE}/api/exams${meOnly ? '?me_only=true' : ''}`)
       .then((r) => handleResponse<ExamListResponse>(r))
       .then((data) => data.exams),
 

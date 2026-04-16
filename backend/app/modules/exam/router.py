@@ -54,14 +54,15 @@ async def create_exam(
 async def list_exams(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
+    me_only: bool = Query(False),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """List all exams (admin sees all, others see own)."""
+    """List all exams (admin sees all, others see own, or if me_only admin sees only own)."""
     offset = (page - 1) * page_size
 
     base_query = select(Exam).options(selectinload(Exam.audio))
-    if current_user.role != "admin":
+    if current_user.role != "admin" or me_only:
         base_query = base_query.where(Exam.creator_id == current_user.id)
 
     total_result = await db.execute(select(func.count()).select_from(base_query.subquery()))
