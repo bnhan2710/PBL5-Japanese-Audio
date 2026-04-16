@@ -18,6 +18,7 @@ from app.modules.ai_feedback.router import router as ai_feedback_router
 from app.modules.system_feedback.router import router as system_feedback_router
 from app.modules.ai_chat.router import router as ai_chat_router
 from app.modules.random_exam.router import router as random_exam_router
+from app.modules.analytics.router import router as analytics_router
 from app.db.session import init_db, engine
 from app.core.config import get_settings
 
@@ -182,5 +183,7 @@ app.include_router(result_router, prefix="/api")
 app.include_router(ai_feedback_router, prefix="/api")
 app.include_router(system_feedback_router, prefix="/api")
 app.include_router(ai_chat_router, prefix="/api")
+
+app.include_router(analytics_router, prefix="/api")
 
 logger.info("Application routes configured")

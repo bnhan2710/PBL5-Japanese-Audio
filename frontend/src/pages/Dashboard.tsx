@@ -34,6 +34,13 @@ const ADMIN_SHORTCUTS = [
     color: 'bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400',
   },
   {
+    title: 'Báo cáo & Thống kê',
+    description: 'Theo dõi toàn diện các chỉ số vận hành và chất lượng AI',
+    icon: FileText,
+    path: '/admin/analytics',
+    color: 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400',
+  },
+  {
     title: 'Tạo đề thi mới',
     description: 'Tạo đề thi nghe tiếng Nhật theo cấu trúc JLPT',
     icon: Plus,

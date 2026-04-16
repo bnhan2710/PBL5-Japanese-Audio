@@ -68,6 +68,7 @@ class AIExamResult(BaseModel):
     split_segments: List[AISplitSegment] = []
     timestamps: Optional[List[AITimestampMondai]] = None
     questions: List[AIQuestion]
+    confidence_error_score: Optional[float] = 0.10
 
 
 class AIJobStatusResponse(BaseModel):

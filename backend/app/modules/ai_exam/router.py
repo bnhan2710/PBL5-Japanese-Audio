@@ -166,6 +166,7 @@ async def _run_pipeline(
             cache.pipeline_version = svc.pipeline_version
             cache.cloudinary_public_id = public_id
             cache.cloudinary_format = fmt
+            result.confidence_error_score = 0.10
             cache.result_json = result.model_dump_json()
             cache.error_message = None
             await db.commit()
