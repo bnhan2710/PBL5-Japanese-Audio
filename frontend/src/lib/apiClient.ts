@@ -88,6 +88,19 @@ export async function apiFetch(
 
  // Return early for non-401 or if there is no refresh token to try
  if (response.status !== 401 || !localStorage.getItem('refresh_token')) {
+ if (response.status === 403) {
+ try {
+ const clonedResponse = response.clone();
+ const data = await clonedResponse.json();
+ if (data?.detail && typeof data.detail === 'string' && data.detail.includes('Tài khoản của bạn đã bị khóa')) {
+ localStorage.removeItem('token');
+ localStorage.removeItem('refresh_token');
+ if (logoutCallback) logoutCallback();
+ }
+ } catch (err) {
+ // Ignore parse error
+ }
+ }
  return response;
  }
 
