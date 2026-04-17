@@ -21,6 +21,17 @@ class ContestCreateRequest(BaseModel):
     exam_id: UUID
 
 
+class ContestUpdateRequest(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    min_jlpt_level: Optional[JLPTLevel] = None
+    max_participants: Optional[int] = Field(None, ge=1)
+    time_limit: Optional[int] = Field(None, ge=1)
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    exam_id: Optional[UUID] = None
+
+
 class ContestParticipantSummary(BaseModel):
     user_id: int
     result_id: Optional[UUID] = None

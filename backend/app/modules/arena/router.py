@@ -13,6 +13,7 @@ from app.modules.arena.schemas import (
     ContestSubmitRequest,
     ContestSubmitResponse,
     ContestTakeResponse,
+    ContestUpdateRequest,
 )
 from app.modules.arena.service import ArenaService
 from app.modules.users.models import User
@@ -49,6 +50,16 @@ async def get_contest(
     current_user: User = Depends(get_current_user),
 ):
     return await service.get_contest(contest_id, current_user)
+
+
+@router.patch("/{contest_id}", response_model=ContestResponse)
+async def update_contest(
+    contest_id: UUID,
+    payload: ContestUpdateRequest,
+    service: ArenaService = Depends(get_arena_service),
+    current_user: User = Depends(get_current_user),
+):
+    return await service.update_contest(contest_id, payload, current_user)
 
 
 @router.post("/{contest_id}/join", response_model=ContestJoinResponse)

@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -7,7 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.modules.arena.models import Contest, ContestParticipant
-from app.modules.arena.schemas import ContestCreateRequest, ContestLeaderboardEntry, ContestResponse
+from app.modules.arena.schemas import (
+    ContestCreateRequest,
+    ContestLeaderboardEntry,
+    ContestResponse,
+    ContestUpdateRequest,
+)
 from app.modules.exam.models import Exam
 from app.modules.questions.models import Question
 from app.modules.result.models import UserResult
@@ -105,15 +110,21 @@ class ArenaService:
         )
 
     async def list_contests(self, current_user: User) -> list[ContestResponse]:
-        result = await self.db.execute(
-            select(Contest)
-            .options(
-                selectinload(Contest.exam),
-                selectinload(Contest.participants).selectinload(ContestParticipant.user),
-                selectinload(Contest.participants).selectinload(ContestParticipant.result),
-            )
-            .order_by(Contest.start_time.desc())
+        query = select(Contest).options(
+            selectinload(Contest.exam),
+            selectinload(Contest.participants).selectinload(ContestParticipant.user),
+            selectinload(Contest.participants).selectinload(ContestParticipant.result),
         )
+
+        # All users see all contests (except for end_time filtering if still applicable)
+        cutoff = _utcnow() - timedelta(days=30)
+        # Database stores naive UTC from _normalize_naive_utc
+        cutoff_naive = cutoff.replace(tzinfo=None)
+        
+        # User requested to hide old ones, we keep that logic but remove is_active check
+        query = query.where(Contest.end_time >= cutoff_naive)
+
+        result = await self.db.execute(query.order_by(Contest.start_time.desc()))
         contests = result.scalars().unique().all()
         return [self._serialize_contest(contest, current_user) for contest in contests]
 
@@ -149,6 +160,42 @@ class ArenaService:
         await self.db.commit()
         await self.db.refresh(contest)
         contest = await self._get_contest_entity(contest.contest_id)
+        return self._serialize_contest(contest, current_user)
+
+    async def update_contest(
+        self, contest_id: UUID, payload: ContestUpdateRequest, current_user: User
+    ) -> ContestResponse:
+        contest = await self._get_contest_entity(contest_id)
+        
+        if contest.creator_id != current_user.id and current_user.role != "admin":
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have permission to edit this contest")
+
+        update_data = payload.model_dump(exclude_unset=True)
+        
+        if "start_time" in update_data:
+            update_data["start_time"] = _normalize_naive_utc(update_data["start_time"])
+        if "end_time" in update_data:
+            update_data["end_time"] = _normalize_naive_utc(update_data["end_time"])
+
+        # Validate start/end time if both are present or new ones compared to existing
+        final_start = update_data.get("start_time", contest.start_time)
+        final_end = update_data.get("end_time", contest.end_time)
+        if final_end <= final_start:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="End time must be after start time")
+
+        if "exam_id" in update_data:
+            exam = await self.db.get(Exam, update_data["exam_id"])
+            if not exam:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found")
+            if exam.creator_id != current_user.id and current_user.role != "admin":
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You cannot use this exam")
+
+        for key, value in update_data.items():
+            setattr(contest, key, value)
+
+        await self.db.commit()
+        await self.db.refresh(contest)
+        contest = await self._get_contest_entity(contest_id)
         return self._serialize_contest(contest, current_user)
 
     async def join_contest(self, contest_id: UUID, current_user: User) -> ContestResponse:
