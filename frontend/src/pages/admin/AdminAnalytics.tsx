@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import {
   BarChart,
   Bar,
@@ -9,11 +9,10 @@ import {
   ResponsiveContainer,
   PieChart,
   Pie,
-  Cell,
   LineChart,
   Line,
 } from 'recharts'
-import { AlertCircle, Calendar, RefreshCw, Info } from 'lucide-react'
+import { AlertCircle, Calendar, RefreshCw, Info, ChevronDown } from 'lucide-react'
 import {
   AnalyticsOverviewResponse,
   analyticsApi,
@@ -29,22 +28,90 @@ export default function AdminAnalytics() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
+  const popupRef = useRef<HTMLDivElement>(null)
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
+  
   // Filter states
-  const [dateRange, setDateRange] = useState('30')
+  const [customStartDate, setCustomStartDate] = useState<string>(() => {
+    const d = new Date()
+    d.setDate(d.getDate() - 30)
+    return d.toISOString().split('T')[0]
+  })
+  const [customEndDate, setCustomEndDate] = useState<string>(() => {
+    const d = new Date()
+    return d.toISOString().split('T')[0]
+  })
+
+  const [tempStartDate, setTempStartDate] = useState<string>(customStartDate)
+  const [tempEndDate, setTempEndDate] = useState<string>(customEndDate)
   const [level, setLevel] = useState<string>('')
+
+  // reset temp UI when popup opens
+  useEffect(() => {
+    if (isDatePickerOpen) {
+      setTempStartDate(customStartDate)
+      setTempEndDate(customEndDate)
+    }
+  }, [isDatePickerOpen, customStartDate, customEndDate])
+
+  // handle outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (popupRef.current && !popupRef.current.contains(event.target as Node)) {
+        setIsDatePickerOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+  
+  const applyQuickRange = (days: number) => {
+    const end = new Date()
+    const start = new Date()
+    start.setDate(end.getDate() - days)
+    setCustomStartDate(start.toISOString().split('T')[0])
+    setCustomEndDate(end.toISOString().split('T')[0])
+    setIsDatePickerOpen(false)
+  }
+
+  const applyCustomRange = () => {
+    if (tempStartDate && tempEndDate && new Date(tempStartDate) <= new Date(tempEndDate)) {
+      setCustomStartDate(tempStartDate)
+      setCustomEndDate(tempEndDate)
+      setIsDatePickerOpen(false)
+    } else {
+      setError("Thời gian tùy chỉnh không hợp lệ")
+    }
+  }
+
+  const formatDateForDisplay = (dateStr: string) => {
+    if (!dateStr) return '';
+    const [y, m, d] = dateStr.split('-');
+    return `${d}/${m}/${y}`;
+  }
 
   const loadData = async () => {
     try {
+      if (!customStartDate || !customEndDate) return
+      if (new Date(customStartDate) > new Date(customEndDate)) {
+        setError('Ngày bắt đầu không được lớn hơn ngày kết thúc')
+        return
+      }
+
       setLoading(true)
       setError(null)
       
-      const endDate = new Date()
-      const startDate = new Date()
-      startDate.setDate(endDate.getDate() - parseInt(dateRange))
+      const startDate = new Date(customStartDate)
+      startDate.setHours(0, 0, 0, 0)
+      const startDateStr = startDate.toISOString()
+
+      const endDate = new Date(customEndDate)
+      endDate.setHours(23, 59, 59, 999)
+      const endDateStr = endDate.toISOString()
 
       const res = await analyticsApi.getOverview({
-        start_date: startDate.toISOString(),
-        end_date: endDate.toISOString(),
+        start_date: startDateStr,
+        end_date: endDateStr,
         level: level || undefined,
       })
       setData(res)
@@ -56,8 +123,10 @@ export default function AdminAnalytics() {
   }
 
   useEffect(() => {
-    loadData()
-  }, [dateRange, level])
+    if (customStartDate && customEndDate) {
+      loadData()
+    }
+  }, [level, customStartDate, customEndDate])
 
   if (loading && !data) {
     return (
@@ -93,20 +162,68 @@ export default function AdminAnalytics() {
           </p>
         </div>
         
-        <div className="flex items-center gap-3 bg-card p-2 rounded-lg border border-border">
-          <div className="flex items-center gap-2 px-2">
-            <Calendar className="w-4 h-4 text-muted-foreground" />
-            <select 
-              value={dateRange}
-              onChange={(e) => setDateRange(e.target.value)}
-              className="bg-transparent text-sm font-medium border-none outline-none focus:ring-0 cursor-pointer"
+        <div className="flex flex-wrap items-center gap-3 bg-card p-2 rounded-lg border border-border shadow-sm">
+          <div className="relative" ref={popupRef}>
+            <button
+              onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
+              className="flex items-center gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-input hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-sm font-medium"
             >
-              <option value="7">7 ngày qua</option>
-              <option value="30">30 ngày qua</option>
-              <option value="90">90 ngày qua</option>
-            </select>
+              <Calendar className="w-4 h-4 text-muted-foreground" />
+              <span>{formatDateForDisplay(customStartDate)}</span>
+              <span className="text-muted-foreground mx-1">-</span>
+              <span>{formatDateForDisplay(customEndDate)}</span>
+              <ChevronDown className={`w-4 h-4 text-muted-foreground ml-2 transition-transform duration-200 ${isDatePickerOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isDatePickerOpen && (
+              <div className="absolute top-full right-0 sm:left-0 mt-2 p-4 bg-card rounded-xl border border-border shadow-xl z-50 w-[340px] flex flex-col gap-4 animate-in slide-in-from-top-2 origin-top">
+                <div>
+                  <p className="text-sm font-semibold mb-3">Thời gian nhanh</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => applyQuickRange(7)}>7 ngày</Button>
+                    <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => applyQuickRange(30)}>30 ngày</Button>
+                    <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => applyQuickRange(90)}>90 ngày</Button>
+                  </div>
+                </div>
+                
+                <div className="w-full h-px bg-border my-1" />
+                
+                <div>
+                  <p className="text-sm font-semibold mb-3">Tùy chỉnh khoảng thời gian</p>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-3">
+                      <label className="text-sm text-muted-foreground w-16">Từ ngày</label>
+                      <input 
+                        type="date" 
+                        max={tempEndDate || new Date().toISOString().split('T')[0]}
+                        value={tempStartDate} 
+                        onChange={e => setTempStartDate(e.target.value)}
+                        className="flex-1 px-3 py-1.5 text-sm rounded bg-slate-50 dark:bg-slate-800 border border-input focus:ring-1 focus:ring-primary outline-none"
+                      />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <label className="text-sm text-muted-foreground w-16">Đến ngày</label>
+                      <input 
+                        type="date" 
+                        min={tempStartDate}
+                        max={new Date().toISOString().split('T')[0]}
+                        value={tempEndDate} 
+                        onChange={e => setTempEndDate(e.target.value)}
+                        className="flex-1 px-3 py-1.5 text-sm rounded bg-slate-50 dark:bg-slate-800 border border-input focus:ring-1 focus:ring-primary outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 mt-2">
+                  <Button variant="ghost" size="sm" onClick={() => setIsDatePickerOpen(false)}>Hủy</Button>
+                  <Button size="sm" onClick={applyCustomRange}>Xác nhận</Button>
+                </div>
+              </div>
+            )}
           </div>
-          <div className="w-px h-6 bg-border mx-1" />
+
+          <div className="w-px h-6 bg-border mx-1 hidden sm:block" />
           <select
             value={level}
             onChange={(e) => setLevel(e.target.value)}
@@ -190,19 +307,18 @@ export default function AdminAnalytics() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={data.exam_stats.by_level}
+                    data={data.exam_stats.by_level.map((item, index) => ({
+                      ...item,
+                      fill: COLORS[index % COLORS.length]
+                    }))}
                     cx="50%"
                     cy="50%"
                     innerRadius={60}
                     outerRadius={100}
                     paddingAngle={5}
                     dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {data.exam_stats.by_level.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
+                    label={({ name, percent = 0 }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  />
                   <Tooltip />
                 </PieChart>
               </ResponsiveContainer>
@@ -213,10 +329,13 @@ export default function AdminAnalytics() {
         </Card>
 
         {/* AI Quality / Feedback distribution */}
-        <Card className="p-6 lg:col-span-2">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-semibold">Đánh giá hệ thống AI từ người dùng</h3>
-            <span className="text-sm font-medium bg-secondary text-secondary-foreground px-3 py-1 rounded-full">
+        <Card className="p-6">
+          <div className="flex justify-between items-start mb-6">
+            <div className="flex flex-col h-12">
+              <h3 className="text-lg font-semibold">Đánh giá hệ thống AI</h3>
+              <span className="text-sm text-muted-foreground mt-1 invisible">Placeholder</span>
+            </div>
+            <span className="text-sm font-medium bg-secondary text-secondary-foreground px-3 py-1 rounded-full whitespace-nowrap">
               Trung bình: {data.ai_quality_stats.average_rating} ⭐
             </span>
           </div>
@@ -232,8 +351,41 @@ export default function AdminAnalytics() {
                 />
                 <Bar 
                   dataKey="value" 
-                  name="Số lượt đánh giá" 
+                  name="Số lượt đánh giá AI" 
                   fill="#f59e0b" 
+                  radius={[4, 4, 0, 0]} 
+                  barSize={40}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        {/* System Feedback distribution */}
+        <Card className="p-6">
+          <div className="flex justify-between items-start mb-6">
+            <div className="flex flex-col h-12">
+              <h3 className="text-lg font-semibold">Đánh giá chung (Trải nghiệm)</h3>
+              <span className="text-sm text-muted-foreground mt-1">Tổng số: {data.system_quality_stats.total_feedbacks} lượt</span>
+            </div>
+            <span className="text-sm font-medium bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200 px-3 py-1 rounded-full whitespace-nowrap">
+              Trung bình: {data.system_quality_stats.average_rating} ⭐
+            </span>
+          </div>
+          <div className="h-72 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data.system_quality_stats.rating_distribution}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="name" />
+                <YAxis allowDecimals={false} />
+                <Tooltip 
+                  cursor={{ fill: 'transparent' }} 
+                  contentStyle={{ borderRadius: '8px' }}
+                />
+                <Bar 
+                  dataKey="value" 
+                  name="Số lượt đánh giá chung" 
+                  fill="#3b82f6" 
                   radius={[4, 4, 0, 0]} 
                   barSize={40}
                 />

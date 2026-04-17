@@ -16,7 +16,8 @@ from app.modules.users.models import User
 from app.modules.analytics.schemas import (
     ExamStats, 
     InteractionStats, 
-    AIQualityStats, 
+    AIQualityStats,
+    SystemQualityStats,
     AnalyticsOverviewResponse,
     ChartDataPoint,
     AnalyticsFeedbackResponse,
@@ -153,6 +154,23 @@ class AnalyticsService:
         # Reliability formula
         reliability_score = (1.0 - confidence_error) * 0.7 + (average_rating / 5.0) * 0.3 if average_rating > 0 else (1.0 - confidence_error)
         
+        # 4. System Quality Stats
+        system_fb_query = select(SystemFeedback).where(
+            SystemFeedback.created_at >= start_date, 
+            SystemFeedback.created_at <= end_date
+        )
+        system_fbs = (await db.execute(system_fb_query)).scalars().all()
+        
+        sys_rating_dist = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+        total_sys_rating = 0
+        for fb in system_fbs:
+            score = fb.rating_score
+            if 1 <= score <= 5:
+                sys_rating_dist[score] += 1
+                total_sys_rating += score
+                
+        sys_average_rating = total_sys_rating / len(system_fbs) if system_fbs else 0.0
+
         return AnalyticsOverviewResponse(
             exam_stats=ExamStats(
                 total=len(filtered_exams),
@@ -169,6 +187,11 @@ class AnalyticsService:
                 confidence_error=round(confidence_error, 4),
                 average_rating=round(average_rating, 2),
                 rating_distribution=[ChartDataPoint(name=f"{k} Sao", value=v) for k, v in rating_dist.items()]
+            ),
+            system_quality_stats=SystemQualityStats(
+                total_feedbacks=len(system_fbs),
+                average_rating=round(sys_average_rating, 2),
+                rating_distribution=[ChartDataPoint(name=f"{k} Sao", value=v) for k, v in sys_rating_dist.items()]
             )
         )
 

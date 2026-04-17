@@ -24,6 +24,11 @@ export interface AnalyticsOverviewResponse {
     average_rating: number
     rating_distribution: ChartDataPoint[]
   }
+  system_quality_stats: {
+    total_feedbacks: number
+    average_rating: number
+    rating_distribution: ChartDataPoint[]
+  }
 }
 
 export interface AnalyticsFeedbackResponse {

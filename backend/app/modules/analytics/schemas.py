@@ -27,10 +27,17 @@ class AIQualityStats(BaseModel):
     rating_distribution: List[ChartDataPoint] = Field(..., description="Count of 1-5 stars")
 
 
+class SystemQualityStats(BaseModel):
+    total_feedbacks: int = Field(..., description="Total system feedback submissions")
+    average_rating: float = Field(..., description="1 to 5 average star rating")
+    rating_distribution: List[ChartDataPoint] = Field(..., description="Count of 1-5 stars")
+
+
 class AnalyticsOverviewResponse(BaseModel):
     exam_stats: ExamStats
     interaction_stats: InteractionStats
     ai_quality_stats: AIQualityStats
+    system_quality_stats: SystemQualityStats
 
 
 class AnalyticsFeedbackResponse(BaseModel):
