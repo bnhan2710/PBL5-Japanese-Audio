@@ -13,6 +13,7 @@ class UserResult(Base):
     result_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     exam_id = Column(UUID(as_uuid=True), ForeignKey("exams.exam_id", ondelete="SET NULL"), nullable=True)
+    contest_id = Column(UUID(as_uuid=True), ForeignKey("contests.contest_id", ondelete="SET NULL"), nullable=True)
     score = Column(Float, nullable=True)
     total_questions = Column(Integer, nullable=True)
     correct_answers = Column(Integer, nullable=True)

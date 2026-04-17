@@ -137,8 +137,7 @@ class TestService:
             )
         return exam
 
-    async def get_exam_detail(self, exam_id: UUID, current_user: User) -> TestExamDetailResponse:
-        exam = await self._get_exam_entity(exam_id, current_user)
+    def _build_exam_detail_response(self, exam: Exam) -> TestExamDetailResponse:
         sorted_questions = _sort_questions(list(exam.questions))
 
         mondai_map: dict[str, list[int]] = defaultdict(list)
@@ -202,6 +201,10 @@ class TestService:
             mondai_groups=mondai_groups,
             questions=serialized_questions,
         )
+
+    async def get_exam_detail(self, exam_id: UUID, current_user: User) -> TestExamDetailResponse:
+        exam = await self._get_exam_entity(exam_id, current_user)
+        return self._build_exam_detail_response(exam)
 
     async def get_result_review(self, result_id: UUID, current_user: User) -> TestResultReviewResponse:
         # Get result
@@ -294,13 +297,12 @@ class TestService:
             user_answers=db_result.user_answers or {}
         )
 
-    async def submit_exam(
+    async def _submit_exam_from_entity(
         self,
-        exam_id: UUID,
+        exam: Exam,
         payload: TestSubmitRequest,
         current_user: User,
     ) -> TestSubmitResponse:
-        exam = await self._get_exam_entity(exam_id, current_user)
         sorted_questions = _sort_questions(list(exam.questions))
 
         question_lookup = {question.question_id: question for question in sorted_questions}
@@ -355,3 +357,12 @@ class TestService:
             answered_questions=answered_questions,
             completed_at=result.completed_at,
         )
+
+    async def submit_exam(
+        self,
+        exam_id: UUID,
+        payload: TestSubmitRequest,
+        current_user: User,
+    ) -> TestSubmitResponse:
+        exam = await self._get_exam_entity(exam_id, current_user)
+        return await self._submit_exam_from_entity(exam, payload, current_user)

@@ -25,6 +25,7 @@ class Exam(Base):
     audio = relationship("Audio", back_populates="exams")
     questions = relationship("Question", back_populates="exam", cascade="all, delete-orphan")
     results = relationship("UserResult", back_populates="exam", cascade="all, delete-orphan")
+    contests = relationship("Contest", back_populates="exam", cascade="all, delete-orphan")
 
     @property
     def audio_file_url(self) -> str | None:

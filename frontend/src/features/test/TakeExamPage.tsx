@@ -58,15 +58,26 @@ function getGlobalAudioUrl(exam: TestExamDetail | null): string | undefined {
 interface TakeExamContentProps {
  examId: string
  initialAudioMode?: 'practice' | 'simulation'
+ initialExam?: TestExamDetail
+ submitExam?: (payload: {
+ answers: { question_id: string; answer_id: string | null }[]
+ elapsed_seconds: number
+ }) => Promise<TestSubmitResult>
  onClose?: () => void
  standalone?: boolean
+ variant?: 'default' | 'arena'
+ returnPath?: string
 }
 
 export function TakeExamContent({
  examId,
  initialAudioMode,
+ initialExam,
+ submitExam,
  onClose,
  standalone = false,
+ variant = 'default',
+ returnPath,
 }: TakeExamContentProps) {
  const navigate = useNavigate()
  const [exam, setExam] = useState<TestExamDetail | null>(null)
@@ -113,6 +124,30 @@ export function TakeExamContent({
  void tryPlay()
  }, [simulationAudioSrc, startPhase, selectedAudioMode])
 
+ const headerAccentClass =
+ variant === 'arena'
+ ? 'text-orange-950'
+ : 'text-teal-950'
+ const timerToneClass =
+ variant === 'arena'
+ ? 'rounded-full bg-orange-100 px-5 py-3 text-orange-800'
+ : ''
+
+ const handleResumeSimulationAudio = async () => {
+ const audio = simulationAudioRef.current
+ if (!audio) return
+ try {
+ await audio.play()
+ setSimulationAudioBlocked(false)
+ } catch (err: any) {
+ toast({
+ title: 'Không thể phát audio',
+ description: err?.message || 'Vui lòng thử lại.',
+ variant: 'destructive',
+ })
+ }
+ }
+
  useEffect(() => {
  if (!examId) {
  setError('Thiếu mã đề thi')
@@ -121,8 +156,8 @@ export function TakeExamContent({
  }
 
  setLoading(true)
- testClient
- .getExamDetail(examId)
+ const loadExam = initialExam ? Promise.resolve(initialExam) : testClient.getExamDetail(examId)
+ loadExam
  .then((data) => {
  setExam(data)
  setActiveQuestionId(data.questions[0]?.question_id || '')
@@ -135,7 +170,7 @@ export function TakeExamContent({
  })
  .catch((err: Error) => setError(err.message || 'Không tải được bài thi'))
  .finally(() => setLoading(false))
- }, [examId])
+ }, [examId, initialExam])
 
  useEffect(() => {
  if (!exam || result || submitting || autoSubmitted || startPhase !== 'active') return
@@ -252,21 +287,6 @@ export function TakeExamContent({
  if (!confirmed) return
  }
 
- const handleResumeSimulationAudio = async () => {
- const audio = simulationAudioRef.current
- if (!audio) return
- try {
- await audio.play()
- setSimulationAudioBlocked(false)
- } catch (err: any) {
- toast({
- title: 'Không thể phát audio',
- description: err?.message || 'Vui lòng thử lại.',
- variant: 'destructive',
- })
- }
- }
-
  setSubmitting(true)
  try {
  const payload = {
@@ -276,7 +296,9 @@ export function TakeExamContent({
  })),
  elapsed_seconds: (exam.time_limit || 45) * 60 - remainingSeconds,
  }
- const submitResult = await testClient.submitExam(exam.exam_id, payload)
+ const submitResult = submitExam
+ ? await submitExam(payload)
+ : await testClient.submitExam(exam.exam_id, payload)
  setResult(submitResult)
  toast({
  title: autoSubmit ? 'Hết giờ, bài thi đã được nộp' : 'Nộp bài thành công',
@@ -306,7 +328,7 @@ export function TakeExamContent({
  <div className="mx-auto max-w-3xl rounded-3xl border border-red-200 bg-red-50 px-8 py-10 text-center">
  <p className="text-lg font-semibold text-red-700">{error || 'Không thể hiển thị bài thi'}</p>
  <Button className="mt-5" variant="outline" onClick={() => (onClose ? onClose() : navigate('/exam'))}>
- {onClose ? 'Đóng' : 'Quay lại danh sách đề'}
+ {onClose ? 'Đóng' : 'Quay lại'}
  </Button>
  </div>
  )
@@ -330,7 +352,7 @@ export function TakeExamContent({
  </Button>
  )}
  <div className="min-w-0">
- <p className="truncate text-base font-black tracking-tight text-teal-950">{exam.title}</p>
+ <p className={`truncate text-base font-black tracking-tight ${headerAccentClass}`}>{exam.title}</p>
  <p className="mt-1 text-[11px] text-muted-foreground">
  {exam.mondai_groups.length} mondai · {exam.total_questions} câu hỏi
  </p>
@@ -338,7 +360,7 @@ export function TakeExamContent({
  </div>
 
  <div className="justify-self-start lg:justify-self-center">
- <div className="flex items-center gap-3 text-slate-700">
+ <div className={`flex items-center gap-3 text-slate-700 ${timerToneClass}`}>
  <span className="text-xl font-black tracking-[0.08em] sm:text-[28px]">
  {formatCountdown(remainingSeconds)}
  </span>
@@ -632,9 +654,9 @@ export function TakeExamContent({
  </Button>
  <Button
  className="rounded-2xl bg-blue-600 px-5 hover:bg-blue-700"
- onClick={() => (onClose ? onClose() : navigate('/exam'))}
+ onClick={() => (onClose ? onClose() : navigate(returnPath || '/exam'))}
  >
- {onClose ? 'Đóng cửa sổ' : 'Về danh sách đề'}
+ {onClose ? 'Đóng cửa sổ' : variant === 'arena' ? 'Về cuộc thi' : 'Về danh sách đề'}
  </Button>
  </div>
  </div>

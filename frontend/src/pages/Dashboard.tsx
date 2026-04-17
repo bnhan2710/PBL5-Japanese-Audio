@@ -9,6 +9,7 @@ import {
   History,
   FileAudio,
   Shuffle,
+  Swords,
 } from 'lucide-react'
 
 const ADMIN_SHORTCUTS = [
@@ -62,6 +63,13 @@ const ADMIN_SHORTCUTS = [
     color: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400',
   },
   {
+    title: 'JLPT Ranking Arena',
+    description: 'Tạo contest dạng phòng thi để người dùng tranh hạng bằng đề của bạn',
+    icon: Swords,
+    path: '/arena',
+    color: 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400',
+  },
+  {
     title: 'Đề thi của tôi',
     description: 'Xem lại các đề thi đã tạo và xuất bản',
     icon: FileText,
@@ -106,6 +114,13 @@ const USER_SHORTCUTS = [
     icon: Shuffle,
     path: '/exam/random-create',
     color: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400',
+  },
+  {
+    title: 'JLPT Ranking Arena',
+    description: 'Tham gia và tạo contest phòng thi từ các đề thi đã có',
+    icon: Swords,
+    path: '/arena',
+    color: 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400',
   },
   {
     title: 'Đề thi của tôi',

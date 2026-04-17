@@ -28,6 +28,10 @@ const ExamHistoryPage = lazy(() =>
   import('../features/exam/ExamHistoryPage').then((m) => ({ default: m.ExamHistoryPage }))
 )
 const QuestionBankPage = lazy(() => import('../features/questionbank/QuestionBankPage'))
+const ArenaPage = lazy(() => import('../features/arena/ArenaPage'))
+const CreateArenaPage = lazy(() => import('../features/arena/CreateArenaPage'))
+const ArenaDetailPage = lazy(() => import('../features/arena/ArenaDetailPage'))
+const ArenaTakePage = lazy(() => import('../features/arena/ArenaTakePage'))
 
 // Error boundary component
 function ErrorBoundary() {
@@ -133,6 +137,22 @@ const routes = {
     {
       path: 'question-bank',
       element: <QuestionBankPage />,
+    },
+    {
+      path: 'arena',
+      element: <ArenaPage />,
+    },
+    {
+      path: 'arena/create',
+      element: <CreateArenaPage />,
+    },
+    {
+      path: 'arena/:contestId',
+      element: <ArenaDetailPage />,
+    },
+    {
+      path: 'arena/:contestId/take',
+      element: <ArenaTakePage />,
     },
   ],
 }
