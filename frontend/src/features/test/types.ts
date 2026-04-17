@@ -84,12 +84,17 @@ export interface TestResultReviewResponse {
 }
 
 export interface CompetencyAnalysisResponse {
- analysis_id: string
- result_id: string
- overview?: string | null
- strengths?: string[] | null
- weaknesses_analysis?: string | null
- actionable_advice?: string[] | null
- skill_metrics?: Record<string, number> | null
- created_at: string
+  analysis_id: string;
+  result_id: string;
+  overview?: string | null;
+  strengths?: string[] | null;
+  weaknesses_analysis?: string | null;
+  actionable_advice?: string[] | null;
+  skill_metrics?: Record<string, {
+    correct: number;
+    total: number;
+    percentage: number;
+    mondai_id?: number;
+  }> | null;
+  created_at: string;
 }

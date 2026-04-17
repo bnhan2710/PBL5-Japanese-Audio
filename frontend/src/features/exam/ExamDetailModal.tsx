@@ -8,6 +8,7 @@ import {
 import { examClient, ExamResponse, QuestionResponse, AnswerResponse } from './api/examClient'
 import AIPhotoGenerator from './components/AIPhotoGenerator'
 import { toast } from '@/hooks/use-toast'
+import { useAuthState } from '@/context/AuthContext'
 
 interface Props {
  exam: ExamResponse
@@ -222,7 +223,10 @@ function InlineAudioTrimmer({
 // ─── Main Modal ───────────────────────────────────────────────────────────────
 
 export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUpdated }: Props) {
+ const { user } = useAuthState()
  const navigate = useNavigate()
+
+ const canEdit = user?.role === 'admin' || user?.id === exam.creator_id
  const imageInputRef = useRef<HTMLInputElement>(null)
  const [questions, setQuestions] = useState<QuestionResponse[]>([])
  const [loading, setLoading] = useState(true)
@@ -252,8 +256,7 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  examClient.getExamQuestions(exam.exam_id)
  .then(qs => { setQuestions(qs); if (qs.length > 0) setActiveQId(qs[0].question_id) })
  .catch(() => setQuestions([]))
- .finally(() => setLoading(false))
- }, [exam.exam_id])
+ .finally(() => setLoading(false))}, [exam.exam_id])
 
  // ── Header actions ──────────────────────────────────────────────────────────
 
@@ -293,8 +296,8 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  const getEditQ = (q: QuestionResponse) => ({ ...q, ...(editedQuestions[q.question_id] ?? {}) })
 
  const patchQ = (qId: string, patch: EditableQuestionPatch) => {
- setEditedQuestions(prev => ({ ...prev, [qId]: { ...(prev[qId] ?? {}), ...patch } }))
- }
+  setEditedQuestions(prev => ({ ...prev, [qId]: { ...(prev[qId] ?? {}), ...patch } }))
+}
 
  const isHideQuestionEnabled = (question: QuestionResponse) => {
  const patched = editedQuestions[question.question_id]
@@ -543,7 +546,8 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  <input
  value={editTitle}
  onChange={e => { setEditTitle(e.target.value); setHeaderDirty(true) }}
- className="w-full text-lg font-bold px-0 py-0 bg-transparent border-0 border-b border-transparent hover:border-border focus:border-blue-400 focus:outline-none text-card-foreground transition-colors"
+ readOnly={!canEdit}
+ className={`w-full text-lg font-bold px-0 py-0 bg-transparent border-0 border-b border-transparent ${canEdit ? 'hover:border-border focus:border-blue-400' : ''} focus:outline-none text-card-foreground transition-colors`}
  placeholder="Tiêu đề đề thi"
  />
  <div className="flex items-center gap-4 flex-wrap">
@@ -552,6 +556,7 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  <input
  type="number"
  value={editTimeLimit}
+ disabled={!canEdit}
  onChange={e => { setEditTimeLimit(parseInt(e.target.value) || 0); setHeaderDirty(true) }}
  className="w-14 text-center bg-transparent border-b border-border hover:border-border focus:border-blue-500 focus:outline-none text-sm transition-colors"
  />
@@ -561,6 +566,7 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  <input
  type="checkbox"
  checked={editIsPublished}
+ disabled={!canEdit}
  onChange={e => { setEditIsPublished(e.target.checked); setHeaderDirty(true) }}
  className="w-3.5 h-3.5 rounded accent-emerald-500"
  />
@@ -572,7 +578,7 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  </span>
  </label>
 
- {headerDirty && (
+ {headerDirty && canEdit && (
  <button
  onClick={handleSaveHeader}
  disabled={savingHeader}
@@ -611,14 +617,14 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  <ExternalLink className="w-3.5 h-3.5" />
  Làm bài thi
  </button>
- <button
+ {canEdit && (<button
  onClick={handleDeleteExam}
  disabled={deletingExam}
  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50"
  >
  {deletingExam ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
  Xoá đề thi
- </button>
+ </button>)}
  <button
  onClick={onClose}
  className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
@@ -650,7 +656,7 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  </span>
  </div>
  <div className="flex-1 overflow-y-auto p-4 space-y-6">
- <div className="rounded-xl border border-border bg-muted/20 p-3.5">
+ {canEdit && (<div className="rounded-xl border border-border bg-muted/20 p-3.5">
  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">
  Ẩn phần câu hỏi theo Mondai
  </p>
@@ -676,7 +682,7 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  )
  })}
  </div>
- </div>
+ </div>)}
 
  {Object.entries(groupedQuestions).map(([group, qs]) => (
  <div key={group}>
@@ -706,18 +712,19 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  </button>
  )
  })}
+ {canEdit && (
  <button
  onClick={() => handleAddQuestion(group)}
  className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 border-dashed border-border text-muted-foreground hover:border-blue-500 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 transition-colors"
  title="Thêm câu hỏi mới"
  >
  <Plus className="w-4 h-4" />
- </button>
+ </button>)}
  </div>
  </div>
  ))}
 
- <button
+ {canEdit && (<button
  onClick={() => {
  const newGroup = prompt('Nhập tên phần thi mới (ví dụ: Mondai 1):');
  if (newGroup && newGroup.trim()) {
@@ -727,7 +734,7 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  className="w-full mt-4 flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-border rounded-xl text-muted-foreground font-medium hover:bg-accent hover:text-accent-foreground hover:border-blue-400 hover:text-blue-600 transition-colors text-sm"
  >
  <Plus className="w-4 h-4" /> Thêm phần thi mới
- </button>
+ </button>)}
  </div>
  </div>
 
@@ -750,7 +757,7 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  </div>
  </span>
  </div>
- {isDirtyQ(activeQ.question_id) && (
+ {isDirtyQ(activeQ.question_id) && canEdit && (
  <span className="text-[10px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-700">
  Chưa lưu
  </span>
@@ -762,7 +769,7 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  {[1, 2, 3, 4, 5].map((star) => (
  <button
  key={star}
- onClick={() => patchQ(activeQ.question_id, { difficulty: star })}
+ onClick={() => canEdit && patchQ(activeQ.question_id, { difficulty: star })}
  className={`w-6 h-6 flex items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-accent-foreground ${(activeEdited.difficulty || 3) >= star ? 'text-amber-400' : 'text-muted-foreground dark:text-muted-foreground'}`}
  title={`${star} sao`}
  >
@@ -771,7 +778,7 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  ))}
  </div>
  {/* Delete Question */}
- {confirmDeleteQ === activeQ.question_id ? (
+ {canEdit && (confirmDeleteQ === activeQ.question_id ? (
  <div className="flex items-center gap-2">
  <span className="text-xs text-red-600 font-medium">Xác nhận xoá?</span>
  <button
@@ -796,9 +803,9 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  <Trash2 className="w-3.5 h-3.5" />
  Xoá câu hỏi
  </button>
- )}
+ ))}
  {/* Save Question */}
- {isDirtyQ(activeQ.question_id) && (
+ {isDirtyQ(activeQ.question_id) && canEdit && (
  <button
  onClick={() => handleSaveQ(activeQ)}
  disabled={savingQ === activeQ.question_id}
@@ -838,21 +845,21 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  <div className="flex-1 min-w-0">
  <AudioPlayer key={activeEdited.audio_clip_url} url={activeEdited.audio_clip_url} />
  </div>
- <button 
+ {canEdit && (<button 
  onClick={() => setIsEditingAudio(activeQ.question_id)} 
  title="Chỉnh sửa thời gian lấy Audio"
  className="px-3 py-2.5 shrink-0 rounded-xl bg-muted/60 hover:bg-muted text-muted-foreground flex items-center justify-center gap-1.5 transition-colors shadow-sm border border-border text-xs font-medium"
  >
  <Scissors className="w-4 h-4" />
  Chỉnh sửa
- </button>
+ </button>)}
  </div>
  ) : getBaseAudioUrl() ? (
  <div className="flex items-center justify-between gap-4">
  <p className="text-sm text-muted-foreground italic">Chưa lấy audio cho câu này từ file gốc</p>
- <button onClick={() => setIsEditingAudio(activeQ.question_id)} className="text-xs px-3 py-1.5 rounded-lg bg-muted/50 hover:bg-muted text-muted-foreground font-medium shrink-0 flex items-center gap-1.5 transition-colors border border-border mt-2">
+ {canEdit && (<button onClick={() => setIsEditingAudio(activeQ.question_id)} className="text-xs px-3 py-1.5 rounded-lg bg-muted/50 hover:bg-muted text-muted-foreground font-medium shrink-0 flex items-center gap-1.5 transition-colors border border-border mt-2">
  <Scissors className="w-3.5 h-3.5" /> Lấy từ bản gốc
- </button>
+ </button>)}
  </div>
  ) : (
  <p className="text-sm text-muted-foreground italic">Bài thi chưa có audio gốc để cắt</p>
@@ -878,7 +885,8 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  value={activeEdited.question_text ?? ''}
  onChange={e => patchQ(activeQ.question_id, { question_text: e.target.value })}
  rows={2}
- placeholder="Nhập nội dung câu hỏi..."
+ readOnly={!canEdit}
+  placeholder="Nhập nội dung câu hỏi..."
  className="w-full px-4 py-3 border border-border rounded-xl text-sm bg-card text-card-foreground resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder:text-muted-foreground leading-relaxed transition-shadow"
  />
  </div>
@@ -893,7 +901,8 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  value={activeEdited.script_text ?? ''}
  onChange={e => patchQ(activeQ.question_id, { script_text: e.target.value })}
  rows={7}
- placeholder="Nhập nội dung hội thoại tiếng Nhật..."
+ readOnly={!canEdit}
+  placeholder="Nhập nội dung hội thoại tiếng Nhật..."
  className="w-full px-4 py-3 border border-border rounded-xl text-sm bg-muted text-card-foreground resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 font-medium leading-relaxed placeholder:text-muted-foreground transition-shadow"
  />
  </div>
@@ -908,7 +917,8 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  value={activeEdited.explanation ?? ''}
  onChange={e => patchQ(activeQ.question_id, { explanation: e.target.value })}
  rows={7}
- placeholder="Nhập giải thích cho câu hỏi và đáp án đúng..."
+ readOnly={!canEdit}
+  placeholder="Nhập giải thích cho câu hỏi và đáp án đúng..."
  className="w-full px-4 py-3 border border-border rounded-xl text-sm bg-muted text-card-foreground resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 font-medium leading-relaxed placeholder:text-muted-foreground transition-shadow"
  />
  </div>
@@ -919,15 +929,17 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  <label className="block text-sm font-bold text-card-foreground">
  Đáp án lựa chọn (Choices)
  </label>
- <div className="flex items-center gap-2">
- <span className="text-xs font-medium text-muted-foreground">Số đáp án</span>
+  <div className="flex items-center gap-2">
+  {canEdit && (
+  <span className="text-xs font-medium text-muted-foreground">Số đáp án</span>
+  )}
  {[3, 4].map((count) => {
  const isActive = (activeEdited.answers ?? []).length === count;
  return (
  <button
  key={count}
  type="button"
- onClick={() => updateAnswerCount(activeQ.question_id, count as 3 | 4)}
+ onClick={() => canEdit && updateAnswerCount(activeQ.question_id, count as 3 | 4)}
  className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${isActive
  ? 'border-blue-500 bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300'
  : 'border-border bg-card text-muted-foreground hover:bg-accent hover:text-accent-foreground dark:text-muted-foreground '
@@ -944,7 +956,7 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  <div key={a.answer_id ?? ai} className="flex items-center gap-3 group/answer">
  {/* Correct toggle */}
  <button
- onClick={() => patchAnswer(activeQ.question_id, ai, { is_correct: true })}
+ onClick={() => canEdit && patchAnswer(activeQ.question_id, ai, { is_correct: true })}
  className="flex flex-col items-center w-10 shrink-0 opacity-70 hover:opacity-100 transition-opacity"
  >
  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all
@@ -983,7 +995,7 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  <label className="block text-sm font-bold text-card-foreground">
  Hình ảnh minh họa
  </label>
- {activeEdited.image_url ? (
+ {activeEdited.image_url && canEdit ? (
  <button
  type="button"
  onClick={() => handleRemoveQuestionImage(activeQ.question_id)}
@@ -995,7 +1007,7 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  ) : null}
  </div>
  <div className="space-y-3">
- {activeEdited.image_url ? (
+ {activeEdited.image_url && canEdit ? (
  <img
  src={activeEdited.image_url}
  alt="Question illustration"
@@ -1008,7 +1020,7 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  placeholder="Dán URL ảnh nếu cần..."
  className="w-full px-4 py-3 border border-border rounded-xl text-sm bg-card text-card-foreground focus:outline-none focus:ring-2 focus:ring-blue-400"
  />
- <div
+ {canEdit && (<div
  onClick={() => imageInputRef.current?.click()}
  className="border-2 border-dashed border-border rounded-xl p-6 flex flex-col items-center justify-center bg-muted/10 hover:bg-muted/20 transition-colors cursor-pointer group"
  >
@@ -1023,15 +1035,15 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  className="hidden"
  onChange={e => handlePickQuestionImage(activeQ.question_id, e.target.files?.[0] ?? null)}
  />
- </div>
- <AIPhotoGenerator
+ </div>)}
+ {canEdit && <AIPhotoGenerator
  
  questionText={activeEdited.question_text}
  scriptText={activeEdited.script_text}
  answers={activeEdited.answers}
  onSelectImage={(file, previewUrl) => patchQ(activeQ.question_id, { image_url: previewUrl, image_file: file })}
  
- />
+ />}
  </div>
  </div>
 
@@ -1039,7 +1051,7 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
 
  {/* Pane Footer */}
  <div className="px-6 py-3 border-t border-border shrink-0 flex justify-end gap-2 bg-muted/30">
- {isDirtyQ(activeQ.question_id) ? (
+ {canEdit && isDirtyQ(activeQ.question_id) ? (
  <>
  <button
  onClick={() => setEditedQuestions(prev => { const n = { ...prev }; delete n[activeQ.question_id]; return n })}
@@ -1056,6 +1068,11 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  Lưu câu hỏi
  </button>
  </>
+ ) : !canEdit ? (
+ <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+ <AlertCircle className="w-3.5 h-3.5 text-blue-500" />
+ Bạn đang ở chế độ xem. Chỉ Admin hoặc người sở hữu mới có quyền chỉnh sửa.
+ </span>
  ) : (
  <span className="text-xs text-muted-foreground flex items-center gap-1.5">
  <AlertCircle className="w-3.5 h-3.5" />
@@ -1067,7 +1084,7 @@ export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUp
  ) : (
  <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
  <Brain className="w-12 h-12 text-muted-foreground dark:text-muted-foreground mb-3" />
- <p className="text-sm text-muted-foreground font-medium">Chọn một câu hỏi ở danh sách bên trái để hiệu đính</p>
+ <p className="text-sm font-medium text-muted-foreground">Chọn một câu hỏi ở danh sách bên trái để hiệu đính</p>
  </div>
  )}
  </div>

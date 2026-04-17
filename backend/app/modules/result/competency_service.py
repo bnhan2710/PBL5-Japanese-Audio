@@ -1,7 +1,8 @@
 import json
 import httpx
+import re
 from uuid import UUID
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Union
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -14,39 +15,80 @@ from app.modules.users.models import User
 
 settings = get_settings()
 
-def get_skill_from_mondai(mondai_group: str) -> str:
-    """Map a Mondai group to a general skill label."""
-    if not mondai_group:
-        return "Khác"
-    mondai = mondai_group.lower().strip()
-    
-    # Ưu tiên mapping theo keyword trước (vì Mondai 4, 5 có kỹ năng khác nhau tùy N1-N5)
-    if "tổng hợp" in mondai or "tougou" in mondai:
-        return "Hiểu tổng hợp"
-    elif "phát ngôn" in mondai or "biểu hiện" in mondai or "hyougen" in mondai:
-        return "Biểu hiện phát ngôn"
-    elif "phản xạ" in mondai or "sokuji" in mondai or "tức thời" in mondai:
-        return "Phản xạ nhanh"
-    elif "khái quát" in mondai or "tổng quan" in mondai or "gaiyou" in mondai:
-        return "Hiểu khái quát"
-    elif "điểm chính" in mondai or "point" in mondai:
-        return "Hiểu điểm chính"
-    elif "vấn đề" in mondai or "kadai" in mondai:
-        return "Hiểu vấn đề"
-        
-    # Fallback theo cấu trúc số ngầm định (Mang tính tương đối tùy cấp độ)
-    if "mondai 1" in mondai:
-        return "Hiểu vấn đề"
-    elif "mondai 2" in mondai:
-        return "Hiểu điểm chính"
-    elif "mondai 3" in mondai:
-        return "Hiểu khái quát"
-    elif "mondai 4" in mondai:
-        return "Phản xạ / Phát ngôn"
-    elif "mondai 5" in mondai:
-        return "Tổng hợp / Phản xạ"
+JLPT_STANDARD_MAPPING = {
+    "N1": {
+        1: "Hiểu vấn đề",
+        2: "Hiểu điểm chính",
+        3: "Hiểu khái quát",
+        4: "Phản xạ nhanh",
+        5: "Hiểu tổng hợp"
+    },
+    "N2": {
+        1: "Hiểu vấn đề",
+        2: "Hiểu điểm chính",
+        3: "Hiểu khái quát",
+        4: "Phản xạ nhanh",
+        5: "Hiểu tổng hợp"
+    },
+    "N3": {
+        1: "Hiểu vấn đề",
+        2: "Hiểu điểm chính",
+        3: "Hiểu khái quát",
+        4: "Biểu hiện phát ngôn",
+        5: "Phản xạ nhanh"
+    },
+    "N4": {
+        1: "Hiểu vấn đề",
+        2: "Hiểu điểm chính",
+        3: "Biểu hiện phát ngôn",
+        4: "Phản xạ nhanh"
+    },
+    "N5": {
+        1: "Hiểu vấn đề",
+        2: "Hiểu điểm chính",
+        3: "Biểu hiện phát ngôn",
+        4: "Phản xạ nhanh"
+    }
+}
 
-    return "Kỹ năng khác"
+def get_skill_from_mondai(mondai_group: str, level: Optional[str] = None) -> tuple[str, Optional[int]]:
+    """Map a Mondai group to a general skill label and its ID."""
+    if not mondai_group:
+        return "Khác", None
+    
+    mondai_label = mondai_group.lower().strip()
+    
+    # Extract mondai number (e.g. "Mondai 1" -> 1)
+    match = re.search(r"\d+", mondai_label)
+    m_id = int(match.group()) if match else None
+
+    # Normalize level
+    level = (level or "").upper().strip()
+    
+    # 1. Check keywords first
+    if "tổng hợp" in mondai_label or "sougou" in mondai_label or "tougou" in mondai_label:
+        return "Hiểu tổng hợp", 5
+    elif "phát ngôn" in mondai_label or "biểu hiện" in mondai_label or "hatsuwa" in mondai_label:
+        return "Biểu hiện phát ngôn", (4 if level == "N3" else 3)
+    elif "phản xạ" in mondai_label or "sokuji" in mondai_label or "tức thời" in mondai_label:
+        return "Phản xạ nhanh", (5 if level == "N3" else (4 if level in ["N2", "N1", "N4", "N5"] else 4))
+    elif "khái quát" in mondai_label or "tổng quan" in mondai_label or "gaiyou" in mondai_label:
+        return "Hiểu khái quát", 3
+    elif "điểm chính" in mondai_label or "point" in mondai_label:
+        return "Hiểu điểm chính", 2
+    elif "vấn đề" in mondai_label or "kadai" in mondai_label:
+        return "Hiểu vấn đề", 1
+
+    # 2. Map by Mondai ID and Level
+    if m_id is not None and level in JLPT_STANDARD_MAPPING:
+        skill = JLPT_STANDARD_MAPPING[level].get(m_id)
+        if skill:
+            return skill, m_id
+
+    # Fallback
+    if m_id:
+        return f"Mondai {m_id}", m_id
+    return "Kỹ năng khác", None
 
 
 def extract_json_from_llm_response(text: str) -> dict:
@@ -96,17 +138,46 @@ class CompetencyAnalysisService:
             raise HTTPException(status_code=403, detail="Not authorized to view this result")
             
         # 3. Fetch questions mapping to exam
-        q_query = select(Question).where(Question.exam_id == user_result.exam_id).options(joinedload(Question.answers))
+        q_query = select(Question).where(Question.exam_id == user_result.exam_id).options(joinedload(Question.answers), joinedload(Question.exam))
         q_exec = await self.db.execute(q_query)
         # Ensure we unique() the result because of joinedload
         questions = q_exec.unique().scalars().all()
         q_dict = {str(q.question_id): q for q in questions}
         
+        # Get Exam level if possible
+        exam_obj = None
+        if questions:
+            exam_obj = questions[0].exam
+        
+        jlpt_level = None
+        if exam_obj:
+            title = (exam_obj.title or "").upper()
+            desc = (exam_obj.description or "").upper()
+            match = re.search(r"(N[1-5])", title + desc)
+            if match:
+                jlpt_level = match.group(1)
+        
+        # Default to N2 if not found
+        effective_level = jlpt_level or "N2"
+
         # 4. Analyze mistakes and skills
-        skill_stats: Dict[str, Dict[str, int]] = {} # e.g. {"Từ vựng": {"total": 5, "correct": 3}}
+        # Initialize with standard skills for the level
+        skill_stats: Dict[str, Dict[str, Any]] = {} 
+        standard_for_level = JLPT_STANDARD_MAPPING.get(effective_level, JLPT_STANDARD_MAPPING["N2"])
+        for m_id, skill_name in standard_for_level.items():
+            skill_stats[skill_name] = {"total": 0, "correct": 0, "mondai_id": m_id}
+
         mistakes_info = []
         user_answers = user_result.user_answers or {}
         
+        # 4a. First calculate TOTAL questions per skill from all exam questions
+        for q in questions:
+            skill, m_id = get_skill_from_mondai(q.mondai_group, level=effective_level)
+            if skill not in skill_stats:
+                 skill_stats[skill] = {"total": 0, "correct": 0, "mondai_id": m_id}
+            skill_stats[skill]["total"] += 1
+
+        # 4b. Then calculate CORRECT answers from user_answers
         # Determine format of user_answers
         # It could be {"q_id": "ans_id"} or a list [{"question_id": "...", "answer_id": "..."}]
         if isinstance(user_answers, list):
@@ -118,11 +189,10 @@ class CompetencyAnalysisService:
             if not q:
                 continue
                 
-            skill = get_skill_from_mondai(q.mondai_group)
+            skill, m_id = get_skill_from_mondai(q.mondai_group, level=effective_level)
             if skill not in skill_stats:
-                skill_stats[skill] = {"total": 0, "correct": 0}
-                
-            skill_stats[skill]["total"] += 1
+                # This case shouldn't happen if q is in q_dict, but for safety:
+                skill_stats[skill] = {"total": 0, "correct": 0, "mondai_id": m_id}
             
             # Check if answer is correct
             is_correct = False
@@ -148,11 +218,16 @@ class CompetencyAnalysisService:
                  
         # Format strings for the prompt
         skill_summary = []
-        skill_percentages = {}
+        skill_metrics_rich = {}
         for skill, stats in skill_stats.items():
             percentage = (stats['correct'] / stats['total']) * 100 if stats['total'] > 0 else 0
             skill_summary.append(f"- {skill}: {percentage:.1f}% (đúng {stats['correct']}/{stats['total']})")
-            skill_percentages[skill] = round(percentage, 1)
+            skill_metrics_rich[skill] = {
+                "correct": stats['correct'],
+                "total": stats['total'],
+                "percentage": round(percentage, 1),
+                "mondai_id": stats.get("mondai_id")
+            }
             
         # Round-robin: Phân bổ rải đều các lỗi sai theo từng nhóm kỹ năng để AI có cái nhìn toàn diện
         mistakes_to_send = []
@@ -229,7 +304,7 @@ MANDATORY OUTPUT JSON FORMAT (Do not add any markdown formatting or text outside
                 strengths=parsed.get("strengths", []),
                 weaknesses_analysis=parsed.get("weaknesses_analysis", ""),
                 actionable_advice=parsed.get("actionable_advice", []),
-                skill_metrics=skill_percentages
+                skill_metrics=skill_metrics_rich
             )
             
             from sqlalchemy.exc import IntegrityError
