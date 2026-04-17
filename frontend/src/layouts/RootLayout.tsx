@@ -11,7 +11,10 @@ import { AIChatWidget } from '../components/AIChatWidget'
 
 const publicNavLinks = [{ to: '/', label: 'Home' }] as const
 
-const privateNavLinks = [{ to: '/dashboard', label: 'Dashboard' }] as const
+const privateNavLinks = [
+  { to: '/dashboard', label: 'Dashboard' },
+  { to: '/arena', label: 'JLPT Ranking Arena' },
+] as const
 
 function Navigation() {
   const location = useLocation()
@@ -46,13 +49,17 @@ function Navigation() {
                 </Link>
               ))}
               {isAuthenticated &&
-                privateNavLinks.map(({ to }) => (
+                privateNavLinks.map(({ to, label }) => (
                   <Link
                     key={to}
                     to={to}
-                    className={location.pathname === to ? `${linkBase} ${activeLink}` : linkBase}
+                    className={
+                      location.pathname === to || location.pathname.startsWith(`${to}/`)
+                        ? `${linkBase} ${activeLink}`
+                        : linkBase
+                    }
                   >
-                    {t('nav.dashboard')}
+                    {to === '/dashboard' ? t('nav.dashboard') : label}
                   </Link>
                 ))}
               {isAuthenticated && user?.role === 'admin' && (

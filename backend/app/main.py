@@ -18,6 +18,7 @@ from app.modules.ai_feedback.router import router as ai_feedback_router
 from app.modules.system_feedback.router import router as system_feedback_router
 from app.modules.ai_chat.router import router as ai_chat_router
 from app.modules.random_exam.router import router as random_exam_router
+from app.modules.arena.router import router as arena_router
 from app.modules.analytics.router import router as analytics_router
 from app.db.session import init_db, engine
 from app.core.config import get_settings
@@ -29,6 +30,7 @@ from app.modules.questions.models import Question, Answer  # noqa: F401
 from app.modules.result.models import UserResult  # noqa: F401
 from app.modules.ai_feedback.models import AIFeedback  # noqa: F401
 from app.modules.system_feedback.models import SystemFeedback  # noqa: F401
+from app.modules.arena.models import Contest, ContestParticipant  # noqa: F401
 
 settings = get_settings()
 logger = setup_logger(__name__)
@@ -100,6 +102,10 @@ app = FastAPI(
         {
             "name": "ai_photos",
             "description": "Local AI photo generation for context and action images via LM Studio and Draw Things"
+        },
+        {
+            "name": "arena",
+            "description": "JLPT Ranking Arena contests: create contest, join, take, and submit"
         },
         {
             "name": "ai-feedbacks",
@@ -174,6 +180,7 @@ app.include_router(users_router, prefix="/api")
 app.include_router(auth_router, prefix="/api")
 app.include_router(audio_router, prefix="/api")
 app.include_router(random_exam_router, prefix="/api")
+app.include_router(arena_router, prefix="/api")
 app.include_router(exam_router, prefix="/api")
 app.include_router(questions_router, prefix="/api")
 app.include_router(ai_exam_router, prefix="/api")
