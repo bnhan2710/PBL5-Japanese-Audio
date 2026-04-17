@@ -62,8 +62,8 @@ class CompetencyAnalysisResponse(BaseModel):
     strengths: Optional[List[str]] = None
     weaknesses_analysis: Optional[str] = None
     actionable_advice: Optional[List[str]] = None
-    skill_metrics: Optional[dict] = None
-    skill_metrics: Optional[dict] = None
+    skill_metrics: Optional[dict] = Field(None, description="Detailed skill metrics: {skill_name: {correct, total, percentage}}")
+
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

@@ -140,7 +140,7 @@ export function CompetencyAnalysisModal({ resultId, onClose }: CompetencyAnalysi
               )}
 
               {/* Spider Chart / Radar Chart */}
-              {data.skill_metrics && Object.keys(data.skill_metrics).length > 1 && (
+              {data.skill_metrics && Object.keys(data.skill_metrics).length > 0 && (
                 <div className="rounded-[24px] border border-border bg-card p-6 shadow-sm">
                   <div className="mb-2 text-center">
                     <h4 className="text-xl font-black text-foreground">Bản đồ Năng lực Đồng bộ</h4>
@@ -148,29 +148,78 @@ export function CompetencyAnalysisModal({ resultId, onClose }: CompetencyAnalysi
                   </div>
                   <div className="mx-auto h-[350px] w-full max-w-lg">
                     <ResponsiveContainer width="100%" height="100%">
-                      <RadarChart 
-                        cx="50%" 
-                        cy="50%" 
-                        outerRadius="75%" 
-                        data={Object.entries(data.skill_metrics).map(([subject, A]) => ({
-                          subject,
-                          A,
-                          fullMark: 100,
-                        }))}
-                      >
-                        <PolarGrid stroke="var(--border)" strokeDasharray="3 3" />
-                        <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--muted-foreground)', fontSize: 13, fontWeight: 600 }} />
-                        <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} />
-                        <RechartsTooltip formatter={(value: any) => [`${value}%`, 'Tỷ lệ đúng']} />
-                        <Radar
-                          name="Kỹ năng"
-                          dataKey="A"
-                          stroke="#6366f1"
-                          strokeWidth={3}
-                          fill="#818cf8"
-                          fillOpacity={0.35}
-                        />
-                      </RadarChart>
+                        <RadarChart 
+                          cx="50%" 
+                          cy="50%" 
+                          outerRadius="75%" 
+                          data={Object.entries(data.skill_metrics)
+                            .sort(([, a], [, b]) => (a.mondai_id || 99) - (b.mondai_id || 99))
+                            .map(([subject, stats]) => {
+                              const maxTotal = Math.max(...Object.values(data.skill_metrics).map(m => m.total));
+                              // Each ring = 2 questions. 
+                              // We use a decent minimum of 5 rings (10 pts) and a max based on content
+                              const gridCount = Math.max(5, Math.ceil(maxTotal / 2));
+                              return {
+                                subject,
+                                A: stats.correct,
+                                percentage: stats.percentage,
+                                correct: stats.correct,
+                                total: stats.total,
+                                fullMark: gridCount * 2,
+                                gridCount,
+                              };
+                            })}
+                        >
+                          {/* Each ring represents 2 correct answers */}
+                          <PolarGrid 
+                            gridCount={Math.max(5, Math.ceil(Math.max(...Object.values(data.skill_metrics).map(m => m.total)) / 2))} 
+                            stroke="var(--border)" 
+                            strokeOpacity={0.5}
+                          />
+                          <PolarAngleAxis 
+                            dataKey="subject" 
+                            tick={{ fill: 'var(--muted-foreground)', fontSize: 12, fontWeight: 600 }} 
+                          />
+                          <PolarRadiusAxis 
+                            domain={[0, (dataKey) => Math.max(10, Math.ceil(Math.max(...Object.values(data.skill_metrics).map(m => m.total)) / 2) * 2)]} 
+                            tick={false} 
+                            axisLine={false}
+                            tickCount={Math.max(5, Math.ceil(Math.max(...Object.values(data.skill_metrics).map(m => m.total)) / 2)) + 1}
+                          />
+                          <RechartsTooltip 
+                            content={({ active, payload }) => {
+                              if (active && payload && payload.length) {
+                                const data = payload[0].payload;
+                                return (
+                                  <div className="rounded-xl border border-border bg-card p-3 shadow-xl backdrop-blur-md">
+                                    <p className="text-sm font-black text-foreground">{data.subject}</p>
+                                    <div className="mt-1.5 flex items-center gap-2">
+                                      <div className="h-2 w-full max-w-[60px] overflow-hidden rounded-full bg-muted">
+                                        <div 
+                                          className="h-full bg-indigo-500" 
+                                          style={{ width: `${data.percentage}%` }}
+                                        />
+                                      </div>
+                                      <span className="text-xs font-bold text-indigo-500">{data.percentage}%</span>
+                                    </div>
+                                    <p className="mt-1 text-[10px] text-muted-foreground font-medium italic">
+                                      Làm đúng: <span className="text-foreground">{data.correct}/{data.total}</span> câu
+                                    </p>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                          <Radar
+                            name="Kỹ năng"
+                            dataKey="A"
+                            stroke="#6366f1"
+                            strokeWidth={3}
+                            fill="#818cf8"
+                            fillOpacity={0.35}
+                          />
+                        </RadarChart>
                     </ResponsiveContainer>
                   </div>
                 </div>

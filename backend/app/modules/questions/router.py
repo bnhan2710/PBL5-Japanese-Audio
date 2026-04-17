@@ -3,6 +3,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app.db.session import get_db
 from app.core.security import get_current_user
@@ -13,8 +14,43 @@ from app.modules.questions.schemas import (
     AnswerCreate, AnswerUpdate, AnswerResponse,
 )
 from app.shared.upload import upload_audio, upload_image
+from app.modules.exam.models import Exam
 
 router = APIRouter(tags=["questions"])
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+async def _check_question_modify_permission(db: AsyncSession, question: Question, user: User):
+    """Raise Forbidden if user is not admin and not the creator of the exam associated with this question."""
+    if user.role == "admin":
+        return
+    
+    result = await db.execute(select(Exam).where(Exam.exam_id == question.exam_id))
+    exam = result.scalar_one_or_none()
+    
+    if not exam or exam.creator_id != user.id:
+        raise HTTPException(
+            status_code=403, 
+            detail="You do not have permission to modify this question."
+        )
+
+
+async def _check_exam_modify_permission(db: AsyncSession, exam_id: UUID, user: User):
+    """Raise Forbidden if user is not admin and not the creator of the exam."""
+    if user.role == "admin":
+        return
+    
+    result = await db.execute(select(Exam).where(Exam.exam_id == exam_id))
+    exam = result.scalar_one_or_none()
+    
+    if not exam or exam.creator_id != user.id:
+        raise HTTPException(
+            status_code=403, 
+            detail="You do not have permission to modify this exam's content."
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -44,9 +80,11 @@ async def list_questions(
 async def create_question(
     payload: QuestionCreate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Create a question (and optionally its answers) for an exam."""
+    await _check_exam_modify_permission(db, payload.exam_id, current_user)
+    
     question = Question(
         exam_id=payload.exam_id,
         mondai_group=payload.mondai_group,
@@ -97,12 +135,14 @@ async def update_question(
     question_id: UUID,
     payload: QuestionUpdate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     result = await db.execute(select(Question).where(Question.question_id == question_id))
     question = result.scalar_one_or_none()
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
+
+    await _check_question_modify_permission(db, question, current_user)
 
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(question, field, value)
@@ -116,12 +156,15 @@ async def update_question(
 async def delete_question(
     question_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     result = await db.execute(select(Question).where(Question.question_id == question_id))
     question = result.scalar_one_or_none()
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
+    
+    await _check_question_modify_permission(db, question, current_user)
+    
     await db.delete(question)
     await db.commit()
 
@@ -139,13 +182,15 @@ async def upload_question_audio(
     question_id: UUID,
     file: UploadFile = File(..., description="Audio file (mp3, wav, ogg – max 50 MB)"),
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Upload an audio file to Cloudinary and save the URL on the question."""
     result = await db.execute(select(Question).where(Question.question_id == question_id))
     question = result.scalar_one_or_none()
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
+
+    await _check_question_modify_permission(db, question, current_user)
 
     upload_result = await upload_audio(file, folder="question-audio")
     question.audio_clip_url = upload_result["secure_url"]
@@ -170,12 +215,14 @@ async def upload_question_image(
     question_id: UUID,
     file: UploadFile = File(..., description="Image file"),
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     result = await db.execute(select(Question).where(Question.question_id == question_id))
     question = result.scalar_one_or_none()
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
+
+    await _check_question_modify_permission(db, question, current_user)
 
     question.image_url = await upload_image(file, folder="question-images")
 
@@ -196,8 +243,16 @@ async def upload_question_image(
 async def create_answer(
     payload: AnswerCreate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
+    # Check permission via question
+    result = await db.execute(select(Question).where(Question.question_id == payload.question_id))
+    question = result.scalar_one_or_none()
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+    
+    await _check_question_modify_permission(db, question, current_user)
+
     answer = Answer(**payload.model_dump())
     db.add(answer)
     await db.commit()
@@ -210,12 +265,18 @@ async def update_answer(
     answer_id: UUID,
     payload: AnswerUpdate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
-    result = await db.execute(select(Answer).where(Answer.answer_id == answer_id))
+    result = await db.execute(
+        select(Answer)
+        .options(selectinload(Answer.question))
+        .where(Answer.answer_id == answer_id)
+    )
     answer = result.scalar_one_or_none()
     if not answer:
         raise HTTPException(status_code=404, detail="Answer not found")
+
+    await _check_question_modify_permission(db, answer.question, current_user)
 
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(answer, field, value)
@@ -229,11 +290,19 @@ async def update_answer(
 async def delete_answer(
     answer_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
-    result = await db.execute(select(Answer).where(Answer.answer_id == answer_id))
+    result = await db.execute(
+        select(Answer)
+        .options(selectinload(Answer.question))
+        .where(Answer.answer_id == answer_id)
+    )
     answer = result.scalar_one_or_none()
     if not answer:
         raise HTTPException(status_code=404, detail="Answer not found")
+    
+    await _check_question_modify_permission(db, answer.question, current_user)
+    
     await db.delete(answer)
     await db.commit()
+

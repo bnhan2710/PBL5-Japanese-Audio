@@ -48,12 +48,14 @@ def _sort_questions(questions: List[Question]) -> List[Question]:
 
 def _difficulty_to_b(difficulty: int) -> float:
     bounded = max(1, min(5, int(difficulty)))
-    return {1: -1.5, 2: -0.75, 3: 0.0, 4: 0.75, 5: 1.5}[bounded]
+    # Calibrated widening: Original was [-1.5, 1.5]
+    return {1: -2.8, 2: -1.4, 3: 0.0, 4: 1.4, 5: 2.8}[bounded]
 
 
 def _difficulty_to_a(difficulty: int) -> float:
     bounded = max(1, min(5, int(difficulty)))
-    return {1: 0.8, 2: 0.95, 3: 1.1, 4: 1.2, 5: 1.35}[bounded]
+    # Calibrated discrimination: Original was [0.8, 1.35]
+    return {1: 1.0, 2: 1.2, 3: 1.4, 4: 1.6, 5: 1.8}[bounded]
 
 
 def _estimate_question_difficulty(question: Question) -> int:
@@ -79,16 +81,22 @@ def _estimate_question_difficulty(question: Question) -> int:
 
 
 def calculate_irt_score(responses: List[Tuple[int, int]]) -> float:
-    """Estimate ability with a bounded 2PL model and scale the result to [0, 60]."""
+    """
+    Estimate ability using a 2PL Bayesian IRT model (MAP) and map to [0, 60].
+    Uses Range-Scaled Expected Score with a Quadratic (Power 2.0) transformation
+    to ensure reasonable score progression at the extremes.
+    """
     if not responses:
         return 0.0
 
-    if all(x == 1 for b, x in responses):
+    # Hard-coded absolute extremes for consistency
+    if all(x == 1 for _, x in responses):
         return 60.0
-    if all(x == 0 for b, x in responses):
+    if all(x == 0 for _, x in responses):
         return 0.0
 
-    def neg_log_likelihood(theta: float) -> float:
+    def neg_log_posterior(theta: float) -> float:
+        # 1. Log-Likelihood (2PL)
         nll = 0.0
         for difficulty, correct in responses:
             a = _difficulty_to_a(difficulty)
@@ -99,13 +107,41 @@ def calculate_irt_score(responses: List[Tuple[int, int]]) -> float:
                 nll -= math.log(p)
             else:
                 nll -= math.log(1.0 - p)
+        
+        # 2. Bayesian Prior (theta ~ N(0, 2.0))
+        # Stabilizes estimation for low question counts
+        prior_sigma = 2.0
+        nll += (theta ** 2) / (2 * (prior_sigma ** 2))
         return nll
 
-    res = minimize_scalar(neg_log_likelihood, bounds=(-4.0, 4.0), method="bounded")
+    # Estimate theta using Bayesian MAP
+    res = minimize_scalar(neg_log_posterior, bounds=(-4.0, 4.0), method="bounded")
     theta = float(getattr(res, "x", 0.0))
 
-    score = ((theta + 4.0) / 8.0) * 60.0
-    return max(0.0, min(60.0, score))
+    def get_expected_correct(t: float) -> float:
+        total = 0.0
+        for difficulty, _ in responses:
+            a = _difficulty_to_a(difficulty)
+            b = _difficulty_to_b(difficulty)
+            p = 1.0 / (1.0 + math.exp(-a * (t - b)))
+            total += p
+        return total
+
+    # 3. Range-Scaled Expected Score Mapping
+    current_exp = get_expected_correct(theta)
+    min_exp = get_expected_correct(-4.0)
+    max_exp = get_expected_correct(4.0)
+    
+    # Normalized expected score [0, 1]
+    norm_exp = (current_exp - min_exp) / (max_exp - min_exp)
+    norm_exp = max(0.0, min(1.0, norm_exp))
+
+    # 4. Balanced Power Transformation (1.2)
+    # Compresses scores at the low end but provides more reasonable
+    # resolution for mid-range performance compared to quadratic (2.0).
+    score = (norm_exp ** 1.2) * 60.0
+    
+    return round(float(max(0.0, min(60.0, score))), 2)
 
 
 class TestService:
