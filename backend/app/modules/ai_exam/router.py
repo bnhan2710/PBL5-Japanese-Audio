@@ -92,9 +92,13 @@ async def _run_pipeline(
     filename: str,
     jlpt_level: str,
     mondai_config: Optional[list],
+    user_id: Optional[int] = None,
+    exam_title: str = "",
 ):
     """Background task: run split-first AI pipeline and update job store."""
     from app.shared.upload import upload_audio_bytes
+    from app.modules.notifications.service import create_notification
+
     job = _jobs.get(job_id)
     if not job:
         return
@@ -162,6 +166,7 @@ async def _run_pipeline(
             result.audio_file_url = audio.file_url
             cache.source_filename = filename
             cache.status = "completed"
+            cache.progress_message = f"Done! Generated {len(result.questions)} questions."
             cache.ai_model = svc.model_name
             cache.pipeline_version = svc.pipeline_version
             cache.cloudinary_public_id = public_id
@@ -175,17 +180,37 @@ async def _run_pipeline(
         job.progress_message = f"Done! Generated {len(result.questions)} questions."
         job.result = result
 
+        if user_id:
+            title_display = exam_title or filename
+            await create_notification(
+                user_id=user_id,
+                title="Sinh đề AI hoàn thành!",
+                message=f'Đề "{title_display}" ({jlpt_level}) đã được tạo xong với {len(result.questions)} câu hỏi. Nhấn để xem kết quả.',
+                type="success",
+                link=f"/exam/ai-create?job={job_id}",
+            )
+
     except Exception as exc:
         logger.error(f"AI pipeline failed for job {job_id}: {exc}", exc_info=True)
         async with AsyncSessionLocal() as db:
             cache = await db.get(AIExamCache, uuid.UUID(cache_id))
             if cache is not None:
                 cache.status = "failed"
+                cache.progress_message = "Pipeline failed."
                 cache.error_message = str(exc)
                 await db.commit()
         job.status = "failed"
         job.error = str(exc)
         job.progress_message = "Pipeline failed."
+
+        if user_id:
+            await create_notification(
+                user_id=user_id,
+                title="Sinh đề AI thất bại",
+                message=f'Đề "{exam_title or filename}" ({jlpt_level}) gặp lỗi trong quá trình xử lý.',
+                type="error",
+                link=f"/exam/ai-create",
+            )
 
 
 @router.post(
@@ -268,6 +293,7 @@ async def generate_exam_from_audio(
             status="pending",
             ai_model=svc.model_name,
             pipeline_version=svc.pipeline_version,
+            user_id=current_user.id,
         )
         db.add(cache)
         try:
@@ -282,6 +308,8 @@ async def generate_exam_from_audio(
         cache.mondai_config_json = _normalize_mondai_config(mondai_config)
         cache.ai_model = svc.model_name
         cache.pipeline_version = svc.pipeline_version
+        if cache.user_id is None:
+            cache.user_id = current_user.id
 
     job_id = str(uuid.uuid4())
     cache.status = "processing"
@@ -303,7 +331,9 @@ async def generate_exam_from_audio(
         audio_bytes=audio_bytes,
         filename=filename,
         jlpt_level=jlpt_level,
-        mondai_config=mondai_config,  # future: parse from Form JSON
+        mondai_config=mondai_config,
+        user_id=current_user.id,
+        exam_title=title,
     )
 
     return AIGenerateResponse(
@@ -371,3 +401,37 @@ async def delete_job(
 ):
     if job_id in _jobs:
         del _jobs[job_id]
+
+
+@router.get(
+    "/my-jobs",
+    summary="List AI exam jobs for the current user",
+)
+async def list_my_jobs(
+    limit: int = 10,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return a list of the current user's AI exam generation jobs (most recent first)."""
+    result = await db.execute(
+        select(AIExamCache)
+        .where(AIExamCache.user_id == current_user.id)
+        .order_by(AIExamCache.created_at.desc())
+        .limit(limit)
+    )
+    caches = result.scalars().all()
+
+    jobs = []
+    for cache in caches:
+        jobs.append({
+            "job_id": cache.job_id,
+            "cache_id": str(cache.cache_id),
+            "status": cache.status,
+            "jlpt_level": cache.jlpt_level,
+            "source_filename": cache.source_filename,
+            "progress_message": cache.progress_message,
+            "error_message": cache.error_message,
+            "created_at": cache.created_at.isoformat() if cache.created_at else None,
+            "updated_at": cache.updated_at.isoformat() if cache.updated_at else None,
+        })
+    return {"jobs": jobs}

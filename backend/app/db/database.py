@@ -26,6 +26,14 @@ def get_database_url() -> str:
     raise ValueError("No database URL found")
 
 
+def should_auto_create_tables() -> bool:
+    """
+    Restrict metadata-driven table creation to ephemeral test databases.
+    Alembic should own schema changes for development and production.
+    """
+    return get_database_url().startswith("sqlite")
+
+
 def create_engine_with_retry(database_url: str):
     """
     Creates an async engine with retry logic and appropriate configuration
@@ -91,6 +99,9 @@ async def init_db() -> None:
     """
     logger.info("Initializing database")
     try:
+        if not should_auto_create_tables():
+            logger.info("Skipping metadata.create_all; use Alembic migrations for this database")
+            return
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         logger.info("Database initialized successfully")

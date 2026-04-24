@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import Column, DateTime, ForeignKey, String, Text
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -15,6 +15,7 @@ class AIExamCache(Base):
     cache_key = Column(String(128), nullable=False, unique=True, index=True)
     content_hash = Column(String(64), nullable=False, index=True)
     audio_id = Column(UUID(as_uuid=True), ForeignKey("audios.audio_id", ondelete="SET NULL"), nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     source_filename = Column(String(255), nullable=True)
     jlpt_level = Column(String(10), nullable=False)
     mondai_config_json = Column(Text, nullable=True)
@@ -25,8 +26,10 @@ class AIExamCache(Base):
     cloudinary_public_id = Column(String(255), nullable=True)
     cloudinary_format = Column(String(20), nullable=True)
     result_json = Column(Text, nullable=True)
+    progress_message = Column(Text, nullable=True)
     error_message = Column(Text, nullable=True)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
 
     audio = relationship("Audio")
+    user = relationship("User", foreign_keys=[user_id])

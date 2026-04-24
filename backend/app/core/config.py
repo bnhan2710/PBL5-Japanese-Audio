@@ -62,6 +62,12 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: Optional[str] = None
     GOOGLE_REDIRECT_URI: Optional[str] = None
 
+    # Redis / Celery Settings
+    REDIS_URL: Optional[str] = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    CELERY_BROKER_URL: Optional[str] = os.getenv("CELERY_BROKER_URL")
+    CELERY_RESULT_BACKEND: Optional[str] = os.getenv("CELERY_RESULT_BACKEND")
+    CELERY_TASK_ALWAYS_EAGER: bool = False
+
     # n8n Automation Settings
     N8N_WEBHOOK_URL: Optional[str] = os.getenv("N8N_WEBHOOK_URL")
 

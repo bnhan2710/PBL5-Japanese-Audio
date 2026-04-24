@@ -20,6 +20,7 @@ from app.modules.ai_chat.router import router as ai_chat_router
 from app.modules.random_exam.router import router as random_exam_router
 from app.modules.arena.router import router as arena_router
 from app.modules.analytics.router import router as analytics_router
+from app.modules.notifications.router import router as notifications_router
 from app.db.session import init_db, engine
 from app.core.config import get_settings
 
@@ -31,6 +32,7 @@ from app.modules.result.models import UserResult  # noqa: F401
 from app.modules.ai_feedback.models import AIFeedback  # noqa: F401
 from app.modules.system_feedback.models import SystemFeedback  # noqa: F401
 from app.modules.arena.models import Contest, ContestParticipant  # noqa: F401
+from app.modules.notifications.models import Notification  # noqa: F401
 
 settings = get_settings()
 logger = setup_logger(__name__)
@@ -118,6 +120,10 @@ app = FastAPI(
         {
             "name": "ai-chat",
             "description": "Chat completion proxy from app to LM Studio Gemma model"
+        },
+        {
+            "name": "notifications",
+            "description": "In-app notifications for users (AI exam completion, etc.)"
         }
     ],
     swagger_ui_parameters={
@@ -192,5 +198,6 @@ app.include_router(system_feedback_router, prefix="/api")
 app.include_router(ai_chat_router, prefix="/api")
 
 app.include_router(analytics_router, prefix="/api")
+app.include_router(notifications_router, prefix="/api")
 
 logger.info("Application routes configured")
