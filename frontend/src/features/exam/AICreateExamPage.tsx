@@ -1162,49 +1162,6 @@ function Step3Review({ editableQuestions, setEditableQuestions, audioFile }: Ste
 
                 {/* Question Text */}
                 <div>
-                  <div className="mb-3 rounded-xl border border-border bg-muted/20 p-3.5">
-                    <p className="text-sm font-bold text-card-foreground">Hiển thị khi làm bài thi</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Với Mondai cần nghe và chọn đáp án nhanh (ví dụ Mondai 3/4), bạn có thể ẩn
-                      phần nội dung câu hỏi.
-                    </p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => updateQuestion(activeQIdx, { hide_question_text: false })}
-                        className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors ${
-                          !activeQ.hide_question_text
-                            ? 'border-emerald-500 bg-emerald-500 text-white'
-                            : 'border-border bg-card text-muted-foreground hover:border-emerald-300'
-                        }`}
-                      >
-                        Hiện câu hỏi
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => updateQuestion(activeQIdx, { hide_question_text: true })}
-                        className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors ${
-                          activeQ.hide_question_text
-                            ? 'border-blue-500 bg-blue-500 text-white'
-                            : 'border-border bg-card text-muted-foreground hover:border-blue-300'
-                        }`}
-                      >
-                        Chỉ hiện A/B/C/D
-                      </button>
-                      {extractMondaiNumber(activeQ.mondai_group) > 0 && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            toggleHideQuestionByMondai(extractMondaiNumber(activeQ.mondai_group))
-                          }
-                          className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold text-muted-foreground hover:border-blue-300"
-                        >
-                          Áp dụng cho toàn {activeQ.mondai_group}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
                   <label className="block text-sm font-bold text-card-foreground mb-2">
                     Nội dung câu hỏi (Question)
                   </label>
