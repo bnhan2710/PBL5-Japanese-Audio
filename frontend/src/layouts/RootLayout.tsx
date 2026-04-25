@@ -1,4 +1,5 @@
 import { Link, Outlet, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Notification } from '../components/ui/Notification'
 import { ThemeToggle } from '../components/ui/ThemeToggle'
@@ -7,6 +8,7 @@ import { useAuth } from '../context/AuthContext'
 import { Button } from '../components/ui/Button'
 import { UserMenu } from '../components/ui/UserMenu'
 import { Toaster } from '../components/ui/toaster'
+import { toast } from '../hooks/use-toast'
 import { AIChatWidget } from '../components/AIChatWidget'
 
 const publicNavLinks = [{ to: '/', label: 'Home' }] as const
@@ -120,6 +122,22 @@ export default function RootLayout() {
   const currentYear = new Date().getFullYear()
   const { t } = useTranslation()
   const { isAuthenticated } = useAuth()
+
+  // Show pending AI exam draft notification if user re-logged in
+  useEffect(() => {
+    const pending = localStorage.getItem('ai_exam_draft_saved')
+    if (!pending) return
+    try {
+      const data = JSON.parse(pending) as { title: string; level: string; draftId: string; timestamp: number }
+      if (Date.now() - data.timestamp < 7 * 24 * 60 * 60 * 1000) {
+        toast({
+          title: '🎉 Đề AI đã tạo xong!',
+          description: `Đề "${data.title}" (${data.level}) đã được tự động lưu bản nháp. Vào quản lý đề thi để xem.`,
+        })
+      }
+    } catch { /* ignore */ }
+    localStorage.removeItem('ai_exam_draft_saved')
+  }, [])
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors">

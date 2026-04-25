@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Upload,
   Sparkles,
@@ -1162,49 +1162,6 @@ function Step3Review({ editableQuestions, setEditableQuestions, audioFile }: Ste
 
                 {/* Question Text */}
                 <div>
-                  <div className="mb-3 rounded-xl border border-border bg-muted/20 p-3.5">
-                    <p className="text-sm font-bold text-card-foreground">Hiển thị khi làm bài thi</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Với Mondai cần nghe và chọn đáp án nhanh (ví dụ Mondai 3/4), bạn có thể ẩn
-                      phần nội dung câu hỏi.
-                    </p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => updateQuestion(activeQIdx, { hide_question_text: false })}
-                        className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors ${
-                          !activeQ.hide_question_text
-                            ? 'border-emerald-500 bg-emerald-500 text-white'
-                            : 'border-border bg-card text-muted-foreground hover:border-emerald-300'
-                        }`}
-                      >
-                        Hiện câu hỏi
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => updateQuestion(activeQIdx, { hide_question_text: true })}
-                        className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors ${
-                          activeQ.hide_question_text
-                            ? 'border-blue-500 bg-blue-500 text-white'
-                            : 'border-border bg-card text-muted-foreground hover:border-blue-300'
-                        }`}
-                      >
-                        Chỉ hiện A/B/C/D
-                      </button>
-                      {extractMondaiNumber(activeQ.mondai_group) > 0 && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            toggleHideQuestionByMondai(extractMondaiNumber(activeQ.mondai_group))
-                          }
-                          className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold text-muted-foreground hover:border-blue-300"
-                        >
-                          Áp dụng cho toàn {activeQ.mondai_group}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
                   <label className="block text-sm font-bold text-card-foreground mb-2">
                     Nội dung câu hỏi (Question)
                   </label>
@@ -1725,7 +1682,8 @@ function Step4Save({ questions, level, title, description, draftId, audioId, onB
 // ─── Main Page ──────────────────────────────────────────────────────────────
 
 export default function AICreateExamPage() {
-  useEffect(() => {}, []) // keep useEffect in imports
+  const [searchParams, setSearchParams] = useSearchParams()
+
   // Step 1 state
   const [audioFile, setAudioFile] = useState<File | null>(null)
   const [level, setLevel] = useState<Level>('N2')
@@ -1747,55 +1705,65 @@ export default function AICreateExamPage() {
 
   const [step, setStep] = useState<WizardStep>(1)
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
+  const [resuming, setResuming] = useState(false)
 
-  const handleStartAI = async () => {
-    if (!audioFile || !title.trim()) return
-    setLoading(true)
+  // ── Resume from ?job= query param (notification link) ───────────────────
+  useEffect(() => {
+    const jobParam = searchParams.get('job')
+    if (!jobParam) return
+
+    setResuming(true)
+    aiExamClient.getJobStatus(jobParam).then((status) => {
+      if (status.status === 'done' && status.result) {
+        const result = status.result
+        setAiResult(result)
+        setJobId(jobParam)
+        const mapped = result.questions.map((question) => ({
+          ...question,
+          explanation: question.explanation || '',
+          hide_question_text: !!question.hide_question_text,
+          answers: [...question.answers],
+          difficulty: inferDifficulty(question),
+        }))
+        setEditableQuestions(mapped)
+        setStep(3)
+      } else if (status.status === 'processing' || status.status === 'pending') {
+        setJobId(jobParam)
+        setStep(2)
+      } else if (status.status === 'failed') {
+        setFailed(true)
+        setFailedMsg(status.error || 'Pipeline thất bại')
+        setStep(2)
+      }
+    }).catch(() => {
+      toast({ title: 'Lỗi', description: 'Không tìm thấy job AI này.', variant: 'destructive' })
+    }).finally(() => {
+      setResuming(false)
+      // Clean the query param from URL to avoid re-triggering
+      setSearchParams({}, { replace: true })
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+
+  // ── Reusable save-draft logic ───────────────────────────────────────────
+  const saveDraftToServer = useCallback(async (
+    questions: AIQuestion[],
+    result: AIExamResult | null,
+    lvl: Level,
+    ttl: string,
+    desc: string,
+    existingDraftId: string,
+  ): Promise<string | null> => {
     try {
-      const job = await aiExamClient.generateExamFromAudio(audioFile, level, title)
-      setJobId(job.job_id)
-      setStep(2)
-    } catch (e: any) {
-      toast({
-        title: 'Lỗi khởi tạo',
-        description: e.message || 'Không thể bắt đầu pipeline.',
-        variant: 'destructive',
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleJobDone = (result: AIExamResult) => {
-    setAiResult(result)
-    setEditableQuestions(
-      result.questions.map((question) => ({
-        ...question,
-        explanation: question.explanation || '',
-        hide_question_text: !!question.hide_question_text,
-        answers: [...question.answers],
-        difficulty: inferDifficulty(question),
-      }))
-    )
-    setStep(3)
-  }
-
-  const handleJobFailed = (err: string) => {
-    setFailed(true)
-    setFailedMsg(err)
-  }
-
-  const handleSaveDraft = async () => {
-    setSavingDraft(true)
-    try {
-      if (draftId) await examClient.deleteExam(draftId).catch(() => {})
+      if (existingDraftId) await examClient.deleteExam(existingDraftId).catch(() => {})
       const exam = await examClient.createExam({
-        title: `[Nháp] [${level}] ${title}`,
-        description,
+        title: `[Nháp] [${lvl}] ${ttl}`,
+        description: desc,
         time_limit: 60,
-        audio_id: aiResult?.audio_id,
+        audio_id: result?.audio_id,
       })
-      for (const q of editableQuestions) {
+      for (const q of questions) {
         await examClient
           .createQuestion({
             exam_id: exam.exam_id,
@@ -1828,13 +1796,73 @@ export default function AICreateExamPage() {
           })
       }
       await examClient.updateExam(exam.exam_id, { is_published: false, current_step: 3 })
-      setDraftId(exam.exam_id)
-      toast({ title: 'Thành công', description: 'Đã lưu bản nháp!' })
-    } catch (e: any) {
-      toast({ title: 'Lỗi', description: 'Không thể lưu bản nháp', variant: 'destructive' })
-    } finally {
-      setSavingDraft(false)
+      return exam.exam_id
+    } catch {
+      return null
     }
+  }, [])
+
+  const handleStartAI = async () => {
+    if (!audioFile || !title.trim()) return
+    setLoading(true)
+    try {
+      const job = await aiExamClient.generateExamFromAudio(audioFile, level, title)
+      setJobId(job.job_id)
+      setStep(2)
+    } catch (e: any) {
+      toast({
+        title: 'Lỗi khởi tạo',
+        description: e.message || 'Không thể bắt đầu pipeline.',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleJobDone = (result: AIExamResult) => {
+    setAiResult(result)
+    const mappedQuestions = result.questions.map((question) => ({
+      ...question,
+      explanation: question.explanation || '',
+      hide_question_text: !!question.hide_question_text,
+      answers: [...question.answers],
+      difficulty: inferDifficulty(question),
+    }))
+    setEditableQuestions(mappedQuestions)
+    setStep(3)
+
+    // Auto-save draft in the background
+    saveDraftToServer(mappedQuestions, result, level, title, description, draftId).then((newDraftId) => {
+      if (newDraftId) {
+        setDraftId(newDraftId)
+        toast({ title: '✅ Đã tự động lưu bản nháp', description: `Đề "${title}" đã được lưu nháp tự động.` })
+        // Save pending notification to localStorage for re-login scenario
+        localStorage.setItem('ai_exam_draft_saved', JSON.stringify({
+          title,
+          level,
+          draftId: newDraftId,
+          timestamp: Date.now(),
+        }))
+      }
+    })
+  }
+
+  const handleJobFailed = (err: string) => {
+    setFailed(true)
+    setFailedMsg(err)
+  }
+
+  const handleSaveDraft = async () => {
+    setSavingDraft(true)
+    const newDraftId = await saveDraftToServer(editableQuestions, aiResult, level, title, description, draftId)
+    if (newDraftId) {
+      setDraftId(newDraftId)
+      toast({ title: 'Thành công', description: 'Đã lưu bản nháp!' })
+    } else {
+      toast({ title: 'Lỗi', description: 'Không thể lưu bản nháp', variant: 'destructive' })
+    }
+    setSavingDraft(false)
   }
 
   return (
@@ -1900,6 +1928,13 @@ export default function AICreateExamPage() {
       <div className="bg-card border border-border shadow-xl rounded-2xl md:rounded-3xl p-4 md:p-8">
         <StepIndicator step={step} />
 
+        {resuming ? (
+          <div className="flex flex-col items-center justify-center py-16 space-y-4">
+            <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
+            <p className="text-sm font-medium text-muted-foreground">Đang tải kết quả AI...</p>
+          </div>
+        ) : (
+        <>
         {step === 1 && (
           <Step1
             audioFile={audioFile}
@@ -1957,6 +1992,8 @@ export default function AICreateExamPage() {
             audioId={aiResult?.audio_id}
             onBack={() => setStep(3)}
           />
+        )}
+        </>
         )}
       </div>
 
