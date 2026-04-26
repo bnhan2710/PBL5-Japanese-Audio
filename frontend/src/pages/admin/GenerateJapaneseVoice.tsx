@@ -9,7 +9,7 @@ import { ScriptEditor } from '@/features/tts/components/ScriptEditor';
 import { CharacterConfig } from '@/features/tts/components/CharacterConfig';
 import { ttsClient, SpeakerConfig, DialogueLine } from '@/features/tts/api/ttsClient';
 
-function parseScriptTextJLPT(intro: string, dialogue: string, outro: string, includeEndBell: boolean): { dialogues: DialogueLine[], speakers: string[] } {
+function parseScriptTextJLPT(intro: string, dialogue: string, outro: string, includeBell: boolean): { dialogues: DialogueLine[], speakers: string[] } {
   const dialogues: DialogueLine[] = [];
   const speakerSet = new Set<string>();
 
@@ -21,6 +21,11 @@ function parseScriptTextJLPT(intro: string, dialogue: string, outro: string, inc
       speakerSet.add(speaker);
     }
   };
+
+  // === Chuông đầu (Bell_dau) — trước Intro ===
+  if (includeBell) {
+    addLine('__BELL_START__', 'Bell_dau.wav');
+  }
 
   // 1. Parse Intro
   if (intro.trim()) {
@@ -80,9 +85,9 @@ function parseScriptTextJLPT(intro: string, dialogue: string, outro: string, inc
     }
   }
 
-  // Chèn chuông kết thúc nếu có bật
-  if (includeEndBell) {
-    addLine('__BELL__', 'bellEndScript.wav');
+  // === Chuông cuối (Bell_cuoi) — sau Dialogue, trước Outro ===
+  if (includeBell) {
+    addLine('__BELL_END__', 'Bell_cuoi.wav');
   }
 
   // 3. Parse Outro
@@ -92,8 +97,8 @@ function parseScriptTextJLPT(intro: string, dialogue: string, outro: string, inc
 
   return {
     dialogues,
-    // Loại trừ '__BELL__' khỏi danh sách speakers hiển thị trên UI
-    speakers: Array.from(speakerSet).filter(s => s !== '__BELL__')
+    // Loại trừ marker chuông khỏi danh sách speakers hiển thị trên UI
+    speakers: Array.from(speakerSet).filter(s => !s.startsWith('__BELL'))
   };
 }
 
@@ -152,6 +157,29 @@ const GenerateJapaneseVoicePage: React.FC = () => {
       toast({ title: 'Thành công', description: `Đã lưu giọng mẫu cho nhân vật ${speaker}` });
     } catch (err: any) {
       toast({ title: 'Lỗi', description: err.message || 'Lỗi khi upload giọng mẫu', variant: 'destructive' });
+    }
+  };
+
+  const handleDeleteSample = async (speaker: string) => {
+    const config = speakerConfigs[speaker];
+    if (!config?.reference_audio_url) return;
+    
+    try {
+      const filename = config.reference_audio_url.split('/').pop();
+      if (filename) {
+        await ttsClient.deleteSample(filename);
+      }
+      
+      setSpeakerConfigs(prev => {
+        const next = { ...prev };
+        if (next[speaker]) {
+          delete next[speaker].reference_audio_url;
+        }
+        return next;
+      });
+      toast({ title: 'Thành công', description: `Đã xoá giọng mẫu của ${speaker}` });
+    } catch (err: any) {
+      toast({ title: 'Lỗi', description: err.message || 'Không thể xoá giọng mẫu', variant: 'destructive' });
     }
   };
 
@@ -296,7 +324,7 @@ const GenerateJapaneseVoicePage: React.FC = () => {
                       : "bg-slate-100 border-slate-200 text-slate-400 hover:bg-slate-200 dark:bg-slate-800 dark:border-slate-700"
                   }`}
                   onClick={() => setIncludeEndBell(!includeEndBell)}
-                  title={includeEndBell ? "Tắt chuông kết thúc" : "Bật chuông kết thúc"}
+                  title={includeEndBell ? "Tắt tiếng chuông (đầu + cuối)" : "Bật tiếng chuông (đầu + cuối)"}
                 >
                   {includeEndBell ? <Bell className="w-4 h-4 mr-1.5" /> : <BellOff className="w-4 h-4 mr-1.5" />}
                   <span className="text-xs font-medium">{includeEndBell ? "Có chuông" : "Không chuông"}</span>
@@ -324,6 +352,7 @@ const GenerateJapaneseVoicePage: React.FC = () => {
               configs={speakerConfigs}
               onChange={setSpeakerConfigs}
               onUploadSample={handleUploadSample}
+              onDeleteSample={handleDeleteSample}
             />
           </div>
         </div>

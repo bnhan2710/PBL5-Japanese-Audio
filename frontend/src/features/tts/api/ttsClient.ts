@@ -42,7 +42,12 @@ export const ttsClient = {
     apiFetch(`${API_BASE}/api/tts/generate-script`, {
       method: 'POST',
       body: JSON.stringify(data),
-    }).then(handleResponse<TTSGenerateResponse>),
+    }).then(handleResponse<TTSGenerateResponse>).then(res => {
+      if (res.file_url && res.file_url.startsWith('/')) {
+        res.file_url = `${API_BASE}${res.file_url}`
+      }
+      return res;
+    }),
     
   uploadSample: (file: File): Promise<{ file_url: string }> => {
      const formData = new FormData()
@@ -50,6 +55,17 @@ export const ttsClient = {
      return apiFetch(`${API_BASE}/api/tts/upload-sample`, {
        method: 'POST',
        body: formData,
-     }).then(handleResponse<{ file_url: string }>)
+     }).then(handleResponse<{ file_url: string }>).then(res => {
+       if (res.file_url && res.file_url.startsWith('/')) {
+         res.file_url = `${API_BASE}${res.file_url}`
+       }
+       return res;
+     })
+  },
+
+  deleteSample: (filename: string): Promise<{ message: string }> => {
+    return apiFetch(`${API_BASE}/api/tts/upload-sample/${filename}`, {
+      method: 'DELETE',
+    }).then(handleResponse<{ message: string }>)
   }
 }

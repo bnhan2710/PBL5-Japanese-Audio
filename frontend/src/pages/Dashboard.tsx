@@ -10,6 +10,7 @@ import {
   FileAudio,
   Shuffle,
   Swords,
+  Headphones,
 } from 'lucide-react'
 
 const ADMIN_SHORTCUTS = [
@@ -70,6 +71,13 @@ const ADMIN_SHORTCUTS = [
     color: 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400',
   },
   {
+    title: 'Sinh giọng đọc tiếng Nhật',
+    description: 'Tạo audio đa nhân vật bằng Style-Bert-VITS2 từ kịch bản JLPT',
+    icon: Headphones,
+    path: '/admin/tts-voice',
+    color: 'bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400',
+  },
+  {
     title: 'Đề thi của tôi',
     description: 'Xem lại các đề thi đã tạo và xuất bản',
     icon: FileText,
@@ -121,6 +129,13 @@ const USER_SHORTCUTS = [
     icon: Swords,
     path: '/arena',
     color: 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400',
+  },
+  {
+    title: 'Sinh giọng đọc tiếng Nhật',
+    description: 'Tạo audio đa nhân vật bằng Style-Bert-VITS2 từ kịch bản JLPT',
+    icon: Headphones,
+    path: '/admin/tts-voice',
+    color: 'bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400',
   },
   {
     title: 'Đề thi của tôi',

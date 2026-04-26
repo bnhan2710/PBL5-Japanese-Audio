@@ -6,7 +6,7 @@ import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { Settings2, Music, Upload, CheckCircle2, User, Mic } from 'lucide-react';
+import { Settings2, Music, Upload, CheckCircle2, User, Mic, Trash2 } from 'lucide-react';
 import { SpeakerConfig } from '../api/ttsClient';
 
 interface CharacterConfigProps {
@@ -14,22 +14,21 @@ interface CharacterConfigProps {
   configs: Record<string, SpeakerConfig>;
   onChange: (configs: Record<string, SpeakerConfig>) => void;
   onUploadSample: (speaker: string, file: File) => Promise<void>;
+  onDeleteSample?: (speaker: string) => Promise<void>;
 }
 
 const AVAILABLE_MODELS = [
   { id: 'jvnv-F1-jp', name: 'Nữ chuẩn (JVNV F1)' },
   { id: 'jvnv-F2-jp', name: 'Nữ trầm tĩnh (JVNV F2)' },
-  { id: 'hamidashi-asu', name: 'Nữ học sinh (Asu)' },
-  { id: 'jp-extra-amazing', name: 'Nữ dễ thương (JPExtra)' },
+  { id: 'koharune-ami', name: 'Nữ dễ thương (Koharune Ami)' },
   { id: 'jvnv-M1-jp', name: 'Nam chuẩn (JVNV M1)' },
   { id: 'jvnv-M2-jp', name: 'Nam trầm/lớn tuổi (JVNV M2)' },
-  { id: 'jp-extra-cool-young', name: 'Bé trai (Rikka)' },
-  { id: 'myvoiceclone-male', name: 'Nam trung niên (Jun)' },
+  { id: 'amitaro', name: 'Amitaro' },
 ];
 
-const AVAILABLE_STYLES = ['Neutral', 'Happy', 'Sad', 'Angry', 'Surprised'];
+const AVAILABLE_STYLES = ['Neutral', 'Happy', 'Sad', 'Angry', 'Surprise', 'Fear', 'Disgust'];
 
-export const CharacterConfig: React.FC<CharacterConfigProps> = ({ speakers, configs, onChange, onUploadSample }) => {
+export const CharacterConfig: React.FC<CharacterConfigProps> = ({ speakers, configs, onChange, onUploadSample, onDeleteSample }) => {
   const updateConfig = (speaker: string, currentConfig: SpeakerConfig, field: keyof SpeakerConfig, value: any) => {
     onChange({
       ...configs,
@@ -184,12 +183,23 @@ export const CharacterConfig: React.FC<CharacterConfigProps> = ({ speakers, conf
                   </div>
                   
                   {config.reference_audio_url && (
-                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-2 border border-slate-100 dark:border-slate-800">
+                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-2 border border-slate-100 dark:border-slate-800 flex items-center gap-2">
                       <audio 
                         src={config.reference_audio_url} 
                         controls 
                         className="w-full h-8 outline-none"
                       />
+                      {onDeleteSample && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 shrink-0"
+                          onClick={() => onDeleteSample(speaker)}
+                          title="Xoá giọng mẫu"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>
