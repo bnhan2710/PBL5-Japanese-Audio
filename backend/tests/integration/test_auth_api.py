@@ -5,7 +5,7 @@ from sqlalchemy import select
 
 # UserCreate schema is not directly used, json payloads are dicts
 from app.db.models import User  # To verify DB state
-from app.config import get_settings
+from app.core.config import get_settings
 
 settings = get_settings()
 API_PREFIX = settings.API_PREFIX
