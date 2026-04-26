@@ -63,7 +63,7 @@ async def list_exams(
     offset = (page - 1) * page_size
 
     base_query = select(Exam).options(selectinload(Exam.audio))
-    
+
     if published_only:
         base_query = base_query.where(Exam.is_published == True)
         if me_only:
@@ -108,8 +108,7 @@ def _check_exam_permission(exam: Exam, user: User):
     """Raise Forbidden if user is not admin and not the creator of the exam."""
     if user.role != "admin" and exam.creator_id != user.id:
         raise HTTPException(
-            status_code=403, 
-            detail="You do not have permission to modify this exam."
+            status_code=403, detail="You do not have permission to modify this exam."
         )
 
 
@@ -194,17 +193,16 @@ async def merge_exam_audio(
     out_f.seek(0)
 
     from uuid import uuid4
+
     upload_res = await upload_audio_bytes(
-        out_f.read(),
-        filename=f"exam_merged_{uuid4().hex[:8]}.mp3",
-        folder="merged-audio"
+        out_f.read(), filename=f"exam_merged_{uuid4().hex[:8]}.mp3", folder="merged-audio"
     )
 
     new_audio = Audio(
         file_url=upload_res["secure_url"],
         content_hash=f"merged_{uuid4().hex[:8]}",
         duration=int(upload_res.get("duration", 0)),
-        file_name=f"exam_merged_{uuid4().hex[:8]}.mp3"
+        file_name=f"exam_merged_{uuid4().hex[:8]}.mp3",
     )
     db.add(new_audio)
     await db.flush()
@@ -230,9 +228,8 @@ async def delete_exam(
     exam = result.scalar_one_or_none()
     if not exam:
         raise HTTPException(status_code=404, detail="Exam not found")
-    
+
     _check_exam_permission(exam, current_user)
-    
+
     await db.delete(exam)
     await db.commit()
-

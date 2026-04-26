@@ -114,7 +114,9 @@ class AIPhotoService:
                         prompt = parsed.get("prompt")
                         negative = parsed.get("negative_prompt")
                         if isinstance(prompt, str) and prompt.strip():
-                            return prompt.strip(), negative.strip() if isinstance(negative, str) else ""
+                            return prompt.strip(), (
+                                negative.strip() if isinstance(negative, str) else ""
+                            )
                     except Exception:
                         pass
                 return merged, ""
@@ -171,7 +173,7 @@ class AIPhotoService:
             "You are a Stable Diffusion prompt writer for JLPT listening illustrations. "
             "Use the primary user prompt as the main content. "
             "Generate English prompt + negative_prompt in JSON. "
-            "Output JSON only with exactly these keys: {\"prompt\":\"...\",\"negative_prompt\":\"...\"}. "
+            'Output JSON only with exactly these keys: {"prompt":"...","negative_prompt":"..."}. '
             "Prompt must describe scene according to user request; keep composition clear and natural. "
             f"Always include these global style tags in prompt: {style_positive}. "
             f"Always include these global negative tags in negative_prompt: {style_negative}. "
@@ -216,8 +218,14 @@ class AIPhotoService:
                         response.raise_for_status()
                     except httpx.HTTPStatusError as exc:
                         response_text = exc.response.text[:400] if exc.response is not None else ""
-                        last_error_detail = f"HTTP {exc.response.status_code}: {response_text}" if exc.response is not None else str(exc)
-                        logger.warning("LM Studio attempt %s failed: %s", index + 1, last_error_detail)
+                        last_error_detail = (
+                            f"HTTP {exc.response.status_code}: {response_text}"
+                            if exc.response is not None
+                            else str(exc)
+                        )
+                        logger.warning(
+                            "LM Studio attempt %s failed: %s", index + 1, last_error_detail
+                        )
                         continue
 
                     data = response.json()
@@ -230,12 +238,17 @@ class AIPhotoService:
                         if style_positive and style_positive.lower() not in final_prompt.lower():
                             final_prompt = f"{style_positive}, {final_prompt}"
                         if style_negative and style_negative.lower() not in final_negative.lower():
-                            final_negative = f"{style_negative}, {final_negative}".strip().strip(",")
+                            final_negative = f"{style_negative}, {final_negative}".strip().strip(
+                                ","
+                            )
                         return final_prompt, final_negative
 
                     reasoning = self._extract_reasoning_content(data)
                     if reasoning:
-                        logger.warning("LM Studio returned reasoning_content without prompt on attempt %s", index + 1)
+                        logger.warning(
+                            "LM Studio returned reasoning_content without prompt on attempt %s",
+                            index + 1,
+                        )
                         recover_payload = {
                             "model": self.lm_model,
                             "messages": [
@@ -243,7 +256,7 @@ class AIPhotoService:
                                     "role": "system",
                                     "content": (
                                         "Convert the provided analysis into final JSON with prompt and negative_prompt for Stable Diffusion. "
-                                        "Return only {\"prompt\":\"...\",\"negative_prompt\":\"...\"}."
+                                        'Return only {"prompt":"...","negative_prompt":"..."}.'
                                     ),
                                 },
                                 {"role": "user", "content": reasoning},
@@ -255,21 +268,39 @@ class AIPhotoService:
                             recover_response = await client.post(self.lm_url, json=recover_payload)
                             recover_response.raise_for_status()
                             recover_data = recover_response.json()
-                            recovered_prompt, recovered_negative = self._extract_lm_bundle(recover_data)
+                            recovered_prompt, recovered_negative = self._extract_lm_bundle(
+                                recover_data
+                            )
                             recovered_prompt = recovered_prompt.strip().strip('"').strip("'")
                             recovered_negative = recovered_negative.strip().strip('"').strip("'")
                             if recovered_prompt:
                                 final_prompt = recovered_prompt
                                 final_negative = recovered_negative or ""
-                                if style_positive and style_positive.lower() not in final_prompt.lower():
+                                if (
+                                    style_positive
+                                    and style_positive.lower() not in final_prompt.lower()
+                                ):
                                     final_prompt = f"{style_positive}, {final_prompt}"
-                                if style_negative and style_negative.lower() not in final_negative.lower():
-                                    final_negative = f"{style_negative}, {final_negative}".strip().strip(",")
+                                if (
+                                    style_negative
+                                    and style_negative.lower() not in final_negative.lower()
+                                ):
+                                    final_negative = (
+                                        f"{style_negative}, {final_negative}".strip().strip(",")
+                                    )
                                 return final_prompt, final_negative
                         except httpx.HTTPStatusError as exc:
-                            response_text = exc.response.text[:400] if exc.response is not None else ""
-                            last_error_detail = f"HTTP {exc.response.status_code}: {response_text}" if exc.response is not None else str(exc)
-                            logger.warning("LM Studio recover attempt failed: %s", last_error_detail)
+                            response_text = (
+                                exc.response.text[:400] if exc.response is not None else ""
+                            )
+                            last_error_detail = (
+                                f"HTTP {exc.response.status_code}: {response_text}"
+                                if exc.response is not None
+                                else str(exc)
+                            )
+                            logger.warning(
+                                "LM Studio recover attempt failed: %s", last_error_detail
+                            )
 
                     logger.warning("LM Studio returned empty prompt on attempt %s", index + 1)
         except httpx.HTTPError as exc:
@@ -285,15 +316,18 @@ class AIPhotoService:
                 detail=f"LM Studio trả lỗi khi tạo prompt: {last_error_detail}",
             )
 
-        logger.warning("LM Studio returned empty prompt after retries. Using JLPT fallback prompt bundle.")
+        logger.warning(
+            "LM Studio returned empty prompt after retries. Using JLPT fallback prompt bundle."
+        )
         return self._build_fallback_prompt_bundle(for_action)
-
 
     # ------------------------------------------------------------------
     # Draw Things generation
     # ------------------------------------------------------------------
 
-    async def _generate_single_image(self, lm_prompt: str, negative_prompt: str | None = None) -> Image.Image:
+    async def _generate_single_image(
+        self, lm_prompt: str, negative_prompt: str | None = None
+    ) -> Image.Image:
         """Send only Gemma-generated prompt so Draw Things uses its own saved preset/config."""
         final_prompt = lm_prompt.strip()
         if not final_prompt:

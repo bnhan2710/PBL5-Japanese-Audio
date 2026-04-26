@@ -13,10 +13,7 @@ import {
   Line,
 } from 'recharts'
 import { AlertCircle, Calendar, RefreshCw, Info, ChevronDown } from 'lucide-react'
-import {
-  AnalyticsOverviewResponse,
-  analyticsApi,
-} from '@/features/analytics/api/analyticsApi'
+import { AnalyticsOverviewResponse, analyticsApi } from '@/features/analytics/api/analyticsApi'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
@@ -27,10 +24,10 @@ export default function AdminAnalytics() {
   const [data, setData] = useState<AnalyticsOverviewResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  
+
   const popupRef = useRef<HTMLDivElement>(null)
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
-  
+
   // Filter states
   const [customStartDate, setCustomStartDate] = useState<string>(() => {
     const d = new Date()
@@ -61,10 +58,10 @@ export default function AdminAnalytics() {
         setIsDatePickerOpen(false)
       }
     }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
-  
+
   const applyQuickRange = (days: number) => {
     const end = new Date()
     const start = new Date()
@@ -80,14 +77,14 @@ export default function AdminAnalytics() {
       setCustomEndDate(tempEndDate)
       setIsDatePickerOpen(false)
     } else {
-      setError("Thời gian tùy chỉnh không hợp lệ")
+      setError('Thời gian tùy chỉnh không hợp lệ')
     }
   }
 
   const formatDateForDisplay = (dateStr: string) => {
-    if (!dateStr) return '';
-    const [y, m, d] = dateStr.split('-');
-    return `${d}/${m}/${y}`;
+    if (!dateStr) return ''
+    const [y, m, d] = dateStr.split('-')
+    return `${d}/${m}/${y}`
   }
 
   const loadData = async () => {
@@ -100,7 +97,7 @@ export default function AdminAnalytics() {
 
       setLoading(true)
       setError(null)
-      
+
       const startDate = new Date(customStartDate)
       startDate.setHours(0, 0, 0, 0)
       const startDateStr = startDate.toISOString()
@@ -161,7 +158,7 @@ export default function AdminAnalytics() {
             Theo dõi toàn diện các chỉ số vận hành và chất lượng AI
           </p>
         </div>
-        
+
         <div className="flex flex-wrap items-center gap-3 bg-card p-2 rounded-lg border border-border shadow-sm">
           <div className="relative" ref={popupRef}>
             <button
@@ -172,7 +169,9 @@ export default function AdminAnalytics() {
               <span>{formatDateForDisplay(customStartDate)}</span>
               <span className="text-muted-foreground mx-1">-</span>
               <span>{formatDateForDisplay(customEndDate)}</span>
-              <ChevronDown className={`w-4 h-4 text-muted-foreground ml-2 transition-transform duration-200 ${isDatePickerOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown
+                className={`w-4 h-4 text-muted-foreground ml-2 transition-transform duration-200 ${isDatePickerOpen ? 'rotate-180' : ''}`}
+              />
             </button>
 
             {isDatePickerOpen && (
@@ -180,35 +179,56 @@ export default function AdminAnalytics() {
                 <div>
                   <p className="text-sm font-semibold mb-3">Thời gian nhanh</p>
                   <div className="grid grid-cols-3 gap-2">
-                    <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => applyQuickRange(7)}>7 ngày</Button>
-                    <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => applyQuickRange(30)}>30 ngày</Button>
-                    <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => applyQuickRange(90)}>90 ngày</Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-8"
+                      onClick={() => applyQuickRange(7)}
+                    >
+                      7 ngày
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-8"
+                      onClick={() => applyQuickRange(30)}
+                    >
+                      30 ngày
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-8"
+                      onClick={() => applyQuickRange(90)}
+                    >
+                      90 ngày
+                    </Button>
                   </div>
                 </div>
-                
+
                 <div className="w-full h-px bg-border my-1" />
-                
+
                 <div>
                   <p className="text-sm font-semibold mb-3">Tùy chỉnh khoảng thời gian</p>
                   <div className="flex flex-col gap-3">
                     <div className="flex items-center gap-3">
                       <label className="text-sm text-muted-foreground w-16">Từ ngày</label>
-                      <input 
-                        type="date" 
+                      <input
+                        type="date"
                         max={tempEndDate || new Date().toISOString().split('T')[0]}
-                        value={tempStartDate} 
-                        onChange={e => setTempStartDate(e.target.value)}
+                        value={tempStartDate}
+                        onChange={(e) => setTempStartDate(e.target.value)}
                         className="flex-1 px-3 py-1.5 text-sm rounded bg-slate-50 dark:bg-slate-800 border border-input focus:ring-1 focus:ring-primary outline-none"
                       />
                     </div>
                     <div className="flex items-center gap-3">
                       <label className="text-sm text-muted-foreground w-16">Đến ngày</label>
-                      <input 
-                        type="date" 
+                      <input
+                        type="date"
                         min={tempStartDate}
                         max={new Date().toISOString().split('T')[0]}
-                        value={tempEndDate} 
-                        onChange={e => setTempEndDate(e.target.value)}
+                        value={tempEndDate}
+                        onChange={(e) => setTempEndDate(e.target.value)}
                         className="flex-1 px-3 py-1.5 text-sm rounded bg-slate-50 dark:bg-slate-800 border border-input focus:ring-1 focus:ring-primary outline-none"
                       />
                     </div>
@@ -216,8 +236,12 @@ export default function AdminAnalytics() {
                 </div>
 
                 <div className="flex justify-end gap-2 mt-2">
-                  <Button variant="ghost" size="sm" onClick={() => setIsDatePickerOpen(false)}>Hủy</Button>
-                  <Button size="sm" onClick={applyCustomRange}>Xác nhận</Button>
+                  <Button variant="ghost" size="sm" onClick={() => setIsDatePickerOpen(false)}>
+                    Hủy
+                  </Button>
+                  <Button size="sm" onClick={applyCustomRange}>
+                    Xác nhận
+                  </Button>
                 </div>
               </div>
             )}
@@ -248,10 +272,12 @@ export default function AdminAnalytics() {
           <p className="text-sm font-medium text-muted-foreground">Tổng số Đề thi</p>
           <h3 className="text-4xl font-bold text-primary mt-2">{data.exam_stats.total}</h3>
         </Card>
-        
+
         <Card className="p-6 flex flex-col justify-center">
           <p className="text-sm font-medium text-muted-foreground">Lượt Tương tác (Làm bài)</p>
-          <h3 className="text-4xl font-bold text-emerald-600 mt-2">{data.interaction_stats.total_takes}</h3>
+          <h3 className="text-4xl font-bold text-emerald-600 mt-2">
+            {data.interaction_stats.total_takes}
+          </h3>
         </Card>
 
         <Card className="p-6 flex flex-col justify-center relative overflow-hidden group">
@@ -260,7 +286,9 @@ export default function AdminAnalytics() {
             <div className="group/tooltip relative cursor-help">
               <Info className="w-4 h-4 text-muted-foreground/60 hover:text-primary transition-colors" />
               <div className="invisible group-hover/tooltip:visible absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-gray-900 text-white text-xs rounded shadow-lg z-50 text-center leading-relaxed">
-                Chỉ số này được tính toán dựa trên mức độ tự tin của Model AI khi nhận diện âm thanh, do chưa có văn bản đối soát chuẩn. Chỉ số sẽ cập nhật dựa vào Feedback thực tế.
+                Chỉ số này được tính toán dựa trên mức độ tự tin của Model AI khi nhận diện âm
+                thanh, do chưa có văn bản đối soát chuẩn. Chỉ số sẽ cập nhật dựa vào Feedback thực
+                tế.
                 <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
               </div>
             </div>
@@ -268,7 +296,9 @@ export default function AdminAnalytics() {
           <h3 className="text-4xl font-bold text-amber-500 mt-2">
             {(data.ai_quality_stats.confidence_error * 100).toFixed(1)}%
           </h3>
-          <p className="text-xs text-muted-foreground mt-1">Độ tin cậy tổng thể: {(data.ai_quality_stats.reliability_score * 100).toFixed(1)}%</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Độ tin cậy tổng thể: {(data.ai_quality_stats.reliability_score * 100).toFixed(1)}%
+          </p>
         </Card>
       </div>
 
@@ -282,14 +312,18 @@ export default function AdminAnalytics() {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="name" tick={{ fontSize: 12 }} tickMargin={10} minTickGap={30} />
                 <YAxis allowDecimals={false} />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: '8px',
+                    border: 'none',
+                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                  }}
                 />
-                <Line 
-                  type="monotone" 
-                  dataKey="value" 
-                  name="Lượt làm bài" 
-                  stroke="#10b981" 
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  name="Lượt làm bài"
+                  stroke="#10b981"
                   strokeWidth={3}
                   dot={{ r: 4, strokeWidth: 2 }}
                   activeDot={{ r: 6 }}
@@ -309,7 +343,7 @@ export default function AdminAnalytics() {
                   <Pie
                     data={data.exam_stats.by_level.map((item, index) => ({
                       ...item,
-                      fill: COLORS[index % COLORS.length]
+                      fill: COLORS[index % COLORS.length],
                     }))}
                     cx="50%"
                     cy="50%"
@@ -323,7 +357,7 @@ export default function AdminAnalytics() {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-                <p className="text-muted-foreground text-sm">Chưa có dữ liệu phân loại</p>
+              <p className="text-muted-foreground text-sm">Chưa có dữ liệu phân loại</p>
             )}
           </div>
         </Card>
@@ -345,15 +379,12 @@ export default function AdminAnalytics() {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="name" />
                 <YAxis allowDecimals={false} />
-                <Tooltip 
-                  cursor={{ fill: 'transparent' }} 
-                  contentStyle={{ borderRadius: '8px' }}
-                />
-                <Bar 
-                  dataKey="value" 
-                  name="Số lượt đánh giá AI" 
-                  fill="#f59e0b" 
-                  radius={[4, 4, 0, 0]} 
+                <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '8px' }} />
+                <Bar
+                  dataKey="value"
+                  name="Số lượt đánh giá AI"
+                  fill="#f59e0b"
+                  radius={[4, 4, 0, 0]}
                   barSize={40}
                 />
               </BarChart>
@@ -366,7 +397,9 @@ export default function AdminAnalytics() {
           <div className="flex justify-between items-start mb-6">
             <div className="flex flex-col h-12">
               <h3 className="text-lg font-semibold">Đánh giá chung (Trải nghiệm)</h3>
-              <span className="text-sm text-muted-foreground mt-1">Tổng số: {data.system_quality_stats.total_feedbacks} lượt</span>
+              <span className="text-sm text-muted-foreground mt-1">
+                Tổng số: {data.system_quality_stats.total_feedbacks} lượt
+              </span>
             </div>
             <span className="text-sm font-medium bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200 px-3 py-1 rounded-full whitespace-nowrap">
               Trung bình: {data.system_quality_stats.average_rating} ⭐
@@ -378,15 +411,12 @@ export default function AdminAnalytics() {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="name" />
                 <YAxis allowDecimals={false} />
-                <Tooltip 
-                  cursor={{ fill: 'transparent' }} 
-                  contentStyle={{ borderRadius: '8px' }}
-                />
-                <Bar 
-                  dataKey="value" 
-                  name="Số lượt đánh giá chung" 
-                  fill="#3b82f6" 
-                  radius={[4, 4, 0, 0]} 
+                <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '8px' }} />
+                <Bar
+                  dataKey="value"
+                  name="Số lượt đánh giá chung"
+                  fill="#3b82f6"
+                  radius={[4, 4, 0, 0]}
                   barSize={40}
                 />
               </BarChart>

@@ -19,7 +19,9 @@ class AIChatService:
     async def chat(payload: AIChatRequest) -> dict[str, str]:
         settings = get_settings()
 
-        user_messages = [msg for msg in payload.messages if msg.role == "user" and msg.content.strip()]
+        user_messages = [
+            msg for msg in payload.messages if msg.role == "user" and msg.content.strip()
+        ]
         if not user_messages:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -27,8 +29,12 @@ class AIChatService:
             )
 
         has_system = any(msg.role == "system" for msg in payload.messages)
-        messages = ([{"role": "system", "content": DEFAULT_SYSTEM_PROMPT}] if not has_system else []) + [
-            {"role": msg.role, "content": msg.content} for msg in payload.messages if msg.content.strip()
+        messages = (
+            [{"role": "system", "content": DEFAULT_SYSTEM_PROMPT}] if not has_system else []
+        ) + [
+            {"role": msg.role, "content": msg.content}
+            for msg in payload.messages
+            if msg.content.strip()
         ]
 
         body: dict[str, Any] = {

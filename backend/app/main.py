@@ -70,62 +70,50 @@ app = FastAPI(
     redoc_url="/api/redoc",  # ReDoc
     openapi_url="/api/openapi.json",  # OpenAPI schema
     openapi_tags=[
-        {
-            "name": "health",
-            "description": "Health check endpoints for system and database"
-        },
+        {"name": "health", "description": "Health check endpoints for system and database"},
         {
             "name": "auth",
-            "description": "Authentication and user management (registration, login, password reset)"
+            "description": "Authentication and user management (registration, login, password reset)",
         },
         {
             "name": "admin",
-            "description": "User management for administrators (admin access required)"
+            "description": "User management for administrators (admin access required)",
         },
-        {
-            "name": "exams",
-            "description": "Exam CRUD – create, list, update, delete exam drafts"
-        },
+        {"name": "exams", "description": "Exam CRUD – create, list, update, delete exam drafts"},
         {
             "name": "random-exams",
-            "description": "Random exam generation – select and shuffle questions from question bank"
+            "description": "Random exam generation – select and shuffle questions from question bank",
         },
-        {
-            "name": "audio",
-            "description": "Admin audio resource management and listing"
-        },
-        {
-            "name": "questions",
-            "description": "Question / Answer CRUD + audio upload per question"
-        },
+        {"name": "audio", "description": "Admin audio resource management and listing"},
+        {"name": "questions", "description": "Question / Answer CRUD + audio upload per question"},
         {
             "name": "ai",
-            "description": "Local exam generation: upload audio \u2192 bell split \u2192 ReazonSpeech ASR \u2192 JLPT draft questions"
+            "description": "Local exam generation: upload audio \u2192 bell split \u2192 ReazonSpeech ASR \u2192 JLPT draft questions",
         },
         {
             "name": "ai_photos",
-            "description": "Local AI photo generation for context and action images via LM Studio and Draw Things"
+            "description": "Local AI photo generation for context and action images via LM Studio and Draw Things",
         },
         {
             "name": "arena",
-            "description": "JLPT Ranking Arena contests: create contest, join, take, and submit"
+            "description": "JLPT Ranking Arena contests: create contest, join, take, and submit",
         },
         {
             "name": "ai-feedbacks",
-            "description": "AI feedback tracking for automatically generated content"
+            "description": "AI feedback tracking for automatically generated content",
         },
         {
             "name": "system-feedbacks",
-            "description": "System-wide user feedback for product quality and analytics"
+            "description": "System-wide user feedback for product quality and analytics",
         },
         {
             "name": "ai-chat",
-            "description": "Chat completion proxy from app to LM Studio Gemma model"
+            "description": "Chat completion proxy from app to LM Studio Gemma model",
         },
         {
             "name": "notifications",
-            "description": "In-app notifications for users (AI exam completion, etc.)"
-        }
+            "description": "In-app notifications for users (AI exam completion, etc.)",
+        },
     ],
     swagger_ui_parameters={
         "persistAuthorization": True,  # Keep token after page reload
@@ -147,7 +135,7 @@ app = FastAPI(
 def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
-    
+
     openapi_schema = get_openapi(
         title=app.title,
         version=app.version,
@@ -155,17 +143,17 @@ def custom_openapi():
         routes=app.routes,
         tags=app.openapi_tags,
     )
-    
+
     # Add JWT Bearer security scheme
     openapi_schema["components"]["securitySchemes"] = {
         "Bearer": {
             "type": "http",
             "scheme": "bearer",
             "bearerFormat": "JWT",
-            "description": "Enter JWT token (obtained from /api/auth/login endpoint). Just enter the token, no need to add 'Bearer ' prefix."
+            "description": "Enter JWT token (obtained from /api/auth/login endpoint). Just enter the token, no need to add 'Bearer ' prefix.",
         }
     }
-    
+
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 

@@ -10,7 +10,7 @@ from app.modules.users.schemas import (
     UserCreateByAdmin,
     UserUpdate,
     LockUserRequest,
-    AdminResetPasswordResponse
+    AdminResetPasswordResponse,
 )
 from app.modules.users.service import UserService
 
@@ -31,11 +31,11 @@ async def list_users(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(10, ge=1, le=100, description="Items per page"),
     service: UserService = Depends(get_user_service),
-    admin: User = Depends(RoleChecker(["admin"]))
+    admin: User = Depends(RoleChecker(["admin"])),
 ):
     """
     List all users with optional filters and pagination.
-    
+
     🔒 **Requires**: Admin role
     """
     filters = {}
@@ -56,11 +56,11 @@ async def list_users(
 async def create_user(
     user_data: UserCreateByAdmin,
     service: UserService = Depends(get_user_service),
-    admin: User = Depends(RoleChecker(["admin"]))
+    admin: User = Depends(RoleChecker(["admin"])),
 ):
     """
     Create a new user (Admin).
-    
+
     🔒 **Requires**: Admin role
     """
     return await service.create_user_by_admin(user_data)
@@ -70,11 +70,11 @@ async def create_user(
 async def get_user(
     user_id: int,
     service: UserService = Depends(get_user_service),
-    admin: User = Depends(RoleChecker(["admin"]))
+    admin: User = Depends(RoleChecker(["admin"])),
 ):
     """
     Get user details by ID.
-    
+
     🔒 **Requires**: Admin role
     """
     return await service.get_user_by_id(user_id)
@@ -85,11 +85,11 @@ async def update_user(
     user_id: int,
     update_data: UserUpdate,
     service: UserService = Depends(get_user_service),
-    admin: User = Depends(RoleChecker(["admin"]))
+    admin: User = Depends(RoleChecker(["admin"])),
 ):
     """
     Update user information.
-    
+
     🔒 **Requires**: Admin role
     """
     return await service.update_user(user_id, update_data)
@@ -100,15 +100,21 @@ async def lock_user(
     user_id: int,
     lock_data: LockUserRequest,
     service: UserService = Depends(get_user_service),
-    admin: User = Depends(RoleChecker(["admin"]))
+    admin: User = Depends(RoleChecker(["admin"])),
 ):
     """
     Lock user account temporarily.
-    
+
     🔒 **Requires**: Admin role
     """
     try:
-        return await service.lock_user(user_id, lock_data.duration_hours, lock_data.reason, lock_data.detailed_reason, executor=admin)
+        return await service.lock_user(
+            user_id,
+            lock_data.duration_hours,
+            lock_data.reason,
+            lock_data.detailed_reason,
+            executor=admin,
+        )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
 
@@ -117,11 +123,11 @@ async def lock_user(
 async def unlock_user(
     user_id: int,
     service: UserService = Depends(get_user_service),
-    admin: User = Depends(RoleChecker(["admin"]))
+    admin: User = Depends(RoleChecker(["admin"])),
 ):
     """
     Unlock user account.
-    
+
     🔒 **Requires**: Admin role
     """
     try:
@@ -134,11 +140,11 @@ async def unlock_user(
 async def admin_reset_password(
     user_id: int,
     service: UserService = Depends(get_user_service),
-    admin: User = Depends(RoleChecker(["admin"]))
+    admin: User = Depends(RoleChecker(["admin"])),
 ):
     """
     Reset user password (Admin).
-    
+
     🔒 **Requires**: Admin role
     """
     return await service.admin_reset_password(user_id)

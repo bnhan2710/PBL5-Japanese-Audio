@@ -5,7 +5,7 @@ from app.core.security import get_password_hash
 from app.shared.exceptions import (
     InvalidResetTokenException,
     UserNotFoundException,
-    UserAlreadyExistsException
+    UserAlreadyExistsException,
 )
 import secrets
 import string
@@ -17,7 +17,7 @@ from app.shared.email import (
     send_update_notification,
     send_password_reset_by_admin,
     send_account_locked_email,
-    send_account_unlocked_email
+    send_account_unlocked_email,
 )
 from app.shared.webhook import trigger_n8n_webhook
 from app.shared.utils import setup_logger
@@ -27,15 +27,16 @@ from app.modules.users.schemas import (
     UserMeUpdate,
     UserListResponse,
     UserResponse,
-    AdminResetPasswordResponse
+    AdminResetPasswordResponse,
 )
 
 logger = setup_logger(__name__)
 
+
 def generate_random_password(length: int = 12) -> str:
     """Generate a secure random password."""
     characters = string.ascii_letters + string.digits + string.punctuation
-    return ''.join(secrets.choice(characters) for _ in range(length))
+    return "".join(secrets.choice(characters) for _ in range(length))
 
 
 class UserService:
@@ -46,24 +47,21 @@ class UserService:
         self.db = db
 
     async def list_users(
-        self,
-        filters: Dict[str, Any],
-        page: int = 1,
-        page_size: int = 10
+        self, filters: Dict[str, Any], page: int = 1, page_size: int = 10
     ) -> UserListResponse:
         """
         List users with filters and pagination.
-        
+
         Args:
             filters: Filter criteria (email, username, role, is_active)
             page: Page number (1-indexed)
             page_size: Number of users per page
-        
+
         Returns:
             UserListResponse with paginated users
         """
         skip = (page - 1) * page_size
-        
+
         users = await self.repository.get_all_with_filters(filters, skip, page_size)
         total = await self.repository.count_all(filters)
         total_pages = ceil(total / page_size) if total > 0 else 0
@@ -73,7 +71,7 @@ class UserService:
             total=total,
             page=page,
             page_size=page_size,
-            total_pages=total_pages
+            total_pages=total_pages,
         )
 
     async def get_user_by_id(self, user_id: int) -> User:
@@ -84,17 +82,15 @@ class UserService:
         return user
 
     async def create_user_by_admin(
-        self,
-        user_data: UserCreateByAdmin,
-        base_url: str = "http://localhost:3000"
+        self, user_data: UserCreateByAdmin, base_url: str = "http://localhost:3000"
     ) -> User:
         """
         Create a new user as admin and send verification email.
-        
+
         Args:
             user_data: User creation data
             base_url: Frontend base URL for verification link
-        
+
         Returns:
             Created User object
         """
@@ -120,7 +116,7 @@ class UserService:
             email_verified=False,
             first_name=user_data.first_name,
             last_name=user_data.last_name,
-            avatar_url=user_data.avatar_url
+            avatar_url=user_data.avatar_url,
         )
 
         # Generate verification token
@@ -137,28 +133,27 @@ class UserService:
             logger.error(f"Failed to send verification email: {str(e)}")
 
         # Trigger n8n automation
-        await trigger_n8n_webhook("user.created", {
-            "user_id": user.id,
-            "email": user.email,
-            "username": user.username,
-            "role": user.role,
-            "created_by": "admin"
-        })
+        await trigger_n8n_webhook(
+            "user.created",
+            {
+                "user_id": user.id,
+                "email": user.email,
+                "username": user.username,
+                "role": user.role,
+                "created_by": "admin",
+            },
+        )
 
         return user
 
-    async def update_user(
-        self,
-        user_id: int,
-        update_data: UserUpdate
-    ) -> User:
+    async def update_user(self, user_id: int, update_data: UserUpdate) -> User:
         """
         Update user information and send notification email.
-        
+
         Args:
             user_id: User ID to update
             update_data: Update data
-        
+
         Returns:
             Updated User object
         """
@@ -217,48 +212,52 @@ class UserService:
                 logger.error(f"Failed to send update notification: {str(e)}")
 
         # Trigger n8n automation
-        await trigger_n8n_webhook("user.updated", {
-            "user_id": user.id,
-            "email": user.email,
-            "changes": changes
-        })
+        await trigger_n8n_webhook(
+            "user.updated", {"user_id": user.id, "email": user.email, "changes": changes}
+        )
 
         return user
 
-    async def lock_user(self, user_id: int, duration_hours: int, reason: str = "Vi phạm chính sách bảo mật / Hoạt động bất thường", detailed_reason: str = None, executor: User = None) -> User:
+    async def lock_user(
+        self,
+        user_id: int,
+        duration_hours: int,
+        reason: str = "Vi phạm chính sách bảo mật / Hoạt động bất thường",
+        detailed_reason: str = None,
+        executor: User = None,
+    ) -> User:
         """
         Lock user account temporarily.
-        
+
         Args:
             user_id: User ID to lock
             duration_hours: Lock duration in hours
             reason: Reason for locking
             detailed_reason: Detailed reason for locking
             executor: The admin user performing the action
-        
+
         Returns:
             Updated User object
         """
         user = await self.get_user_by_id(user_id)
-        
+
         # Security constraints
         if executor and executor.id == user.id:
             raise ValueError("You cannot lock your own account")
         if user.is_superuser:
             raise ValueError("Cannot lock a super user account")
-            
-        
+
         if duration_hours == -1:
             user.is_active = False
             user.locked_until = None
             logger.info(f"User {user.email} permanently locked")
         else:
             user.locked_until = datetime.utcnow() + timedelta(hours=duration_hours)
-            user.is_active = False # Mark as inactive too for consistency
+            user.is_active = False  # Mark as inactive too for consistency
             logger.info(f"User {user.email} locked until {user.locked_until}")
-        
+
         user = await self.repository.update(user)
-        
+
         # Send notification email
         try:
             send_account_locked_email(user, duration_hours, reason, detailed_reason)
@@ -267,38 +266,41 @@ class UserService:
             logger.error(f"Failed to send lock notification: {str(e)}")
 
         # Trigger n8n automation
-        await trigger_n8n_webhook("user.locked", {
-            "user_id": user.id,
-            "email": user.email,
-            "locked_until": user.locked_until.isoformat() if user.locked_until else None,
-            "duration_hours": duration_hours
-        })
+        await trigger_n8n_webhook(
+            "user.locked",
+            {
+                "user_id": user.id,
+                "email": user.email,
+                "locked_until": user.locked_until.isoformat() if user.locked_until else None,
+                "duration_hours": duration_hours,
+            },
+        )
 
         return user
 
     async def unlock_user(self, user_id: int, executor: User = None) -> User:
         """
         Unlock user account.
-        
+
         Args:
             user_id: User ID to unlock
             executor: The admin user performing the action
-        
+
         Returns:
             Updated User object
         """
         user = await self.get_user_by_id(user_id)
-        
+
         # Security constraints
         if executor and executor.id == user.id:
             raise ValueError("You cannot unlock your own account")
         if user.is_superuser:
             raise ValueError("Super users cannot be locked/unlocked")
-        
+
         user.locked_until = None
         user.is_active = True
         user = await self.repository.update(user)
-        
+
         logger.info(f"User {user.email} unlocked")
 
         # Send notification email
@@ -309,49 +311,43 @@ class UserService:
             logger.error(f"Failed to send unlock notification: {str(e)}")
 
         # Trigger n8n automation
-        await trigger_n8n_webhook("user.unlocked", {
-            "user_id": user.id,
-            "email": user.email
-        })
+        await trigger_n8n_webhook("user.unlocked", {"user_id": user.id, "email": user.email})
 
         return user
 
     async def admin_reset_password(self, user_id: int) -> AdminResetPasswordResponse:
         """
         Reset user password as admin and send temporary password.
-        
+
         Args:
             user_id: User ID to reset password
-        
+
         Returns:
             AdminResetPasswordResponse with temporary password
         """
         user = await self.get_user_by_id(user_id)
-        
+
         # Generate temporary password
         temp_password = generate_random_password()
-        
+
         # Update password
         user.hashed_password = get_password_hash(temp_password)
         user = await self.repository.update(user)
-        
+
         # Send email with temporary password
         try:
             send_password_reset_by_admin(user, temp_password)
             logger.info(f"Password reset email sent to {user.email}")
         except Exception as e:
             logger.error(f"Failed to send password reset email: {str(e)}")
-        
+
         # Trigger n8n automation
-        await trigger_n8n_webhook("user.password_reset", {
-            "user_id": user.id,
-            "email": user.email,
-            "reset_by": "admin"
-        })
-        
+        await trigger_n8n_webhook(
+            "user.password_reset", {"user_id": user.id, "email": user.email, "reset_by": "admin"}
+        )
+
         return AdminResetPasswordResponse(
-            message="Password reset successfully",
-            temporary_password=temp_password
+            message="Password reset successfully", temporary_password=temp_password
         )
 
     async def update_me(self, user: User, update_data: UserMeUpdate) -> User:
@@ -383,6 +379,3 @@ class UserService:
         # Save changes
         db_user = await self.repository.update(db_user)
         return db_user
-
-
-

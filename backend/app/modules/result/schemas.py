@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, ConfigDict
 
 class UserResultCreate(BaseModel):
     """Payload submitted when a user finishes an exam."""
+
     exam_id: UUID = Field(..., description="Exam UUID")
     score: float = Field(..., description="Final score (e.g. 8.5)")
     total_questions: int = Field(..., description="Total number of questions")
@@ -32,14 +33,15 @@ class UserResultResponse(BaseModel):
                 "score": 8.5,
                 "total_questions": 10,
                 "correct_answers": 8,
-                "completed_at": "2024-01-01T12:30:00"
+                "completed_at": "2024-01-01T12:30:00",
             }
-        }
+        },
     )
 
 
 class UserResultListResponse(BaseModel):
     """Paginated results list."""
+
     results: List[UserResultResponse]
     total: int
     page: int
@@ -49,11 +51,13 @@ class UserResultListResponse(BaseModel):
 
 class ExamSummaryResponse(BaseModel):
     """Aggregate statistics for an exam (admin view)."""
+
     exam_id: UUID
     total_attempts: int
     average_score: Optional[float]
     highest_score: Optional[float]
     lowest_score: Optional[float]
+
 
 class CompetencyAnalysisResponse(BaseModel):
     analysis_id: UUID
@@ -62,9 +66,10 @@ class CompetencyAnalysisResponse(BaseModel):
     strengths: Optional[List[str]] = None
     weaknesses_analysis: Optional[str] = None
     actionable_advice: Optional[List[str]] = None
-    skill_metrics: Optional[dict] = Field(None, description="Detailed skill metrics: {skill_name: {correct, total, percentage}}")
+    skill_metrics: Optional[dict] = Field(
+        None, description="Detailed skill metrics: {skill_name: {correct, total, percentage}}"
+    )
 
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
-

@@ -48,7 +48,8 @@ class AnalyticsFeedbackResponse(BaseModel):
     rating_score: int
     comment_text: Optional[str] = None
     created_at: datetime
-    
+
+
 class FeedbackListResponse(BaseModel):
     items: List[AnalyticsFeedbackResponse]
     total: int

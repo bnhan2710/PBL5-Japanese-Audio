@@ -10,8 +10,13 @@ from app.core.security import get_current_user
 from app.modules.users.models import User
 from app.modules.questions.models import Question, Answer
 from app.modules.questions.schemas import (
-    QuestionCreate, QuestionUpdate, QuestionResponse, QuestionWithAnswersResponse,
-    AnswerCreate, AnswerUpdate, AnswerResponse,
+    QuestionCreate,
+    QuestionUpdate,
+    QuestionResponse,
+    QuestionWithAnswersResponse,
+    AnswerCreate,
+    AnswerUpdate,
+    AnswerResponse,
 )
 from app.shared.upload import upload_audio, upload_image
 from app.modules.exam.models import Exam
@@ -23,18 +28,18 @@ router = APIRouter(tags=["questions"])
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 async def _check_question_modify_permission(db: AsyncSession, question: Question, user: User):
     """Raise Forbidden if user is not admin and not the creator of the exam associated with this question."""
     if user.role == "admin":
         return
-    
+
     result = await db.execute(select(Exam).where(Exam.exam_id == question.exam_id))
     exam = result.scalar_one_or_none()
-    
+
     if not exam or exam.creator_id != user.id:
         raise HTTPException(
-            status_code=403, 
-            detail="You do not have permission to modify this question."
+            status_code=403, detail="You do not have permission to modify this question."
         )
 
 
@@ -42,20 +47,20 @@ async def _check_exam_modify_permission(db: AsyncSession, exam_id: UUID, user: U
     """Raise Forbidden if user is not admin and not the creator of the exam."""
     if user.role == "admin":
         return
-    
+
     result = await db.execute(select(Exam).where(Exam.exam_id == exam_id))
     exam = result.scalar_one_or_none()
-    
+
     if not exam or exam.creator_id != user.id:
         raise HTTPException(
-            status_code=403, 
-            detail="You do not have permission to modify this exam's content."
+            status_code=403, detail="You do not have permission to modify this exam's content."
         )
 
 
 # ---------------------------------------------------------------------------
 # Questions
 # ---------------------------------------------------------------------------
+
 
 @router.get("/exams/{exam_id}/questions", response_model=List[QuestionWithAnswersResponse])
 async def list_questions(
@@ -84,7 +89,7 @@ async def create_question(
 ):
     """Create a question (and optionally its answers) for an exam."""
     await _check_exam_modify_permission(db, payload.exam_id, current_user)
-    
+
     question = Question(
         exam_id=payload.exam_id,
         mondai_group=payload.mondai_group,
@@ -101,7 +106,7 @@ async def create_question(
     db.add(question)
     await db.flush()  # get question_id before adding answers
 
-    for ans in (payload.answers or []):
+    for ans in payload.answers or []:
         answer = Answer(
             question_id=question.question_id,
             content=ans.content,
@@ -162,9 +167,9 @@ async def delete_question(
     question = result.scalar_one_or_none()
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
-    
+
     await _check_question_modify_permission(db, question, current_user)
-    
+
     await db.delete(question)
     await db.commit()
 
@@ -172,6 +177,7 @@ async def delete_question(
 # ---------------------------------------------------------------------------
 # Audio upload per question
 # ---------------------------------------------------------------------------
+
 
 @router.post(
     "/questions/{question_id}/audio",
@@ -239,6 +245,7 @@ async def upload_question_image(
 # Answers
 # ---------------------------------------------------------------------------
 
+
 @router.post("/answers", response_model=AnswerResponse, status_code=201)
 async def create_answer(
     payload: AnswerCreate,
@@ -250,7 +257,7 @@ async def create_answer(
     question = result.scalar_one_or_none()
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
-    
+
     await _check_question_modify_permission(db, question, current_user)
 
     answer = Answer(**payload.model_dump())
@@ -268,9 +275,7 @@ async def update_answer(
     current_user: User = Depends(get_current_user),
 ):
     result = await db.execute(
-        select(Answer)
-        .options(selectinload(Answer.question))
-        .where(Answer.answer_id == answer_id)
+        select(Answer).options(selectinload(Answer.question)).where(Answer.answer_id == answer_id)
     )
     answer = result.scalar_one_or_none()
     if not answer:
@@ -293,16 +298,13 @@ async def delete_answer(
     current_user: User = Depends(get_current_user),
 ):
     result = await db.execute(
-        select(Answer)
-        .options(selectinload(Answer.question))
-        .where(Answer.answer_id == answer_id)
+        select(Answer).options(selectinload(Answer.question)).where(Answer.answer_id == answer_id)
     )
     answer = result.scalar_one_or_none()
     if not answer:
         raise HTTPException(status_code=404, detail="Answer not found")
-    
+
     await _check_question_modify_permission(db, answer.question, current_user)
-    
+
     await db.delete(answer)
     await db.commit()
-

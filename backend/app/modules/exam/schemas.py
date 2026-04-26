@@ -14,11 +14,13 @@ class ExamBase(BaseModel):
 
 class ExamCreate(ExamBase):
     """Payload for creating a new exam."""
+
     pass
 
 
 class ExamUpdate(BaseModel):
     """Fields that can be patched."""
+
     title: Optional[str] = None
     description: Optional[str] = None
     audio_mode: Optional[str] = None
@@ -51,14 +53,15 @@ class ExamResponse(ExamBase):
                 "current_step": 1,
                 "is_published": False,
                 "created_at": "2024-01-01T00:00:00",
-                "updated_at": "2024-01-01T00:00:00"
+                "updated_at": "2024-01-01T00:00:00",
             }
-        }
+        },
     )
 
 
 class ExamListResponse(BaseModel):
     """Paginated exam list."""
+
     exams: List[ExamResponse]
     total: int
     page: int

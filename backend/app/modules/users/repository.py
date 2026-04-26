@@ -37,14 +37,11 @@ class UserRepository:
         return result.scalar_one_or_none()
 
     async def get_all_with_filters(
-        self, 
-        filters: Dict[str, Any], 
-        skip: int = 0, 
-        limit: int = 10
+        self, filters: Dict[str, Any], skip: int = 0, limit: int = 10
     ) -> List[User]:
         """
         Get all users with optional filters and pagination.
-        
+
         Args:
             filters: Dictionary of filter criteria
                 - email: str (LIKE search)
@@ -53,7 +50,7 @@ class UserRepository:
                 - is_active: bool (exact match)
             skip: Number of records to skip
             limit: Maximum number of records to return
-        
+
         Returns:
             List of User objects
         """
@@ -62,16 +59,16 @@ class UserRepository:
         # Apply filters
         if filters.get("email"):
             query = query.filter(User.email.ilike(f"%{filters['email']}%"))
-        
+
         if filters.get("username"):
             query = query.filter(User.username.ilike(f"%{filters['username']}%"))
-        
+
         if filters.get("role"):
             query = query.filter(User.role == filters["role"])
 
         if filters.get("exclude_guest"):
             query = query.filter(User.role != "guest")
-        
+
         if filters.get("is_active") is not None:
             query = query.filter(User.is_active == filters["is_active"])
 
@@ -84,10 +81,10 @@ class UserRepository:
     async def count_all(self, filters: Dict[str, Any]) -> int:
         """
         Count total users matching filters.
-        
+
         Args:
             filters: Same filter criteria as get_all_with_filters
-        
+
         Returns:
             Total count of matching users
         """
@@ -96,16 +93,16 @@ class UserRepository:
         # Apply same filters as get_all_with_filters
         if filters.get("email"):
             query = query.filter(User.email.ilike(f"%{filters['email']}%"))
-        
+
         if filters.get("username"):
             query = query.filter(User.username.ilike(f"%{filters['username']}%"))
-        
+
         if filters.get("role"):
             query = query.filter(User.role == filters["role"])
 
         if filters.get("exclude_guest"):
             query = query.filter(User.role != "guest")
-        
+
         if filters.get("is_active") is not None:
             query = query.filter(User.is_active == filters["is_active"])
 

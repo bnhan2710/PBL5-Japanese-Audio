@@ -55,8 +55,12 @@ export default function CreateArenaPage() {
   const [description, setDescription] = useState('')
   const [maxDuration, setMaxDuration] = useState(45)
   const [minLevel, setMinLevel] = useState<JLPTLevel>('N3')
-  const [startAt, setStartAt] = useState(toLocalDatetimeValue(new Date(Date.now() + 60 * 60 * 1000)))
-  const [endAt, setEndAt] = useState(toLocalDatetimeValue(new Date(Date.now() + 2 * 60 * 60 * 1000)))
+  const [startAt, setStartAt] = useState(
+    toLocalDatetimeValue(new Date(Date.now() + 60 * 60 * 1000))
+  )
+  const [endAt, setEndAt] = useState(
+    toLocalDatetimeValue(new Date(Date.now() + 2 * 60 * 60 * 1000))
+  )
   const [maxParticipants, setMaxParticipants] = useState('50')
 
   useEffect(() => {
@@ -347,9 +351,7 @@ export default function CreateArenaPage() {
                             {exam.description || 'Đề thi không có mô tả.'}
                           </p>
                         </div>
-                        {selected ? (
-                          <CheckCircle2 className="h-5 w-5 text-orange-600" />
-                        ) : null}
+                        {selected ? <CheckCircle2 className="h-5 w-5 text-orange-600" /> : null}
                       </div>
                       <div className="mt-4 flex flex-wrap gap-3 text-xs text-muted-foreground">
                         <span>{exam.time_limit ?? 0} phút</span>
@@ -456,7 +458,10 @@ export default function CreateArenaPage() {
       ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Button variant="outline" onClick={() => (step === 1 ? navigate('/arena') : setStep((step - 1) as Step))}>
+        <Button
+          variant="outline"
+          onClick={() => (step === 1 ? navigate('/arena') : setStep((step - 1) as Step))}
+        >
           <ChevronLeft className="h-4 w-4" />
           {step === 1 ? 'Quay lại Arena' : 'Bước trước'}
         </Button>

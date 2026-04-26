@@ -14,12 +14,16 @@ class Audio(Base):
     content_hash = Column(String(64), nullable=True, unique=True, index=True)
     file_url = Column(Text, nullable=False)
     duration = Column(Integer, nullable=True)  # seconds
-    ai_status = Column(String(20), nullable=True, default="pending")  # pending | processing | completed | failed
+    ai_status = Column(
+        String(20), nullable=True, default="pending"
+    )  # pending | processing | completed | failed
     ai_model = Column(String(50), nullable=True)
     raw_transcript = Column(Text, nullable=True)
 
     # Relationships
-    segments = relationship("TranscriptSegment", back_populates="audio", cascade="all, delete-orphan")
+    segments = relationship(
+        "TranscriptSegment", back_populates="audio", cascade="all, delete-orphan"
+    )
     exams = relationship("Exam", back_populates="audio")
 
 
@@ -27,8 +31,10 @@ class TranscriptSegment(Base):
     __tablename__ = "transcript_segments"
 
     segment_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    audio_id = Column(UUID(as_uuid=True), ForeignKey("audios.audio_id", ondelete="CASCADE"), nullable=False)
-    speaker_name = Column(String(50), nullable=True)   # e.g. "Speaker A"
+    audio_id = Column(
+        UUID(as_uuid=True), ForeignKey("audios.audio_id", ondelete="CASCADE"), nullable=False
+    )
+    speaker_name = Column(String(50), nullable=True)  # e.g. "Speaker A"
     speaker_gender = Column(String(10), nullable=True)  # Male / Female
     start_time = Column(Float, nullable=True)
     end_time = Column(Float, nullable=True)

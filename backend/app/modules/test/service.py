@@ -107,11 +107,11 @@ def calculate_irt_score(responses: List[Tuple[int, int]]) -> float:
                 nll -= math.log(p)
             else:
                 nll -= math.log(1.0 - p)
-        
+
         # 2. Bayesian Prior (theta ~ N(0, 2.0))
         # Stabilizes estimation for low question counts
         prior_sigma = 2.0
-        nll += (theta ** 2) / (2 * (prior_sigma ** 2))
+        nll += (theta**2) / (2 * (prior_sigma**2))
         return nll
 
     # Estimate theta using Bayesian MAP
@@ -131,7 +131,7 @@ def calculate_irt_score(responses: List[Tuple[int, int]]) -> float:
     current_exp = get_expected_correct(theta)
     min_exp = get_expected_correct(-4.0)
     max_exp = get_expected_correct(4.0)
-    
+
     # Normalized expected score [0, 1]
     norm_exp = (current_exp - min_exp) / (max_exp - min_exp)
     norm_exp = max(0.0, min(1.0, norm_exp))
@@ -139,8 +139,8 @@ def calculate_irt_score(responses: List[Tuple[int, int]]) -> float:
     # 4. Balanced Power Transformation (1.2)
     # Compresses scores at the low end but provides more reasonable
     # resolution for mid-range performance compared to quadratic (2.0).
-    score = (norm_exp ** 1.2) * 60.0
-    
+    score = (norm_exp**1.2) * 60.0
+
     return round(float(max(0.0, min(60.0, score))), 2)
 
 
@@ -162,9 +162,7 @@ class TestService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found")
 
         can_access = (
-            exam.is_published
-            or current_user.role == "admin"
-            or exam.creator_id == current_user.id
+            exam.is_published or current_user.role == "admin" or exam.creator_id == current_user.id
         )
         if not can_access:
             raise HTTPException(
@@ -242,20 +240,22 @@ class TestService:
         exam = await self._get_exam_entity(exam_id, current_user)
         return self._build_exam_detail_response(exam)
 
-    async def get_result_review(self, result_id: UUID, current_user: User) -> TestResultReviewResponse:
+    async def get_result_review(
+        self, result_id: UUID, current_user: User
+    ) -> TestResultReviewResponse:
         # Get result
         result_stmt = select(UserResult).where(UserResult.result_id == result_id)
         db_result = (await self.db.execute(result_stmt)).scalar_one_or_none()
-        
+
         if not db_result:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Result not found")
-        
+
         if db_result.user_id != current_user.id and current_user.role != "admin":
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You are not allowed to access this result",
             )
-            
+
         exam = await self._get_exam_entity(db_result.exam_id, current_user)
         sorted_questions = _sort_questions(list(exam.questions))
 
@@ -288,7 +288,7 @@ class TestService:
                             content=answer.content,
                             image_url=answer.image_url,
                             order_index=answer.order_index,
-                            is_correct=answer.is_correct
+                            is_correct=answer.is_correct,
                         )
                         for answer in answers
                     ],
@@ -330,7 +330,7 @@ class TestService:
             correct_answers=db_result.correct_answers or 0,
             completed_at=db_result.completed_at,
             exam=exam_review,
-            user_answers=db_result.user_answers or {}
+            user_answers=db_result.user_answers or {},
         )
 
     async def _submit_exam_from_entity(
@@ -355,7 +355,7 @@ class TestService:
         for question in sorted_questions:
             selected_answer_id = submitted_answers.get(question.question_id)
             is_correct = 0
-            
+
             if selected_answer_id:
                 answered_questions += 1
                 answer_lookup = {answer.answer_id: answer for answer in question.answers}

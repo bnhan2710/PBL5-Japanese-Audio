@@ -14,12 +14,18 @@ class AIExamCache(Base):
     cache_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     cache_key = Column(String(128), nullable=False, unique=True, index=True)
     content_hash = Column(String(64), nullable=False, index=True)
-    audio_id = Column(UUID(as_uuid=True), ForeignKey("audios.audio_id", ondelete="SET NULL"), nullable=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    audio_id = Column(
+        UUID(as_uuid=True), ForeignKey("audios.audio_id", ondelete="SET NULL"), nullable=True
+    )
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     source_filename = Column(String(255), nullable=True)
     jlpt_level = Column(String(10), nullable=False)
     mondai_config_json = Column(Text, nullable=True)
-    status = Column(String(20), nullable=False, default="pending")  # pending | processing | completed | failed
+    status = Column(
+        String(20), nullable=False, default="pending"
+    )  # pending | processing | completed | failed
     job_id = Column(String(36), nullable=True)
     ai_model = Column(String(100), nullable=False)
     pipeline_version = Column(String(100), nullable=False)

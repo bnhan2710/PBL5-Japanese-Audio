@@ -89,10 +89,17 @@ export const SystemFeedbackModal: React.FC<SystemFeedbackModalProps> = ({
           <div className="p-8 text-center animate-in zoom-in-95 duration-300">
             <div className="w-16 h-16 mx-auto mb-4 bg-green-100 dark:bg-green-900/30 text-green-500 rounded-full flex items-center justify-center">
               <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
             </div>
-            <h4 className="text-xl font-medium text-slate-800 dark:text-slate-100 mb-2">Cảm ơn bạn!</h4>
+            <h4 className="text-xl font-medium text-slate-800 dark:text-slate-100 mb-2">
+              Cảm ơn bạn!
+            </h4>
             <p className="text-slate-500 dark:text-slate-400">
               Góp ý của bạn đã được lưu để cải thiện trải nghiệm hệ thống.
             </p>
@@ -101,7 +108,8 @@ export const SystemFeedbackModal: React.FC<SystemFeedbackModalProps> = ({
           <form onSubmit={handleSubmit} className="p-6">
             <div className="mb-6">
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3 text-center">
-                Bạn đánh giá trải nghiệm hệ thống như thế nào? <span className="text-red-500">*</span>
+                Bạn đánh giá trải nghiệm hệ thống như thế nào?{' '}
+                <span className="text-red-500">*</span>
               </label>
               <div className="flex justify-center gap-2">
                 {[1, 2, 3, 4, 5].map((star) => (

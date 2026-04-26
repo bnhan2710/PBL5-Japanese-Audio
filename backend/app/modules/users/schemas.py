@@ -6,7 +6,6 @@ from pydantic import BaseModel, EmailStr, Field, ConfigDict
 # User management schemas are below
 
 
-
 class UserResponse(BaseModel):
     id: int = Field(..., description="User ID")
     email: str = Field(..., description="Email")
@@ -33,16 +32,18 @@ class UserResponse(BaseModel):
                 "role": "user",
                 "created_at": "2024-01-01T00:00:00",
                 "updated_at": "2024-01-01T00:00:00",
-                "locked_until": None
+                "locked_until": None,
             }
-        }
+        },
     )
 
 
 # Admin-specific schemas
 
+
 class UserListFilters(BaseModel):
     """Filters for listing users."""
+
     email: Optional[str] = None
     username: Optional[str] = None
     role: Optional[str] = Field(None, pattern="^(admin|user)$")
@@ -51,6 +52,7 @@ class UserListFilters(BaseModel):
 
 class UserListResponse(BaseModel):
     """Paginated user list response."""
+
     users: List[UserResponse]
     total: int = Field(..., description="Total number of users")
     page: int = Field(..., description="Current page")
@@ -60,21 +62,24 @@ class UserListResponse(BaseModel):
 
 class UserCreateByAdmin(BaseModel):
     """Schema for admin creating a new user."""
+
     email: EmailStr = Field(..., description="New user email")
     username: str = Field(..., min_length=3, max_length=50, description="Username")
     role: str = Field("user", pattern="^(admin|user)$", description="Role")
-    password: Optional[str] = Field(None, min_length=8, description="Password (leave empty to auto-generate)")
+    password: Optional[str] = Field(
+        None, min_length=8, description="Password (leave empty to auto-generate)"
+    )
     first_name: Optional[str] = Field(None, description="First name")
     last_name: Optional[str] = Field(None, description="Last name")
     avatar_url: Optional[str] = Field(None, description="Avatar URL")
-    
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
                 "email": "newuser@example.com",
                 "username": "newuser123",
                 "role": "user",
-                "password": "password123456"
+                "password": "password123456",
             }
         }
     )
@@ -82,6 +87,7 @@ class UserCreateByAdmin(BaseModel):
 
 class UserUpdate(BaseModel):
     """Schema for updating user information."""
+
     email: Optional[EmailStr] = Field(None, description="New email")
     username: Optional[str] = Field(None, min_length=3, max_length=50, description="New username")
     role: Optional[str] = Field(None, pattern="^(admin|user)$", description="New role")
@@ -89,30 +95,34 @@ class UserUpdate(BaseModel):
     first_name: Optional[str] = Field(None, description="New first name")
     last_name: Optional[str] = Field(None, description="New last name")
     avatar_url: Optional[str] = Field(None, description="New avatar URL")
-    
+
     model_config = ConfigDict(
         json_schema_extra={
-            "example": {
-                "username": "updated_username",
-                "role": "admin",
-                "is_active": True
-            }
+            "example": {"username": "updated_username", "role": "admin", "is_active": True}
         }
     )
 
 
 class LockUserRequest(BaseModel):
     """Schema for locking a user account."""
-    duration_hours: int = Field(24, ge=-1, le=8760, description="Lock duration (hours), max 1 year. -1 for permanent ban.")
-    reason: str = Field("Vi phạm chính sách bảo mật / Hoạt động bất thường", description="Reason for locking the account")
-    detailed_reason: Optional[str] = Field(None, description="Detailed text reason for locking the account")
-    
+
+    duration_hours: int = Field(
+        24, ge=-1, le=8760, description="Lock duration (hours), max 1 year. -1 for permanent ban."
+    )
+    reason: str = Field(
+        "Vi phạm chính sách bảo mật / Hoạt động bất thường",
+        description="Reason for locking the account",
+    )
+    detailed_reason: Optional[str] = Field(
+        None, description="Detailed text reason for locking the account"
+    )
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
                 "duration_hours": 48,
                 "reason": "Vi phạm chính sách bảo mật / Hoạt động bất thường",
-                "detailed_reason": "Có dấu hiệu đăng nhập bất thường từ nhiều IP"
+                "detailed_reason": "Có dấu hiệu đăng nhập bất thường từ nhiều IP",
             }
         }
     )
@@ -120,30 +130,30 @@ class LockUserRequest(BaseModel):
 
 class AdminResetPasswordResponse(BaseModel):
     """Response when admin resets user password."""
+
     message: str = Field(..., description="Message")
     temporary_password: str = Field(..., description="Temporary password")
-    
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
                 "message": "Password reset successfully",
-                "temporary_password": "TempPass123!"
+                "temporary_password": "TempPass123!",
             }
         }
     )
+
+
 class UserMeUpdate(BaseModel):
     """Schema for users to update their own profile information."""
+
     username: Optional[str] = Field(None, min_length=3, max_length=50, description="New username")
     first_name: Optional[str] = Field(None, description="New first name")
     last_name: Optional[str] = Field(None, description="New last name")
     avatar_url: Optional[str] = Field(None, description="New avatar URL")
-    
+
     model_config = ConfigDict(
         json_schema_extra={
-            "example": {
-                "username": "updated_username",
-                "first_name": "New",
-                "last_name": "Name"
-            }
+            "example": {"username": "updated_username", "first_name": "New", "last_name": "Name"}
         }
     )

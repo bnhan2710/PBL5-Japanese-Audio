@@ -86,7 +86,9 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json()
 }
 
-export function getArenaStatus(contest: Pick<ArenaContest, 'start_time' | 'end_time'>): ArenaStatus {
+export function getArenaStatus(
+  contest: Pick<ArenaContest, 'start_time' | 'end_time'>
+): ArenaStatus {
   const now = new Date()
   const start = new Date(contest.start_time)
   const end = new Date(contest.end_time)

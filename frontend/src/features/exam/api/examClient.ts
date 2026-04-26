@@ -375,9 +375,7 @@ export const randomExamClient = {
   /**
    * Poll job status for random exam generation
    */
-  getRandomExamJobStatus: (
-    jobId: string
-  ): Promise<RandomExamGenerateResponse> =>
+  getRandomExamJobStatus: (jobId: string): Promise<RandomExamGenerateResponse> =>
     apiFetch(`${API_BASE}/api/exams/random/job/${jobId}`).then((r) =>
       handleResponse<RandomExamGenerateResponse>(r)
     ),
@@ -389,8 +387,8 @@ export const randomExamClient = {
   getAvailableQuestions: (
     jlpt_level: 'N5' | 'N4' | 'N3' | 'N2' | 'N1'
   ): Promise<Record<string, QuestionResponse[]>> =>
-    apiFetch(`${API_BASE}/api/exams/random/available-questions?level=${jlpt_level}`).then(
-      (r) => handleResponse<Record<string, QuestionResponse[]>>(r)
+    apiFetch(`${API_BASE}/api/exams/random/available-questions?level=${jlpt_level}`).then((r) =>
+      handleResponse<Record<string, QuestionResponse[]>>(r)
     ),
 
   /**

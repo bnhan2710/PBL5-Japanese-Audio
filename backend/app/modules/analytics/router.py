@@ -24,17 +24,17 @@ async def get_analytics_overview(
     # Ensure admin role for production, but keeping it open for dev or check role
     # if current_user.role != "admin":
     #     raise HTTPException(status_code=403, detail="Not an admin")
-    
+
     if not end_date:
         end_date = datetime.utcnow()
     else:
         end_date = end_date.replace(tzinfo=None)
-        
+
     if not start_date:
         start_date = end_date - timedelta(days=30)
     else:
         start_date = start_date.replace(tzinfo=None)
-        
+
     return await analytics_service.get_overview(db, start_date, end_date, level)
 
 
@@ -52,10 +52,10 @@ async def get_analytics_feedbacks(
         end_date = datetime.utcnow()
     else:
         end_date = end_date.replace(tzinfo=None)
-        
+
     if not start_date:
         start_date = end_date - timedelta(days=30)
     else:
         start_date = start_date.replace(tzinfo=None)
-        
+
     return await analytics_service.get_feedback_list(db, start_date, end_date, type_filter, rating)

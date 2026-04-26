@@ -21,57 +21,52 @@ JLPT_STANDARD_MAPPING = {
         2: "Hiểu điểm chính",
         3: "Hiểu khái quát",
         4: "Phản xạ nhanh",
-        5: "Hiểu tổng hợp"
+        5: "Hiểu tổng hợp",
     },
     "N2": {
         1: "Hiểu vấn đề",
         2: "Hiểu điểm chính",
         3: "Hiểu khái quát",
         4: "Phản xạ nhanh",
-        5: "Hiểu tổng hợp"
+        5: "Hiểu tổng hợp",
     },
     "N3": {
         1: "Hiểu vấn đề",
         2: "Hiểu điểm chính",
         3: "Hiểu khái quát",
         4: "Biểu hiện phát ngôn",
-        5: "Phản xạ nhanh"
+        5: "Phản xạ nhanh",
     },
-    "N4": {
-        1: "Hiểu vấn đề",
-        2: "Hiểu điểm chính",
-        3: "Biểu hiện phát ngôn",
-        4: "Phản xạ nhanh"
-    },
-    "N5": {
-        1: "Hiểu vấn đề",
-        2: "Hiểu điểm chính",
-        3: "Biểu hiện phát ngôn",
-        4: "Phản xạ nhanh"
-    }
+    "N4": {1: "Hiểu vấn đề", 2: "Hiểu điểm chính", 3: "Biểu hiện phát ngôn", 4: "Phản xạ nhanh"},
+    "N5": {1: "Hiểu vấn đề", 2: "Hiểu điểm chính", 3: "Biểu hiện phát ngôn", 4: "Phản xạ nhanh"},
 }
 
-def get_skill_from_mondai(mondai_group: str, level: Optional[str] = None) -> tuple[str, Optional[int]]:
+
+def get_skill_from_mondai(
+    mondai_group: str, level: Optional[str] = None
+) -> tuple[str, Optional[int]]:
     """Map a Mondai group to a general skill label and its ID."""
     if not mondai_group:
         return "Khác", None
-    
+
     mondai_label = mondai_group.lower().strip()
-    
+
     # Extract mondai number (e.g. "Mondai 1" -> 1)
     match = re.search(r"\d+", mondai_label)
     m_id = int(match.group()) if match else None
 
     # Normalize level
     level = (level or "").upper().strip()
-    
+
     # 1. Check keywords first
     if "tổng hợp" in mondai_label or "sougou" in mondai_label or "tougou" in mondai_label:
         return "Hiểu tổng hợp", 5
     elif "phát ngôn" in mondai_label or "biểu hiện" in mondai_label or "hatsuwa" in mondai_label:
         return "Biểu hiện phát ngôn", (4 if level == "N3" else 3)
     elif "phản xạ" in mondai_label or "sokuji" in mondai_label or "tức thời" in mondai_label:
-        return "Phản xạ nhanh", (5 if level == "N3" else (4 if level in ["N2", "N1", "N4", "N5"] else 4))
+        return "Phản xạ nhanh", (
+            5 if level == "N3" else (4 if level in ["N2", "N1", "N4", "N5"] else 4)
+        )
     elif "khái quát" in mondai_label or "tổng quan" in mondai_label or "gaiyou" in mondai_label:
         return "Hiểu khái quát", 3
     elif "điểm chính" in mondai_label or "point" in mondai_label:
@@ -98,57 +93,64 @@ def extract_json_from_llm_response(text: str) -> dict:
         # Remove up to the first newline after ``` or ```json
         lines = text.split("\n")
         if len(lines) > 1:
-             text = "\n".join(lines[1:])
+            text = "\n".join(lines[1:])
         if text.endswith("```"):
-             text = text[:-3]
-    
+            text = text[:-3]
+
     try:
         return json.loads(text.strip())
     except json.JSONDecodeError:
         # Fallback to empty if it completely fails
         return {
-             "overview": "Không thể phân tích kết quả lúc này.",
-             "strengths": [],
-             "weaknesses_analysis": text, 
-             "actionable_advice": []
+            "overview": "Không thể phân tích kết quả lúc này.",
+            "strengths": [],
+            "weaknesses_analysis": text,
+            "actionable_advice": [],
         }
+
 
 class CompetencyAnalysisService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_or_create_analysis(self, result_id: UUID, current_user: User) -> CompetencyAnalysis:
+    async def get_or_create_analysis(
+        self, result_id: UUID, current_user: User
+    ) -> CompetencyAnalysis:
         # 1. Check if analysis already exists
         query = select(CompetencyAnalysis).where(CompetencyAnalysis.result_id == result_id)
         existing = await self.db.execute(query)
         analysis = existing.scalar_one_or_none()
-        
+
         if analysis:
             return analysis
-            
+
         # 2. Fetch UserResult and authorize
         result_query = select(UserResult).where(UserResult.result_id == result_id)
         user_res_exec = await self.db.execute(result_query)
         user_result = user_res_exec.scalar_one_or_none()
-        
+
         if not user_result:
             raise HTTPException(status_code=404, detail="Result not found")
-            
+
         if user_result.user_id != current_user.id:
             raise HTTPException(status_code=403, detail="Not authorized to view this result")
-            
+
         # 3. Fetch questions mapping to exam
-        q_query = select(Question).where(Question.exam_id == user_result.exam_id).options(joinedload(Question.answers), joinedload(Question.exam))
+        q_query = (
+            select(Question)
+            .where(Question.exam_id == user_result.exam_id)
+            .options(joinedload(Question.answers), joinedload(Question.exam))
+        )
         q_exec = await self.db.execute(q_query)
         # Ensure we unique() the result because of joinedload
         questions = q_exec.unique().scalars().all()
         q_dict = {str(q.question_id): q for q in questions}
-        
+
         # Get Exam level if possible
         exam_obj = None
         if questions:
             exam_obj = questions[0].exam
-        
+
         jlpt_level = None
         if exam_obj:
             title = (exam_obj.title or "").upper()
@@ -156,25 +158,25 @@ class CompetencyAnalysisService:
             match = re.search(r"(N[1-5])", title + desc)
             if match:
                 jlpt_level = match.group(1)
-        
+
         # Default to N2 if not found
         effective_level = jlpt_level or "N2"
 
         # 4. Analyze mistakes and skills
         # Initialize with standard skills for the level
-        skill_stats: Dict[str, Dict[str, Any]] = {} 
+        skill_stats: Dict[str, Dict[str, Any]] = {}
         standard_for_level = JLPT_STANDARD_MAPPING.get(effective_level, JLPT_STANDARD_MAPPING["N2"])
         for m_id, skill_name in standard_for_level.items():
             skill_stats[skill_name] = {"total": 0, "correct": 0, "mondai_id": m_id}
 
         mistakes_info = []
         user_answers = user_result.user_answers or {}
-        
+
         # 4a. First calculate TOTAL questions per skill from all exam questions
         for q in questions:
             skill, m_id = get_skill_from_mondai(q.mondai_group, level=effective_level)
             if skill not in skill_stats:
-                 skill_stats[skill] = {"total": 0, "correct": 0, "mondai_id": m_id}
+                skill_stats[skill] = {"total": 0, "correct": 0, "mondai_id": m_id}
             skill_stats[skill]["total"] += 1
 
         # 4b. Then calculate CORRECT answers from user_answers
@@ -182,18 +184,22 @@ class CompetencyAnalysisService:
         # It could be {"q_id": "ans_id"} or a list [{"question_id": "...", "answer_id": "..."}]
         if isinstance(user_answers, list):
             # Convert to dict mapping for easier usage
-            user_answers = {str(ans.get("question_id")): str(ans.get("answer_id")) for ans in user_answers if ans.get("question_id")}
-            
+            user_answers = {
+                str(ans.get("question_id")): str(ans.get("answer_id"))
+                for ans in user_answers
+                if ans.get("question_id")
+            }
+
         for q_id_str, ans_id_val in user_answers.items():
             q = q_dict.get(q_id_str)
             if not q:
                 continue
-                
+
             skill, m_id = get_skill_from_mondai(q.mondai_group, level=effective_level)
             if skill not in skill_stats:
                 # This case shouldn't happen if q is in q_dict, but for safety:
                 skill_stats[skill] = {"total": 0, "correct": 0, "mondai_id": m_id}
-            
+
             # Check if answer is correct
             is_correct = False
             user_selected_text = "Không có"
@@ -203,39 +209,43 @@ class CompetencyAnalysisService:
                     if a.is_correct:
                         is_correct = True
                     break
-                    
+
             if is_correct:
-                 skill_stats[skill]["correct"] += 1
+                skill_stats[skill]["correct"] += 1
             else:
-                 # Collect mistake context
-                 mistakes_info.append({
-                     "skill": skill,
-                     "question": q.question_text or "Câu hỏi không có nội dung text",
-                     "user_selected": user_selected_text,
-                     "is_correct": False,
-                     "explanation": q.explanation or "Không có giải thích chi tiết."
-                 })
-                 
+                # Collect mistake context
+                mistakes_info.append(
+                    {
+                        "skill": skill,
+                        "question": q.question_text or "Câu hỏi không có nội dung text",
+                        "user_selected": user_selected_text,
+                        "is_correct": False,
+                        "explanation": q.explanation or "Không có giải thích chi tiết.",
+                    }
+                )
+
         # Format strings for the prompt
         skill_summary = []
         skill_metrics_rich = {}
         for skill, stats in skill_stats.items():
-            percentage = (stats['correct'] / stats['total']) * 100 if stats['total'] > 0 else 0
-            skill_summary.append(f"- {skill}: {percentage:.1f}% (đúng {stats['correct']}/{stats['total']})")
+            percentage = (stats["correct"] / stats["total"]) * 100 if stats["total"] > 0 else 0
+            skill_summary.append(
+                f"- {skill}: {percentage:.1f}% (đúng {stats['correct']}/{stats['total']})"
+            )
             skill_metrics_rich[skill] = {
-                "correct": stats['correct'],
-                "total": stats['total'],
+                "correct": stats["correct"],
+                "total": stats["total"],
                 "percentage": round(percentage, 1),
-                "mondai_id": stats.get("mondai_id")
+                "mondai_id": stats.get("mondai_id"),
             }
-            
+
         # Round-robin: Phân bổ rải đều các lỗi sai theo từng nhóm kỹ năng để AI có cái nhìn toàn diện
         mistakes_to_send = []
         if len(mistakes_info) > 15:
             skill_groups = {}
             for m in mistakes_info:
-                skill_groups.setdefault(m['skill'], []).append(m)
-            
+                skill_groups.setdefault(m["skill"], []).append(m)
+
             while len(mistakes_to_send) < 15 and skill_groups:
                 for skill in list(skill_groups.keys()):
                     if skill_groups[skill]:
@@ -246,7 +256,7 @@ class CompetencyAnalysisService:
                         break
         else:
             mistakes_to_send = mistakes_info
-        
+
         # 5. Build Prompt
         system_prompt = (
             "You are a dedicated, highly strict yet understanding JLPT Japanese language competency assessment expert. "
@@ -255,7 +265,7 @@ class CompetencyAnalysisService:
             "the use of honorifics/humble language (keigo/kenjougo), or contrastive conjunctions (shikashi, demo, tokoroga). "
             "IMPORTANT: Your entire response must be written exclusively in Vietnamese."
         )
-        
+
         user_prompt = f"""INPUT DATA:
 - Accuracy rate by skill:
 {chr(10).join(skill_summary)}
@@ -277,26 +287,26 @@ MANDATORY OUTPUT JSON FORMAT (Do not add any markdown formatting or text outside
   "actionable_advice": ["Giải pháp 1 bằng tiếng Việt (Cụ thể, thực tế)", "Giải pháp 2 bằng tiếng Việt (Cụ thể, thực tế)"]
 }}
 """
-        
+
         # 6. Call Local LLM
         payload = {
             "model": settings.LM_STUDIO_MODEL,
             "messages": [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
+                {"role": "user", "content": user_prompt},
             ],
-            "temperature": 0.5, # Slightly deterministic to keep JSON structure
+            "temperature": 0.5,  # Slightly deterministic to keep JSON structure
         }
-        
+
         try:
             async with httpx.AsyncClient(timeout=3000.0) as client:
                 res = await client.post(settings.LM_STUDIO_API_URL, json=payload)
                 res.raise_for_status()
                 data = res.json()
                 content = data["choices"][0]["message"]["content"]
-                
+
                 parsed = extract_json_from_llm_response(content)
-                
+
             # Only save to DB if it was successful
             new_analysis = CompetencyAnalysis(
                 result_id=result_id,
@@ -304,10 +314,11 @@ MANDATORY OUTPUT JSON FORMAT (Do not add any markdown formatting or text outside
                 strengths=parsed.get("strengths", []),
                 weaknesses_analysis=parsed.get("weaknesses_analysis", ""),
                 actionable_advice=parsed.get("actionable_advice", []),
-                skill_metrics=skill_metrics_rich
+                skill_metrics=skill_metrics_rich,
             )
-            
+
             from sqlalchemy.exc import IntegrityError
+
             try:
                 self.db.add(new_analysis)
                 await self.db.commit()
@@ -319,12 +330,13 @@ MANDATORY OUTPUT JSON FORMAT (Do not add any markdown formatting or text outside
                 query = select(CompetencyAnalysis).where(CompetencyAnalysis.result_id == result_id)
                 existing = await self.db.execute(query)
                 return existing.scalar_one_or_none()
-                
+
         except Exception as e:
             print(f"LLM Error: {str(e)}")
             # If LLM network fails, return an ephemeral fallback without saving to DB.
             import uuid
             from datetime import datetime, timezone
+
             return CompetencyAnalysis(
                 analysis_id=uuid.uuid4(),
                 result_id=result_id,
@@ -332,5 +344,5 @@ MANDATORY OUTPUT JSON FORMAT (Do not add any markdown formatting or text outside
                 strengths=[],
                 weaknesses_analysis="Không thể phân tích do lỗi kết nối nội bộ hoặc thời gian chờ (timeout) quá lâu.",
                 actionable_advice=[],
-                created_at=datetime.now(timezone.utc)
+                created_at=datetime.now(timezone.utc),
             )

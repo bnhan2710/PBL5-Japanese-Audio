@@ -15,12 +15,12 @@ logger = setup_logger(__name__)
 def send_email(to: str, subject: str, body: str) -> bool:
     """
     Send email using SMTP Gmail.
-    
+
     Args:
         to: Recipient email address
         subject: Email subject
         body: Email body (HTML supported)
-    
+
     Returns:
         bool: True if sent successfully, False otherwise
     """
@@ -50,20 +50,22 @@ def send_email(to: str, subject: str, body: str) -> bool:
         return False
 
 
-def send_verification_email(user: User, token: str, base_url: str = "http://localhost:3000") -> bool:
+def send_verification_email(
+    user: User, token: str, base_url: str = "http://localhost:3000"
+) -> bool:
     """
     Send email verification link to user.
-    
+
     Args:
         user: User object
         token: Verification token
         base_url: Frontend base URL
-    
+
     Returns:
         bool: True if sent successfully
     """
     verification_link = f"{base_url}/verify-email?token={token}"
-    
+
     subject = "Verify Your Email Address"
     body = f"""
     <html>
@@ -88,18 +90,18 @@ def send_verification_email(user: User, token: str, base_url: str = "http://loca
         </body>
     </html>
     """
-    
+
     return send_email(user.email, subject, body)
 
 
 def send_update_notification(user: User, changes: dict) -> bool:
     """
     Send notification email when user profile is updated.
-    
+
     Args:
         user: User object
         changes: Dictionary of changed fields
-    
+
     Returns:
         bool: True if sent successfully
     """
@@ -107,7 +109,7 @@ def send_update_notification(user: User, changes: dict) -> bool:
     for field, value in changes.items():
         changes_list += f"<li><strong>{field.replace('_', ' ').title()}:</strong> {value}</li>"
     changes_list += "</ul>"
-    
+
     subject = "Your Account Information Has Been Updated"
     body = f"""
     <html>
@@ -124,18 +126,18 @@ def send_update_notification(user: User, changes: dict) -> bool:
         </body>
     </html>
     """
-    
+
     return send_email(user.email, subject, body)
 
 
 def send_password_reset_by_admin(user: User, temp_password: str) -> bool:
     """
     Send temporary password email when admin resets user password.
-    
+
     Args:
         user: User object
         temp_password: Temporary password
-    
+
     Returns:
         bool: True if sent successfully
     """
@@ -162,7 +164,7 @@ def send_password_reset_by_admin(user: User, temp_password: str) -> bool:
         </body>
     </html>
     """
-    
+
     return send_email(user.email, subject, body)
 
 
@@ -222,19 +224,24 @@ def send_password_changed_notification_email(user: User) -> bool:
     return send_email(user.email, subject, body)
 
 
-def send_account_locked_email(user: User, duration_hours: int, reason: str = "Vi phạm chính sách bảo mật / Hoạt động bất thường", detailed_reason: str = None) -> bool:
+def send_account_locked_email(
+    user: User,
+    duration_hours: int,
+    reason: str = "Vi phạm chính sách bảo mật / Hoạt động bất thường",
+    detailed_reason: str = None,
+) -> bool:
     """
     Send email notification when account is locked.
     """
     system_name = "Japanese Audio"
-    timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
+    timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
     reference_id = f"LCK-{user.id}-{int(datetime.utcnow().timestamp())}"
-    
+
     detailed_en = f"<br>Detailed Info: {detailed_reason}" if detailed_reason else ""
     detailed_vi = f"<br>Mô tả chi tiết: {detailed_reason}" if detailed_reason else ""
-    
+
     subject = "[Japanese Audio] Thông báo về việc tạm ngưng hoạt động tài khoản - Account Suspension Notice"
-    
+
     body = f"""
     <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
@@ -320,7 +327,7 @@ def send_account_locked_email(user: User, duration_hours: int, reason: str = "Vi
         </body>
     </html>
     """
-    
+
     return send_email(user.email, subject, body)
 
 
@@ -329,11 +336,11 @@ def send_account_unlocked_email(user: User) -> bool:
     Send email notification when account is unlocked.
     """
     system_name = "Japanese Audio"
-    timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
+    timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
     reference_id = f"LCK-{user.id}-{int(datetime.utcnow().timestamp())}"
-    
+
     subject = "[Japanese Audio] Thông báo khôi phục hoạt động tài khoản - Account Restored Notice"
-    
+
     body = f"""
     <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
@@ -385,5 +392,5 @@ def send_account_unlocked_email(user: User) -> bool:
         </body>
     </html>
     """
-    
+
     return send_email(user.email, subject, body)

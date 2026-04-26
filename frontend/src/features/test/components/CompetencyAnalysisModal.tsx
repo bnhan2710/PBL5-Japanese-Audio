@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react'
 import {
   BrainCircuit,
   X,
@@ -10,63 +10,74 @@ import {
   AlertTriangle,
   Loader2,
   Trophy,
-} from 'lucide-react';
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
-import { Button } from '@/components/ui/Button';
-import { testClient } from '../api/testClient';
-import { CompetencyAnalysisResponse } from '../types';
+} from 'lucide-react'
+import {
+  Radar,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
+} from 'recharts'
+import { Button } from '@/components/ui/Button'
+import { testClient } from '../api/testClient'
+import { CompetencyAnalysisResponse } from '../types'
 
 export interface CompetencyAnalysisModalProps {
-  resultId: string;
-  onClose: () => void;
+  resultId: string
+  onClose: () => void
 }
 
 export function CompetencyAnalysisModal({ resultId, onClose }: CompetencyAnalysisModalProps) {
-  const [data, setData] = useState<CompetencyAnalysisResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>('');
+  const [data, setData] = useState<CompetencyAnalysisResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string>('')
 
   useEffect(() => {
-    let isMounted = true;
-    setLoading(true);
+    let isMounted = true
+    setLoading(true)
 
-    testClient.getCompetencyAnalysis(resultId)
+    testClient
+      .getCompetencyAnalysis(resultId)
       .then((res) => {
         if (isMounted) {
-          setData(res);
-          setError('');
+          setData(res)
+          setError('')
         }
       })
       .catch((err) => {
         if (isMounted) {
-          setError(err.message || 'Không thể lấy dữ liệu phân tích. Vui lòng thử lại sau.');
+          setError(err.message || 'Không thể lấy dữ liệu phân tích. Vui lòng thử lại sau.')
         }
       })
       .finally(() => {
         if (isMounted) {
-          setLoading(false);
+          setLoading(false)
         }
-      });
+      })
 
     return () => {
-      isMounted = false;
-    };
-  }, [resultId]);
+      isMounted = false
+    }
+  }, [resultId])
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Dynamic blurred background layer */}
-      <div
-        className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={onClose} />
 
       <div className="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-[32px] border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-300">
-
         {/* Header Section with Gradient Background */}
         <div className="relative shrink-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-violet-700 px-6 py-8 text-white sm:px-10">
           <div className="absolute right-0 top-0 opacity-20 pointer-events-none">
-            <svg width="400" height="200" viewBox="0 0 400 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg
+              width="400"
+              height="200"
+              viewBox="0 0 400 200"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
               <circle cx="300" cy="-50" r="150" fill="currentColor" />
               <circle cx="350" cy="150" r="100" fill="currentColor" />
             </svg>
@@ -114,13 +125,14 @@ export function CompetencyAnalysisModal({ resultId, onClose }: CompetencyAnalysi
               </div>
               <h3 className="text-xl font-bold text-foreground">Ups! Có lỗi xảy ra</h3>
               <p className="mt-2 max-w-md text-muted-foreground">{error}</p>
-              <Button onClick={onClose} className="mt-6 rounded-full px-8">Đóng</Button>
+              <Button onClick={onClose} className="mt-6 rounded-full px-8">
+                Đóng
+              </Button>
             </div>
           )}
 
           {data && !loading && (
             <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-
               {/* Overview panel */}
               {data.overview && (
                 <div className="relative overflow-hidden rounded-[24px] border border-indigo-100 dark:border-indigo-900/30 bg-card p-6 shadow-sm">
@@ -130,7 +142,9 @@ export function CompetencyAnalysisModal({ resultId, onClose }: CompetencyAnalysi
                       <Sparkles className="h-6 w-6" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-black uppercase tracking-widest text-indigo-400">Tổng quan năng lực</h4>
+                      <h4 className="text-sm font-black uppercase tracking-widest text-indigo-400">
+                        Tổng quan năng lực
+                      </h4>
                       <p className="mt-2 text-[15px] leading-[1.8] text-card-foreground">
                         {data.overview}
                       </p>
@@ -144,7 +158,9 @@ export function CompetencyAnalysisModal({ resultId, onClose }: CompetencyAnalysi
                 <div className="rounded-[24px] border border-border bg-card p-6 shadow-sm">
                   <div className="mb-2 text-center">
                     <h4 className="text-xl font-black text-foreground">Bản đồ Năng lực Đồng bộ</h4>
-                    <p className="text-sm text-muted-foreground">Đánh giá độ phủ kiến thức đa chiều</p>
+                    <p className="text-sm text-muted-foreground">
+                      Đánh giá độ phủ kiến thức đa chiều
+                    </p>
                   </div>
                   <div className="mx-auto h-[350px] w-full max-w-lg">
                     <ResponsiveContainer width="100%" height="100%">
@@ -163,10 +179,7 @@ export function CompetencyAnalysisModal({ resultId, onClose }: CompetencyAnalysi
                             fullMark: 100,
                           }))}
                       >
-                        <PolarGrid
-                          stroke="var(--border)"
-                          strokeOpacity={0.5}
-                        />
+                        <PolarGrid stroke="var(--border)" strokeOpacity={0.5} />
                         <PolarAngleAxis
                           dataKey="subject"
                           tick={{ fill: 'var(--muted-foreground)', fontSize: 12, fontWeight: 600 }}
@@ -180,10 +193,12 @@ export function CompetencyAnalysisModal({ resultId, onClose }: CompetencyAnalysi
                         <RechartsTooltip
                           content={({ active, payload }) => {
                             if (active && payload && payload.length) {
-                              const itemData = payload[0].payload;
+                              const itemData = payload[0].payload
                               return (
                                 <div className="rounded-xl border border-border bg-card p-3 shadow-xl backdrop-blur-md">
-                                  <p className="text-sm font-black text-foreground">{itemData.subject}</p>
+                                  <p className="text-sm font-black text-foreground">
+                                    {itemData.subject}
+                                  </p>
                                   <div className="mt-1.5 flex items-center gap-2">
                                     <div className="h-2 w-full max-w-[60px] overflow-hidden rounded-full bg-muted">
                                       <div
@@ -191,15 +206,21 @@ export function CompetencyAnalysisModal({ resultId, onClose }: CompetencyAnalysi
                                         style={{ width: `${itemData.percentage}%` }}
                                       />
                                     </div>
-                                    <span className="text-xs font-bold text-indigo-500">{itemData.percentage}%</span>
+                                    <span className="text-xs font-bold text-indigo-500">
+                                      {itemData.percentage}%
+                                    </span>
                                   </div>
                                   <p className="mt-1 text-[10px] text-muted-foreground font-medium italic">
-                                    Làm đúng: <span className="text-foreground">{itemData.correct}/{itemData.total}</span> câu
+                                    Làm đúng:{' '}
+                                    <span className="text-foreground">
+                                      {itemData.correct}/{itemData.total}
+                                    </span>{' '}
+                                    câu
                                   </p>
                                 </div>
-                              );
+                              )
                             }
-                            return null;
+                            return null
                           }}
                         />
                         <Radar
@@ -289,5 +310,5 @@ export function CompetencyAnalysisModal({ resultId, onClose }: CompetencyAnalysi
         </div>
       </div>
     </div>
-  );
+  )
 }

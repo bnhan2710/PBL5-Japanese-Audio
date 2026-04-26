@@ -9,7 +9,7 @@ import {
   Sparkles,
   XCircle,
   FileText,
-  Brain
+  Brain,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/Button'
@@ -32,7 +32,7 @@ function getGlobalAudioUrl(exam: any): string | undefined {
 export default function TestResultReviewPage() {
   const { resultId } = useParams()
   const navigate = useNavigate()
-  
+
   const [data, setData] = useState<TestResultReviewResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -47,8 +47,9 @@ export default function TestResultReviewPage() {
     }
 
     setLoading(true)
-    resultClient.getResultReview(resultId)
-      .then(res => {
+    resultClient
+      .getResultReview(resultId)
+      .then((res) => {
         setData(res)
         if (res.exam.questions.length > 0) {
           setActiveQuestionId(res.exam.questions[0].question_id)
@@ -72,14 +73,19 @@ export default function TestResultReviewPage() {
     return Array.from(groups.entries()).map(([label, questions]) => ({ label, questions }))
   }, [data])
 
-  const activeQuestion = data?.exam.questions.find((question) => question.question_id === activeQuestionId) || null
-  const activeIndex = data?.exam.questions.findIndex((question) => question.question_id === activeQuestionId) ?? -1
+  const activeQuestion =
+    data?.exam.questions.find((question) => question.question_id === activeQuestionId) || null
+  const activeIndex =
+    data?.exam.questions.findIndex((question) => question.question_id === activeQuestionId) ?? -1
 
   const activeGroup = activeQuestion?.mondai_group || 'Mondai'
-  const activeGroupQuestions = groupedQuestions.find((group) => group.label === activeGroup)?.questions || []
+  const activeGroupQuestions =
+    groupedQuestions.find((group) => group.label === activeGroup)?.questions || []
   const activeGroupStart = activeGroupQuestions[0]?.question_number || 1
   const activeGroupEnd =
-    activeGroupQuestions[activeGroupQuestions.length - 1]?.question_number || activeGroupQuestions.length || 1
+    activeGroupQuestions[activeGroupQuestions.length - 1]?.question_number ||
+    activeGroupQuestions.length ||
+    1
 
   const moveQuestion = (step: number) => {
     if (!data || activeIndex < 0) return
@@ -98,7 +104,9 @@ export default function TestResultReviewPage() {
   if (error || !data || !activeQuestion) {
     return (
       <div className="mx-auto max-w-3xl rounded-3xl border border-red-200 bg-red-50 px-8 py-10 text-center">
-        <p className="text-lg font-semibold text-red-700">{error || 'Không thể tải lịch sử làm bài'}</p>
+        <p className="text-lg font-semibold text-red-700">
+          {error || 'Không thể tải lịch sử làm bài'}
+        </p>
         <Button className="mt-5" variant="outline" onClick={() => navigate('/history')}>
           Quay lại danh sách
         </Button>
@@ -112,7 +120,6 @@ export default function TestResultReviewPage() {
   return (
     <div className="mx-auto max-w-[1650px]">
       <section className="overflow-hidden rounded-[36px] border border-border bg-card shadow-xl shadow-slate-200/50">
-        
         {/* Header */}
         <div className="border-b border-border bg-card px-6 py-6 sm:px-8">
           <div className="grid items-center gap-4 lg:grid-cols-[1fr_auto_1fr]">
@@ -123,7 +130,9 @@ export default function TestResultReviewPage() {
                 </Link>
               </Button>
               <div className="min-w-0">
-                <p className="truncate text-base font-black tracking-tight text-teal-950">{exam.title} (Xem lại)</p>
+                <p className="truncate text-base font-black tracking-tight text-teal-950">
+                  {exam.title} (Xem lại)
+                </p>
                 <div className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
                   <span>Hoàn thành lúc: {new Date(data.completed_at).toLocaleString('vi-VN')}</span>
                   <span>·</span>
@@ -135,20 +144,26 @@ export default function TestResultReviewPage() {
             <div className="justify-self-start lg:justify-self-center">
               <div className="flex items-center gap-6 text-slate-700">
                 <div className="text-center">
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Điểm IRT</p>
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                    Điểm IRT
+                  </p>
                   <p className="text-2xl font-black text-indigo-600">{data.score.toFixed(2)}</p>
                 </div>
                 <div className="h-10 w-px bg-slate-200"></div>
                 <div className="text-center">
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Số câu đúng</p>
-                  <p className="text-2xl font-black text-emerald-600">{data.correct_answers}/{data.total_questions}</p>
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                    Số câu đúng
+                  </p>
+                  <p className="text-2xl font-black text-emerald-600">
+                    {data.correct_answers}/{data.total_questions}
+                  </p>
                 </div>
               </div>
             </div>
 
             <div className="justify-self-start lg:justify-self-end hidden lg:flex items-center gap-3">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={() => setShowAnalysis(true)}
                 className="rounded-full border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-bold transition-all shadow-sm"
@@ -156,9 +171,11 @@ export default function TestResultReviewPage() {
                 <Sparkles className="w-3.5 h-3.5 mr-1.5" />
                 Phân tích học tập (AI)
               </Button>
-              <div className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider ${
-                data.score <= 19 ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'
-              }`}>
+              <div
+                className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider ${
+                  data.score <= 19 ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'
+                }`}
+              >
                 {data.score <= 19 ? 'KHÔNG ĐẠT' : 'ĐẠT (PASS)'}
               </div>
             </div>
@@ -167,14 +184,18 @@ export default function TestResultReviewPage() {
 
         <div className="bg-[#f6f7ff] px-6 py-8 sm:px-8 sm:py-10">
           <div className="grid items-start gap-6 lg:grid-cols-[230px_minmax(0,1fr)] xl:grid-cols-[245px_minmax(0,1fr)]">
-            
             {/* Sidebar Navigation */}
             <aside className="space-y-6">
               <div className="space-y-7">
                 {groupedQuestions.map((group, groupIndex) => (
                   <section key={group.label}>
                     <div className="mb-4 flex items-center gap-3">
-                      <span className={['block h-9 w-1 rounded-full', groupIndex === 0 ? 'bg-orange-400' : 'bg-slate-400'].join(' ')} />
+                      <span
+                        className={[
+                          'block h-9 w-1 rounded-full',
+                          groupIndex === 0 ? 'bg-orange-400' : 'bg-slate-400',
+                        ].join(' ')}
+                      />
                       <div className="text-sm font-black text-foreground">{group.label}</div>
                     </div>
 
@@ -182,14 +203,16 @@ export default function TestResultReviewPage() {
                       {group.questions.map((question) => {
                         const isCurrentActive = question.question_id === activeQuestionId
                         const selectedAnswerId = user_answers[question.question_id]
-                        const isCorrect = selectedAnswerId && question.answers.find(a => a.answer_id === selectedAnswerId)?.is_correct
+                        const isCorrect =
+                          selectedAnswerId &&
+                          question.answers.find((a) => a.answer_id === selectedAnswerId)?.is_correct
 
                         const toneClass = isCurrentActive
                           ? 'border-2 border-blue-400 bg-card shadow-lg shadow-blue-100/50 scale-110 !font-black !text-blue-700 z-10'
-                          : !selectedAnswerId 
+                          : !selectedAnswerId
                             ? 'bg-slate-200 text-muted-foreground opacity-60'
-                            : isCorrect 
-                              ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' 
+                            : isCorrect
+                              ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
                               : 'bg-rose-100 text-rose-700 border border-rose-300'
 
                         return (
@@ -197,7 +220,10 @@ export default function TestResultReviewPage() {
                             key={question.question_id}
                             type="button"
                             onClick={() => setActiveQuestionId(question.question_id)}
-                            className={['relative flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold transition-all', toneClass].join(' ')}
+                            className={[
+                              'relative flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold transition-all',
+                              toneClass,
+                            ].join(' ')}
                           >
                             {question.question_number || '?'}
                           </button>
@@ -213,7 +239,6 @@ export default function TestResultReviewPage() {
             <main className="min-w-0">
               <div className="space-y-6">
                 <div className="rounded-[28px] border border-border bg-card px-6 py-6 shadow-sm relative overflow-hidden">
-                  
                   <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-4">
                       <span className="rounded-xl bg-blue-100 px-3 py-1.5 text-[11px] font-black uppercase tracking-wide text-blue-700 sm:text-xs">
@@ -227,11 +252,24 @@ export default function TestResultReviewPage() {
                     {/* Verification Status Badge */}
                     {(() => {
                       const selAns = user_answers[activeQuestion.question_id]
-                      if (!selAns) return <div className="px-3 py-1 bg-slate-100 text-muted-foreground rounded-lg text-xs font-semibold">Chưa làm</div>
-                      const isK = activeQuestion.answers.find(a => a.answer_id === selAns)?.is_correct
-                      return isK 
-                        ? <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg text-xs font-bold"><CheckCircle2 className="w-4 h-4"/> ĐÚNG</div>
-                        : <div className="flex items-center gap-1.5 px-3 py-1 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-xs font-bold"><XCircle className="w-4 h-4"/> SAI</div>
+                      if (!selAns)
+                        return (
+                          <div className="px-3 py-1 bg-slate-100 text-muted-foreground rounded-lg text-xs font-semibold">
+                            Chưa làm
+                          </div>
+                        )
+                      const isK = activeQuestion.answers.find(
+                        (a) => a.answer_id === selAns
+                      )?.is_correct
+                      return isK ? (
+                        <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg text-xs font-bold">
+                          <CheckCircle2 className="w-4 h-4" /> ĐÚNG
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 px-3 py-1 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-xs font-bold">
+                          <XCircle className="w-4 h-4" /> SAI
+                        </div>
+                      )
                     })()}
                   </div>
 
@@ -272,9 +310,10 @@ export default function TestResultReviewPage() {
 
                     let cardClass = 'border-border bg-card text-muted-foreground'
                     let indexClass = 'border-border text-muted-foreground'
-                    
+
                     if (isCorrectAnswer && isSelected) {
-                      cardClass = 'border-emerald-400 bg-emerald-50/50 shadow-md shadow-emerald-100/50'
+                      cardClass =
+                        'border-emerald-400 bg-emerald-50/50 shadow-md shadow-emerald-100/50'
                       indexClass = 'border-emerald-500 bg-emerald-500 text-white'
                     } else if (isCorrectAnswer && !isSelected) {
                       cardClass = 'border-emerald-400 bg-emerald-50 shadow-sm border-dashed'
@@ -287,16 +326,30 @@ export default function TestResultReviewPage() {
                     return (
                       <div
                         key={answer.answer_id}
-                        className={['flex w-full items-center gap-5 rounded-[28px] border px-6 py-5 text-left transition-all', cardClass].join(' ')}
+                        className={[
+                          'flex w-full items-center gap-5 rounded-[28px] border px-6 py-5 text-left transition-all',
+                          cardClass,
+                        ].join(' ')}
                       >
-                        <span className={['inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-4 text-xs font-black relative', indexClass].join(' ')}>
+                        <span
+                          className={[
+                            'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-4 text-xs font-black relative',
+                            indexClass,
+                          ].join(' ')}
+                        >
                           {index + 1}
-                          {isCorrectAnswer && isSelected && <CheckCircle2 className="absolute -right-2 -top-2 w-5 h-5 text-emerald-500 bg-card rounded-full" />}
-                          {!isCorrectAnswer && isSelected && <XCircle className="absolute -right-2 -top-2 w-5 h-5 text-rose-500 bg-card rounded-full" />}
+                          {isCorrectAnswer && isSelected && (
+                            <CheckCircle2 className="absolute -right-2 -top-2 w-5 h-5 text-emerald-500 bg-card rounded-full" />
+                          )}
+                          {!isCorrectAnswer && isSelected && (
+                            <XCircle className="absolute -right-2 -top-2 w-5 h-5 text-rose-500 bg-card rounded-full" />
+                          )}
                         </span>
-                        
+
                         <div className="flex-1">
-                          <p className={`text-sm leading-[1.6] sm:text-base ${isCorrectAnswer ? 'text-emerald-900 font-medium' : isSelected ? 'text-rose-900' : 'text-slate-700'}`}>
+                          <p
+                            className={`text-sm leading-[1.6] sm:text-base ${isCorrectAnswer ? 'text-emerald-900 font-medium' : isSelected ? 'text-rose-900' : 'text-slate-700'}`}
+                          >
                             {answer.content || 'Đáp án dạng hình ảnh'}
                           </p>
                           {answer.image_url && (
@@ -325,7 +378,7 @@ export default function TestResultReviewPage() {
                         </div>
                       </div>
                     )}
-                    
+
                     {activeQuestion.explanation && (
                       <div className="rounded-[24px] border border-indigo-100 bg-indigo-50/50 p-6 shadow-sm">
                         <h4 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-indigo-800">
@@ -377,10 +430,7 @@ export default function TestResultReviewPage() {
       </section>
 
       {showAnalysis && resultId && (
-        <CompetencyAnalysisModal
-          resultId={resultId}
-          onClose={() => setShowAnalysis(false)}
-        />
+        <CompetencyAnalysisModal resultId={resultId} onClose={() => setShowAnalysis(false)} />
       )}
     </div>
   )

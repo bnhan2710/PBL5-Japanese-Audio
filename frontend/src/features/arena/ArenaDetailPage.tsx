@@ -75,7 +75,6 @@ export default function ArenaDetailPage() {
 
   const isOwner = !!contest && (user?.id === contest.creator_id || user?.role === 'admin')
 
-
   const handleJoin = async () => {
     if (!contest || !canJoin) return
 
@@ -208,23 +207,25 @@ export default function ArenaDetailPage() {
                 <CalendarClock className="h-4 w-4 text-orange-500" />
                 Bắt đầu
               </div>
-              <p className="mt-2 font-semibold text-foreground">{formatDateTime(contest.start_time)}</p>
+              <p className="mt-2 font-semibold text-foreground">
+                {formatDateTime(contest.start_time)}
+              </p>
             </div>
             <div className="rounded-2xl bg-muted/40 p-4">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <CalendarClock className="h-4 w-4 text-orange-500" />
                 Kết thúc
               </div>
-              <p className="mt-2 font-semibold text-foreground">{formatDateTime(contest.end_time)}</p>
+              <p className="mt-2 font-semibold text-foreground">
+                {formatDateTime(contest.end_time)}
+              </p>
             </div>
             <div className="rounded-2xl bg-muted/40 p-4">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Clock3 className="h-4 w-4 text-orange-500" />
                 Thời gian làm bài tối đa
               </div>
-              <p className="mt-2 font-semibold text-foreground">
-                {contest.time_limit} phút
-              </p>
+              <p className="mt-2 font-semibold text-foreground">{contest.time_limit} phút</p>
             </div>
             <div className="rounded-2xl bg-muted/40 p-4">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -265,7 +266,8 @@ export default function ArenaDetailPage() {
         <CardHeader>
           <CardTitle>Bảng xếp hạng hiện tại</CardTitle>
           <CardDescription>
-            Top 3 được làm nổi bật theo avatar và điểm số. Từ hạng 4 trở xuống hiển thị dạng danh sách.
+            Top 3 được làm nổi bật theo avatar và điểm số. Từ hạng 4 trở xuống hiển thị dạng danh
+            sách.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -306,7 +308,9 @@ export default function ArenaDetailPage() {
                     </div>
                     <p className="mt-4 text-lg font-bold text-foreground">{entry.display_name}</p>
                     <p className="mt-1 text-sm text-muted-foreground">@{entry.username}</p>
-                    <p className="mt-4 text-3xl font-black text-foreground">{entry.score.toFixed(2)}</p>
+                    <p className="mt-4 text-3xl font-black text-foreground">
+                      {entry.score.toFixed(2)}
+                    </p>
                     <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Điểm</p>
                   </div>
                 ))}
@@ -343,7 +347,9 @@ export default function ArenaDetailPage() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-lg font-bold text-foreground">{entry.score.toFixed(2)}</p>
+                          <p className="text-lg font-bold text-foreground">
+                            {entry.score.toFixed(2)}
+                          </p>
                           <p className="text-xs text-muted-foreground">điểm</p>
                         </div>
                       </div>

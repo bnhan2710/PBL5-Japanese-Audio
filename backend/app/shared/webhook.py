@@ -6,14 +6,15 @@ from app.shared.utils import setup_logger
 logger = setup_logger(__name__)
 settings = get_settings()
 
+
 async def trigger_n8n_webhook(event_type: str, data: Dict[str, Any]) -> bool:
     """
     Send a notification to n8n webhook for automation.
-    
+
     Args:
         event_type: Type of event (e.g., 'user.created', 'user.updated')
         data: Event payload
-    
+
     Returns:
         bool: True if successful, False otherwise
     """
@@ -24,12 +25,15 @@ async def trigger_n8n_webhook(event_type: str, data: Dict[str, Any]) -> bool:
 
     payload = {
         "event": event_type,
-        "timestamp": str(httpx.utils.now() if hasattr(httpx.utils, 'now') else ""), # Fallback if needed
-        "data": data
+        "timestamp": str(
+            httpx.utils.now() if hasattr(httpx.utils, "now") else ""
+        ),  # Fallback if needed
+        "data": data,
     }
-    
+
     # Custom timestamp logic for consistency
     from datetime import datetime
+
     payload["timestamp"] = datetime.utcnow().isoformat()
 
     try:

@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, ConfigDict
 # Answer schemas
 # ---------------------------------------------------------------------------
 
+
 class AnswerBase(BaseModel):
     content: Optional[str] = Field(None, description="Text content of the answer option")
     image_url: Optional[str] = Field(None, description="Image URL if answer is image-based")
@@ -16,11 +17,13 @@ class AnswerBase(BaseModel):
 
 class AnswerCreate(AnswerBase):
     """Payload for creating an answer. question_id supplied by the route."""
+
     question_id: UUID
 
 
 class AnswerInline(AnswerBase):
     """Payload for creating an answer inline inside QuestionCreate (no question_id needed)."""
+
     pass
 
 
@@ -44,15 +47,16 @@ class AnswerResponse(AnswerBase):
                 "content": "午前9時",
                 "image_url": None,
                 "is_correct": True,
-                "order_index": 0
+                "order_index": 0,
             }
-        }
+        },
     )
 
 
 # ---------------------------------------------------------------------------
 # Question schemas
 # ---------------------------------------------------------------------------
+
 
 class QuestionBase(BaseModel):
     mondai_group: Optional[str] = Field(None, description="e.g. 'Mondai 1'")
@@ -69,8 +73,11 @@ class QuestionBase(BaseModel):
 
 class QuestionCreate(QuestionBase):
     """Payload for creating a question. exam_id supplied by the route."""
+
     exam_id: UUID
-    answers: Optional[List[AnswerInline]] = Field(default_factory=list, description="Inline answers (optional)")
+    answers: Optional[List[AnswerInline]] = Field(
+        default_factory=list, description="Inline answers (optional)"
+    )
 
 
 class QuestionUpdate(BaseModel):
@@ -102,14 +109,15 @@ class QuestionResponse(QuestionBase):
                 "question_text": "男の人はいつ会議に出発しますか。",
                 "image_url": None,
                 "script_text": "男：じゃ、九時に出発しましょう。",
-                "explanation": "会話の中で「午前9時に出発」と言っています。"
+                "explanation": "会話の中で「午前9時に出発」と言っています。",
             }
-        }
+        },
     )
 
 
 class QuestionWithAnswersResponse(QuestionResponse):
     """Question detail including all answer options."""
+
     answers: List[AnswerResponse] = []
 
     model_config = ConfigDict(from_attributes=True)

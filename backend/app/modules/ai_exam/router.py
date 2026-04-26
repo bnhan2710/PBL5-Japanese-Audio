@@ -15,8 +15,11 @@ from app.modules.users.models import User
 from app.modules.audio.models import Audio
 from app.modules.ai_exam.models import AIExamCache
 from app.modules.ai_exam.schemas import (
-    AIGenerateRequest, AIGenerateResponse, AIJobStatusResponse,
-    AIExamResult, MondaiCountConfig
+    AIGenerateRequest,
+    AIGenerateResponse,
+    AIJobStatusResponse,
+    AIExamResult,
+    MondaiCountConfig,
 )
 from app.modules.ai_exam.service import AIExamService
 
@@ -32,6 +35,7 @@ try:
 except Exception as e:
     logger.warning(f"Could not initialize AIExamService eagerly: {e}")
     _service = None
+
 
 def get_service() -> AIExamService:
     global _service
@@ -75,7 +79,9 @@ def _compute_cache_key(
     return hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
 
 
-def _job_from_result(job_id: str, result: AIExamResult, progress_message: str) -> AIJobStatusResponse:
+def _job_from_result(
+    job_id: str, result: AIExamResult, progress_message: str
+) -> AIJobStatusResponse:
     return AIJobStatusResponse(
         job_id=job_id,
         status="done",
@@ -123,6 +129,7 @@ async def _run_pipeline(
         svc = get_service()
 
         import asyncio
+
         result: AIExamResult = await asyncio.to_thread(
             svc.generate,
             audio_bytes,
@@ -146,7 +153,9 @@ async def _run_pipeline(
                     file_name=filename,
                     content_hash=content_hash,
                     file_url=cloudinary_res["secure_url"],
-                    duration=int(cloudinary_res["duration"]) if cloudinary_res.get("duration") else None,
+                    duration=(
+                        int(cloudinary_res["duration"]) if cloudinary_res.get("duration") else None
+                    ),
                     ai_status="completed",
                     ai_model=svc.model_name,
                     raw_transcript=result.raw_transcript,
@@ -156,7 +165,11 @@ async def _run_pipeline(
             else:
                 audio.file_name = audio.file_name or filename
                 audio.file_url = cloudinary_res["secure_url"]
-                audio.duration = int(cloudinary_res["duration"]) if cloudinary_res.get("duration") else audio.duration
+                audio.duration = (
+                    int(cloudinary_res["duration"])
+                    if cloudinary_res.get("duration")
+                    else audio.duration
+                )
                 audio.ai_status = "completed"
                 audio.ai_model = svc.model_name
                 audio.raw_transcript = result.raw_transcript
@@ -232,12 +245,10 @@ async def generate_exam_from_audio(
     Returns a `job_id` to poll for status.
     """
     if not file.content_type or not (
-        file.content_type.startswith("audio/")
-        or file.content_type in ("application/octet-stream",)
+        file.content_type.startswith("audio/") or file.content_type in ("application/octet-stream",)
     ):
         raise HTTPException(
-            status_code=400,
-            detail=f"File must be audio (mp3/wav/ogg). Got: {file.content_type}"
+            status_code=400, detail=f"File must be audio (mp3/wav/ogg). Got: {file.content_type}"
         )
 
     audio_bytes = await file.read()
@@ -300,7 +311,9 @@ async def generate_exam_from_audio(
             await db.flush()
         except IntegrityError:
             await db.rollback()
-            cache_result = await db.execute(select(AIExamCache).where(AIExamCache.cache_key == cache_key))
+            cache_result = await db.execute(
+                select(AIExamCache).where(AIExamCache.cache_key == cache_key)
+            )
             cache = cache_result.scalar_one()
     else:
         cache.source_filename = filename
@@ -423,15 +436,17 @@ async def list_my_jobs(
 
     jobs = []
     for cache in caches:
-        jobs.append({
-            "job_id": cache.job_id,
-            "cache_id": str(cache.cache_id),
-            "status": cache.status,
-            "jlpt_level": cache.jlpt_level,
-            "source_filename": cache.source_filename,
-            "progress_message": cache.progress_message,
-            "error_message": cache.error_message,
-            "created_at": cache.created_at.isoformat() if cache.created_at else None,
-            "updated_at": cache.updated_at.isoformat() if cache.updated_at else None,
-        })
+        jobs.append(
+            {
+                "job_id": cache.job_id,
+                "cache_id": str(cache.cache_id),
+                "status": cache.status,
+                "jlpt_level": cache.jlpt_level,
+                "source_filename": cache.source_filename,
+                "progress_message": cache.progress_message,
+                "error_message": cache.error_message,
+                "created_at": cache.created_at.isoformat() if cache.created_at else None,
+                "updated_at": cache.updated_at.isoformat() if cache.updated_at else None,
+            }
+        )
     return {"jobs": jobs}

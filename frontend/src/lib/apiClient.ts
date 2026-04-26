@@ -10,36 +10,36 @@
  * Concurrent 401s are queued so only one refresh call is ever in-flight at a time.
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 // ---------------------------------------------------------------------------
 // Refresh queue (handles concurrent 401s)
 // ---------------------------------------------------------------------------
 
 type QueueItem = {
- resolve: (token: string) => void;
- reject: (err: unknown) => void;
-};
+  resolve: (token: string) => void
+  reject: (err: unknown) => void
+}
 
-let isRefreshing = false;
-let refreshQueue: QueueItem[] = [];
+let isRefreshing = false
+let refreshQueue: QueueItem[] = []
 
 function processQueue(error: unknown, token: string | null) {
- refreshQueue.forEach(({ resolve, reject }) => {
- if (error) reject(error);
- else resolve(token!);
- });
- refreshQueue = [];
+  refreshQueue.forEach(({ resolve, reject }) => {
+    if (error) reject(error)
+    else resolve(token!)
+  })
+  refreshQueue = []
 }
 
 // ---------------------------------------------------------------------------
 // Logout callback – registered by AuthProvider
 // ---------------------------------------------------------------------------
 
-let logoutCallback: (() => void) | null = null;
+let logoutCallback: (() => void) | null = null
 
 export function registerLogoutCallback(cb: () => void) {
- logoutCallback = cb;
+  logoutCallback = cb
 }
 
 // ---------------------------------------------------------------------------
@@ -47,23 +47,23 @@ export function registerLogoutCallback(cb: () => void) {
 // ---------------------------------------------------------------------------
 
 async function doRefresh(): Promise<string> {
- const refreshToken = localStorage.getItem('refresh_token');
- if (!refreshToken) throw new Error('No refresh token available');
+  const refreshToken = localStorage.getItem('refresh_token')
+  if (!refreshToken) throw new Error('No refresh token available')
 
- const res = await fetch(`${API_BASE}/api/auth/refresh`, {
- method: 'POST',
- headers: { 'Content-Type': 'application/json' },
- body: JSON.stringify({ refresh_token: refreshToken }),
- });
+  const res = await fetch(`${API_BASE}/api/auth/refresh`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refresh_token: refreshToken }),
+  })
 
- if (!res.ok) {
- throw new Error('Token refresh failed');
- }
+  if (!res.ok) {
+    throw new Error('Token refresh failed')
+  }
 
- const data: { access_token: string; refresh_token: string } = await res.json();
- localStorage.setItem('token', data.access_token);
- localStorage.setItem('refresh_token', data.refresh_token);
- return data.access_token;
+  const data: { access_token: string; refresh_token: string } = await res.json()
+  localStorage.setItem('token', data.access_token)
+  localStorage.setItem('refresh_token', data.refresh_token)
+  return data.access_token
 }
 
 // ---------------------------------------------------------------------------
@@ -71,77 +71,81 @@ async function doRefresh(): Promise<string> {
 // ---------------------------------------------------------------------------
 
 export async function apiFetch(
- input: RequestInfo | URL,
- init: RequestInit = {}
+  input: RequestInfo | URL,
+  init: RequestInit = {}
 ): Promise<Response> {
- const token = localStorage.getItem('token');
+  const token = localStorage.getItem('token')
 
- // Build headers, injecting Authorization automatically
- const headers = new Headers(init.headers);
- if (token) headers.set('Authorization', `Bearer ${token}`);
- // Set JSON content-type unless it's a multipart upload
- if (!headers.has('Content-Type') && !(init.body instanceof FormData)) {
- headers.set('Content-Type', 'application/json');
- }
+  // Build headers, injecting Authorization automatically
+  const headers = new Headers(init.headers)
+  if (token) headers.set('Authorization', `Bearer ${token}`)
+  // Set JSON content-type unless it's a multipart upload
+  if (!headers.has('Content-Type') && !(init.body instanceof FormData)) {
+    headers.set('Content-Type', 'application/json')
+  }
 
- let response = await fetch(input, { ...init, headers });
+  let response = await fetch(input, { ...init, headers })
 
- // Return early for non-401 or if there is no refresh token to try
- if (response.status !== 401 || !localStorage.getItem('refresh_token')) {
- if (response.status === 403) {
- try {
- const clonedResponse = response.clone();
- const data = await clonedResponse.json();
- if (data?.detail && typeof data.detail === 'string' && data.detail.includes('Tài khoản của bạn đã bị khóa')) {
- localStorage.removeItem('token');
- localStorage.removeItem('refresh_token');
- if (logoutCallback) logoutCallback();
- }
- } catch (err) {
- // Ignore parse error
- }
- }
- return response;
- }
+  // Return early for non-401 or if there is no refresh token to try
+  if (response.status !== 401 || !localStorage.getItem('refresh_token')) {
+    if (response.status === 403) {
+      try {
+        const clonedResponse = response.clone()
+        const data = await clonedResponse.json()
+        if (
+          data?.detail &&
+          typeof data.detail === 'string' &&
+          data.detail.includes('Tài khoản của bạn đã bị khóa')
+        ) {
+          localStorage.removeItem('token')
+          localStorage.removeItem('refresh_token')
+          if (logoutCallback) logoutCallback()
+        }
+      } catch (err) {
+        // Ignore parse error
+      }
+    }
+    return response
+  }
 
- // ---------------------------------------------------------------------------
- // 401 handling: refresh token then retry
- // ---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // 401 handling: refresh token then retry
+  // ---------------------------------------------------------------------------
 
- if (isRefreshing) {
- // Another request is already refreshing – queue this one
- const newToken = await new Promise<string>((resolve, reject) => {
- refreshQueue.push({ resolve, reject });
- });
- const retryHeaders = new Headers(init.headers);
- retryHeaders.set('Authorization', `Bearer ${newToken}`);
- if (!retryHeaders.has('Content-Type') && !(init.body instanceof FormData)) {
- retryHeaders.set('Content-Type', 'application/json');
- }
- return fetch(input, { ...init, headers: retryHeaders });
- }
+  if (isRefreshing) {
+    // Another request is already refreshing – queue this one
+    const newToken = await new Promise<string>((resolve, reject) => {
+      refreshQueue.push({ resolve, reject })
+    })
+    const retryHeaders = new Headers(init.headers)
+    retryHeaders.set('Authorization', `Bearer ${newToken}`)
+    if (!retryHeaders.has('Content-Type') && !(init.body instanceof FormData)) {
+      retryHeaders.set('Content-Type', 'application/json')
+    }
+    return fetch(input, { ...init, headers: retryHeaders })
+  }
 
- isRefreshing = true;
+  isRefreshing = true
 
- try {
- const newToken = await doRefresh();
- processQueue(null, newToken);
+  try {
+    const newToken = await doRefresh()
+    processQueue(null, newToken)
 
- const retryHeaders = new Headers(init.headers);
- retryHeaders.set('Authorization', `Bearer ${newToken}`);
- if (!retryHeaders.has('Content-Type') && !(init.body instanceof FormData)) {
- retryHeaders.set('Content-Type', 'application/json');
- }
- response = await fetch(input, { ...init, headers: retryHeaders });
- } catch (err) {
- processQueue(err, null);
- localStorage.removeItem('token');
- localStorage.removeItem('refresh_token');
- logoutCallback?.();
- throw err;
- } finally {
- isRefreshing = false;
- }
+    const retryHeaders = new Headers(init.headers)
+    retryHeaders.set('Authorization', `Bearer ${newToken}`)
+    if (!retryHeaders.has('Content-Type') && !(init.body instanceof FormData)) {
+      retryHeaders.set('Content-Type', 'application/json')
+    }
+    response = await fetch(input, { ...init, headers: retryHeaders })
+  } catch (err) {
+    processQueue(err, null)
+    localStorage.removeItem('token')
+    localStorage.removeItem('refresh_token')
+    logoutCallback?.()
+    throw err
+  } finally {
+    isRefreshing = false
+  }
 
- return response;
+  return response
 }

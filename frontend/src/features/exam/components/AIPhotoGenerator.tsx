@@ -118,9 +118,11 @@ export default function AIPhotoGenerator({
           <Sparkles className="h-3.5 w-3.5 text-blue-500" />
           <span className="text-xs font-bold text-blue-600 dark:text-blue-400">Sinh ảnh AI</span>
         </div>
-        {expanded
-          ? <ChevronUp className="h-3.5 w-3.5 text-blue-400" />
-          : <ChevronDown className="h-3.5 w-3.5 text-blue-400" />}
+        {expanded ? (
+          <ChevronUp className="h-3.5 w-3.5 text-blue-400" />
+        ) : (
+          <ChevronDown className="h-3.5 w-3.5 text-blue-400" />
+        )}
       </button>
 
       {/* Inline body — no modal */}
@@ -132,7 +134,10 @@ export default function AIPhotoGenerator({
               <button
                 key={t}
                 type="button"
-                onClick={() => { setPhotoType(t); setGeneratedImageUrl(null) }}
+                onClick={() => {
+                  setPhotoType(t)
+                  setGeneratedImageUrl(null)
+                }}
                 className={`flex-1 rounded-lg px-3 py-2 text-xs font-bold transition-colors ${
                   photoType === t
                     ? 'bg-blue-600 text-white shadow-sm'
@@ -182,14 +187,20 @@ export default function AIPhotoGenerator({
                 }`}
               >
                 {isGenerating ? (
-                  <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Đang sinh...</>
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Đang sinh...
+                  </>
                 ) : (
-                  <><Sparkles className="h-3.5 w-3.5" /> Sinh ảnh</>
+                  <>
+                    <Sparkles className="h-3.5 w-3.5" /> Sinh ảnh
+                  </>
                 )}
               </button>
             </div>
             {generatedImageUrl && !isGenerating && (
-              <p className="text-[11px] text-emerald-600 dark:text-emerald-400">✓ Ảnh đã sẵn sàng</p>
+              <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
+                ✓ Ảnh đã sẵn sàng
+              </p>
             )}
           </div>
 
@@ -215,12 +226,19 @@ export default function AIPhotoGenerator({
                   disabled={isSelecting}
                   className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-emerald-500 disabled:opacity-60"
                 >
-                  {isSelecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                  {isSelecting ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Check className="h-3.5 w-3.5" />
+                  )}
                   Dùng ảnh này
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setGeneratedImageUrl(null); setGeneratedPrompt(null) }}
+                  onClick={() => {
+                    setGeneratedImageUrl(null)
+                    setGeneratedPrompt(null)
+                  }}
                   className="rounded-xl border border-border bg-card px-4 py-2 text-xs font-bold text-muted-foreground transition-colors hover:bg-muted"
                 >
                   Thử lại

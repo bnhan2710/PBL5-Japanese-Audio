@@ -106,10 +106,19 @@ class AdminApiClient {
   }
 
   // Lock user
-  async lockUser(userId: number, durationHours: number, reason: string, detailedReason?: string): Promise<User> {
+  async lockUser(
+    userId: number,
+    durationHours: number,
+    reason: string,
+    detailedReason?: string
+  ): Promise<User> {
     const response = await apiFetch(`${API_BASE_URL}/api/users/${userId}/lock`, {
       method: 'POST',
-      body: JSON.stringify({ duration_hours: durationHours, reason, detailed_reason: detailedReason }),
+      body: JSON.stringify({
+        duration_hours: durationHours,
+        reason,
+        detailed_reason: detailedReason,
+      }),
     })
     return this.handleResponse<User>(response)
   }

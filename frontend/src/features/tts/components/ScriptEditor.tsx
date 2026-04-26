@@ -1,15 +1,15 @@
-import React, { useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Textarea } from '@/components/ui/textarea';
-import { FileText } from 'lucide-react';
+import React, { useRef } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Textarea } from '@/components/ui/textarea'
+import { FileText } from 'lucide-react'
 
 interface ScriptEditorProps {
-  value: string;
-  onChange: (value: string) => void;
+  value: string
+  onChange: (value: string) => void
 }
 
 export const ScriptEditor: React.FC<ScriptEditorProps> = ({ value, onChange }) => {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   return (
     <Card className="shadow-lg border-2 border-blue-100 dark:border-blue-900/40">
@@ -34,5 +34,5 @@ Ví dụ:
         />
       </CardContent>
     </Card>
-  );
-};
+  )
+}

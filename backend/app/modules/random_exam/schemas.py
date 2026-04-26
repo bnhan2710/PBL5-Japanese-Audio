@@ -18,9 +18,7 @@ class RandomExamGenerateRequest(BaseModel):
     title: str = Field(..., min_length=1, description="Exam title")
     description: Optional[str] = None
     jlpt_level: Literal["N5", "N4", "N3", "N2", "N1"] = Field(default="N2")
-    mondai_config: List[MondaiCountConfig] = Field(
-        ..., description="Configuration for each mondai"
-    )
+    mondai_config: List[MondaiCountConfig] = Field(..., description="Configuration for each mondai")
 
 
 class AnswerResponse(BaseModel):
@@ -144,9 +142,7 @@ class AvailableQuestionsResponse(BaseModel):
 class AudioMergeRequest(BaseModel):
     """Request to merge multiple audio files."""
 
-    audio_urls: List[str] = Field(
-        ..., min_items=1, description="List of audio file URLs to merge"
-    )
+    audio_urls: List[str] = Field(..., min_items=1, description="List of audio file URLs to merge")
     silence_duration: int = Field(
         default=3, ge=1, le=60, description="Silence gap duration in seconds"
     )

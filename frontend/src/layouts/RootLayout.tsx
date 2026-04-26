@@ -140,14 +140,21 @@ export default function RootLayout() {
     const pending = localStorage.getItem('ai_exam_draft_saved')
     if (!pending) return
     try {
-      const data = JSON.parse(pending) as { title: string; level: string; draftId: string; timestamp: number }
+      const data = JSON.parse(pending) as {
+        title: string
+        level: string
+        draftId: string
+        timestamp: number
+      }
       if (Date.now() - data.timestamp < 7 * 24 * 60 * 60 * 1000) {
         toast({
           title: '🎉 Đề AI đã tạo xong!',
           description: `Đề "${data.title}" (${data.level}) đã được tự động lưu bản nháp. Vào quản lý đề thi để xem.`,
         })
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     localStorage.removeItem('ai_exam_draft_saved')
   }, [])
 

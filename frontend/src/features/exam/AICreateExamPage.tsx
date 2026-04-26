@@ -93,7 +93,6 @@ function inferDifficulty(question: AIQuestion) {
 
 // ─── Audio Trimmer ──────────────────────────────────────────────────────────
 
-
 interface AudioTrimmerProps {
   audioFile: File | null
   initialStart: number
@@ -527,8 +526,8 @@ function Step1({
             <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 leading-relaxed">
               <span className="font-semibold">Bell splitter</span> → dò `Bell_sound` và loại
               `Bell_2baku` →<span className="font-semibold"> PyDub</span> → cắt từng câu →
-              <span className="font-semibold"> ReazonSpeech</span> → sinh script có dấu câu /
-              đoạn hội thoại → tạo draft câu hỏi cục bộ để bạn rà lại và điền đáp án JLPT {level}.
+              <span className="font-semibold"> ReazonSpeech</span> → sinh script có dấu câu / đoạn
+              hội thoại → tạo draft câu hỏi cục bộ để bạn rà lại và điền đáp án JLPT {level}.
             </p>
           </div>
         </div>
@@ -1334,14 +1333,12 @@ function Step3Review({ editableQuestions, setEditableQuestions, audioFile }: Ste
                       />
                     </div>
                     <AIPhotoGenerator
-                      
                       questionText={activeQ.question_text}
                       scriptText={activeQ.script_text}
                       answers={activeQ.answers}
                       onSelectImage={(file, previewUrl) =>
                         updateQuestion(activeQIdx, { image_url: previewUrl, image_file: file })
                       }
-                      
                     />
                   </div>
                 </div>
@@ -1713,94 +1710,100 @@ export default function AICreateExamPage() {
     if (!jobParam) return
 
     setResuming(true)
-    aiExamClient.getJobStatus(jobParam).then((status) => {
-      if (status.status === 'done' && status.result) {
-        const result = status.result
-        setAiResult(result)
-        setJobId(jobParam)
-        const mapped = result.questions.map((question) => ({
-          ...question,
-          explanation: question.explanation || '',
-          hide_question_text: !!question.hide_question_text,
-          answers: [...question.answers],
-          difficulty: inferDifficulty(question),
-        }))
-        setEditableQuestions(mapped)
-        setStep(3)
-      } else if (status.status === 'processing' || status.status === 'pending') {
-        setJobId(jobParam)
-        setStep(2)
-      } else if (status.status === 'failed') {
-        setFailed(true)
-        setFailedMsg(status.error || 'Pipeline thất bại')
-        setStep(2)
-      }
-    }).catch(() => {
-      toast({ title: 'Lỗi', description: 'Không tìm thấy job AI này.', variant: 'destructive' })
-    }).finally(() => {
-      setResuming(false)
-      // Clean the query param from URL to avoid re-triggering
-      setSearchParams({}, { replace: true })
-    })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    aiExamClient
+      .getJobStatus(jobParam)
+      .then((status) => {
+        if (status.status === 'done' && status.result) {
+          const result = status.result
+          setAiResult(result)
+          setJobId(jobParam)
+          const mapped = result.questions.map((question) => ({
+            ...question,
+            explanation: question.explanation || '',
+            hide_question_text: !!question.hide_question_text,
+            answers: [...question.answers],
+            difficulty: inferDifficulty(question),
+          }))
+          setEditableQuestions(mapped)
+          setStep(3)
+        } else if (status.status === 'processing' || status.status === 'pending') {
+          setJobId(jobParam)
+          setStep(2)
+        } else if (status.status === 'failed') {
+          setFailed(true)
+          setFailedMsg(status.error || 'Pipeline thất bại')
+          setStep(2)
+        }
+      })
+      .catch(() => {
+        toast({ title: 'Lỗi', description: 'Không tìm thấy job AI này.', variant: 'destructive' })
+      })
+      .finally(() => {
+        setResuming(false)
+        // Clean the query param from URL to avoid re-triggering
+        setSearchParams({}, { replace: true })
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
 
   // ── Reusable save-draft logic ───────────────────────────────────────────
-  const saveDraftToServer = useCallback(async (
-    questions: AIQuestion[],
-    result: AIExamResult | null,
-    lvl: Level,
-    ttl: string,
-    desc: string,
-    existingDraftId: string,
-  ): Promise<string | null> => {
-    try {
-      if (existingDraftId) await examClient.deleteExam(existingDraftId).catch(() => {})
-      const exam = await examClient.createExam({
-        title: `[Nháp] [${lvl}] ${ttl}`,
-        description: desc,
-        time_limit: 60,
-        audio_id: result?.audio_id,
-      })
-      for (const q of questions) {
-        await examClient
-          .createQuestion({
-            exam_id: exam.exam_id,
-            mondai_group: q.mondai_group,
-            question_number: q.question_number,
-            question_text: q.question_text,
-            audio_clip_url: q.audio_url,
-            image_url: q.image_file
-              ? null
-              : q.image_url && !q.image_url.startsWith('blob:')
-                ? q.image_url
-                : null,
-            script_text: q.script_text,
-            explanation: q.explanation?.trim() || '',
-            raw_transcript: q.source_transcript,
-            hide_question_text: !!q.hide_question_text,
-            difficulty: q.difficulty,
-            answers: q.answers.map((a, i) => ({
-              question_id: '',
-              content: a.content,
-              is_correct: a.is_correct,
-              order_index: i,
-            })),
-          })
-          .then(async (createdQuestion) => {
-            if (q.image_file) {
-              await examClient.uploadQuestionImage(createdQuestion.question_id, q.image_file)
-            }
-            return createdQuestion
-          })
+  const saveDraftToServer = useCallback(
+    async (
+      questions: AIQuestion[],
+      result: AIExamResult | null,
+      lvl: Level,
+      ttl: string,
+      desc: string,
+      existingDraftId: string
+    ): Promise<string | null> => {
+      try {
+        if (existingDraftId) await examClient.deleteExam(existingDraftId).catch(() => {})
+        const exam = await examClient.createExam({
+          title: `[Nháp] [${lvl}] ${ttl}`,
+          description: desc,
+          time_limit: 60,
+          audio_id: result?.audio_id,
+        })
+        for (const q of questions) {
+          await examClient
+            .createQuestion({
+              exam_id: exam.exam_id,
+              mondai_group: q.mondai_group,
+              question_number: q.question_number,
+              question_text: q.question_text,
+              audio_clip_url: q.audio_url,
+              image_url: q.image_file
+                ? null
+                : q.image_url && !q.image_url.startsWith('blob:')
+                  ? q.image_url
+                  : null,
+              script_text: q.script_text,
+              explanation: q.explanation?.trim() || '',
+              raw_transcript: q.source_transcript,
+              hide_question_text: !!q.hide_question_text,
+              difficulty: q.difficulty,
+              answers: q.answers.map((a, i) => ({
+                question_id: '',
+                content: a.content,
+                is_correct: a.is_correct,
+                order_index: i,
+              })),
+            })
+            .then(async (createdQuestion) => {
+              if (q.image_file) {
+                await examClient.uploadQuestionImage(createdQuestion.question_id, q.image_file)
+              }
+              return createdQuestion
+            })
+        }
+        await examClient.updateExam(exam.exam_id, { is_published: false, current_step: 3 })
+        return exam.exam_id
+      } catch {
+        return null
       }
-      await examClient.updateExam(exam.exam_id, { is_published: false, current_step: 3 })
-      return exam.exam_id
-    } catch {
-      return null
-    }
-  }, [])
+    },
+    []
+  )
 
   const handleStartAI = async () => {
     if (!audioFile || !title.trim()) return
@@ -1833,19 +1836,27 @@ export default function AICreateExamPage() {
     setStep(3)
 
     // Auto-save draft in the background
-    saveDraftToServer(mappedQuestions, result, level, title, description, draftId).then((newDraftId) => {
-      if (newDraftId) {
-        setDraftId(newDraftId)
-        toast({ title: '✅ Đã tự động lưu bản nháp', description: `Đề "${title}" đã được lưu nháp tự động.` })
-        // Save pending notification to localStorage for re-login scenario
-        localStorage.setItem('ai_exam_draft_saved', JSON.stringify({
-          title,
-          level,
-          draftId: newDraftId,
-          timestamp: Date.now(),
-        }))
+    saveDraftToServer(mappedQuestions, result, level, title, description, draftId).then(
+      (newDraftId) => {
+        if (newDraftId) {
+          setDraftId(newDraftId)
+          toast({
+            title: '✅ Đã tự động lưu bản nháp',
+            description: `Đề "${title}" đã được lưu nháp tự động.`,
+          })
+          // Save pending notification to localStorage for re-login scenario
+          localStorage.setItem(
+            'ai_exam_draft_saved',
+            JSON.stringify({
+              title,
+              level,
+              draftId: newDraftId,
+              timestamp: Date.now(),
+            })
+          )
+        }
       }
-    })
+    )
   }
 
   const handleJobFailed = (err: string) => {
@@ -1855,7 +1866,14 @@ export default function AICreateExamPage() {
 
   const handleSaveDraft = async () => {
     setSavingDraft(true)
-    const newDraftId = await saveDraftToServer(editableQuestions, aiResult, level, title, description, draftId)
+    const newDraftId = await saveDraftToServer(
+      editableQuestions,
+      aiResult,
+      level,
+      title,
+      description,
+      draftId
+    )
     if (newDraftId) {
       setDraftId(newDraftId)
       toast({ title: 'Thành công', description: 'Đã lưu bản nháp!' })
@@ -1934,66 +1952,70 @@ export default function AICreateExamPage() {
             <p className="text-sm font-medium text-muted-foreground">Đang tải kết quả AI...</p>
           </div>
         ) : (
-        <>
-        {step === 1 && (
-          <Step1
-            audioFile={audioFile}
-            setAudioFile={setAudioFile}
-            level={level}
-            setLevel={setLevel}
-            title={title}
-            setTitle={setTitle}
-            description={description}
-            setDescription={setDescription}
-            onNext={handleStartAI}
-            loading={loading}
-          />
-        )}
-
-        {step === 2 && (
-          <div>
-            {failed ? (
-              <div className="text-center py-12 space-y-4">
-                <AlertCircle className="w-16 h-16 text-red-400 mx-auto" />
-                <p className="text-lg font-bold text-card-foreground">Pipeline thất bại</p>
-                <p className="text-sm text-red-500">{failedMsg}</p>
-                <button
-                  onClick={() => {
-                    setStep(1)
-                    setFailed(false)
-                    setJobId('')
-                  }}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-colors mx-auto shadow-lg shadow-blue-500/30"
-                >
-                  <RotateCcw className="w-4 h-4" /> Thử lại
-                </button>
-              </div>
-            ) : (
-              <Step2Processing jobId={jobId} onDone={handleJobDone} onFailed={handleJobFailed} />
+          <>
+            {step === 1 && (
+              <Step1
+                audioFile={audioFile}
+                setAudioFile={setAudioFile}
+                level={level}
+                setLevel={setLevel}
+                title={title}
+                setTitle={setTitle}
+                description={description}
+                setDescription={setDescription}
+                onNext={handleStartAI}
+                loading={loading}
+              />
             )}
-          </div>
-        )}
 
-        {step === 3 && aiResult && (
-          <Step3Review
-            editableQuestions={editableQuestions}
-            setEditableQuestions={setEditableQuestions}
-            audioFile={audioFile}
-          />
-        )}
+            {step === 2 && (
+              <div>
+                {failed ? (
+                  <div className="text-center py-12 space-y-4">
+                    <AlertCircle className="w-16 h-16 text-red-400 mx-auto" />
+                    <p className="text-lg font-bold text-card-foreground">Pipeline thất bại</p>
+                    <p className="text-sm text-red-500">{failedMsg}</p>
+                    <button
+                      onClick={() => {
+                        setStep(1)
+                        setFailed(false)
+                        setJobId('')
+                      }}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-colors mx-auto shadow-lg shadow-blue-500/30"
+                    >
+                      <RotateCcw className="w-4 h-4" /> Thử lại
+                    </button>
+                  </div>
+                ) : (
+                  <Step2Processing
+                    jobId={jobId}
+                    onDone={handleJobDone}
+                    onFailed={handleJobFailed}
+                  />
+                )}
+              </div>
+            )}
 
-        {step === 4 && (
-          <Step4Save
-            questions={editableQuestions}
-            level={level}
-            title={title}
-            description={description}
-            draftId={draftId}
-            audioId={aiResult?.audio_id}
-            onBack={() => setStep(3)}
-          />
-        )}
-        </>
+            {step === 3 && aiResult && (
+              <Step3Review
+                editableQuestions={editableQuestions}
+                setEditableQuestions={setEditableQuestions}
+                audioFile={audioFile}
+              />
+            )}
+
+            {step === 4 && (
+              <Step4Save
+                questions={editableQuestions}
+                level={level}
+                title={title}
+                description={description}
+                draftId={draftId}
+                audioId={aiResult?.audio_id}
+                onBack={() => setStep(3)}
+              />
+            )}
+          </>
         )}
       </div>
 

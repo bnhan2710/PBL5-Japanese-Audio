@@ -357,7 +357,10 @@ export default function ExamPrintPage() {
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-500">
                     Tên file
                   </p>
-                  <p className="mt-2 max-w-full truncate text-base font-semibold text-stone-900" title={listeningFile.fileName}>
+                  <p
+                    className="mt-2 max-w-full truncate text-base font-semibold text-stone-900"
+                    title={listeningFile.fileName}
+                  >
                     {shortenFileName(listeningFile.fileName, 34)}
                   </p>
                 </div>

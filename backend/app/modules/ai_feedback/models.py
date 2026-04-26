@@ -15,11 +15,11 @@ class AIFeedback(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     content_id = Column(UUID(as_uuid=True), index=True, nullable=False)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    
+
     rating_score = Column(Integer, nullable=False)
-    
-    # We use JSON since it's compatible with both Postgres and Sqlite (fallback). 
-    # But usually teams here use JSON or Dialect specific things. 
+
+    # We use JSON since it's compatible with both Postgres and Sqlite (fallback).
+    # But usually teams here use JSON or Dialect specific things.
     # sqlalchemy.JSON is safe.
     feedback_tags = Column(sqlalchemy.JSON, nullable=True, default=list)
     comment_text = Column(Text, nullable=True)

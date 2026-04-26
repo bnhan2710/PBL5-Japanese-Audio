@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, ConfigDict
 # Audio schemas
 # ---------------------------------------------------------------------------
 
+
 class AudioBase(BaseModel):
     file_name: Optional[str] = Field(None, description="Original file name")
     file_url: str = Field(..., description="URL / path to the audio file")
@@ -16,11 +17,13 @@ class AudioBase(BaseModel):
 
 class AudioCreate(AudioBase):
     """Payload for uploading / registering a new audio file."""
+
     pass
 
 
 class AudioUpdate(BaseModel):
     """Fields that can be patched after creation."""
+
     file_name: Optional[str] = None
     duration: Optional[int] = None
     ai_status: Optional[str] = Field(None, pattern="^(pending|processing|completed|failed)$")
@@ -43,15 +46,16 @@ class AudioResponse(AudioBase):
                 "duration": 420,
                 "ai_status": "completed",
                 "ai_model": "whisper-v3",
-                "raw_transcript": "こんにちは..."
+                "raw_transcript": "こんにちは...",
             }
-        }
+        },
     )
 
 
 # ---------------------------------------------------------------------------
 # TranscriptSegment schemas
 # ---------------------------------------------------------------------------
+
 
 class TranscriptSegmentBase(BaseModel):
     speaker_name: Optional[str] = Field(None, description="e.g. 'Speaker A'")
@@ -64,6 +68,7 @@ class TranscriptSegmentBase(BaseModel):
 
 class TranscriptSegmentCreate(TranscriptSegmentBase):
     """Payload for creating a single segment. audio_id supplied by the route."""
+
     audio_id: UUID
 
 
@@ -91,14 +96,15 @@ class TranscriptSegmentResponse(TranscriptSegmentBase):
                 "start_time": 0.0,
                 "end_time": 5.2,
                 "content": "こんにちは、よろしくお願いします。",
-                "sort_order": 1
+                "sort_order": 1,
             }
-        }
+        },
     )
 
 
 class AudioWithSegmentsResponse(AudioResponse):
     """Audio detail including all transcript segments."""
+
     segments: List[TranscriptSegmentResponse] = []
 
     model_config = ConfigDict(from_attributes=True)

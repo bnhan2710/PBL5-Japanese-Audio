@@ -1,9 +1,26 @@
 import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
- X, Headphones, Clock, Layers, Loader2,
- Trash2, Save, Brain, AlertCircle,
- Edit3, FileText, ChevronLeft, ExternalLink, Plus, Star, Scissors, Download, QrCode, Play, Pause
+  X,
+  Headphones,
+  Clock,
+  Layers,
+  Loader2,
+  Trash2,
+  Save,
+  Brain,
+  AlertCircle,
+  Edit3,
+  FileText,
+  ChevronLeft,
+  ExternalLink,
+  Plus,
+  Star,
+  Scissors,
+  Download,
+  QrCode,
+  Play,
+  Pause,
 } from 'lucide-react'
 import { examClient, ExamResponse, QuestionResponse, AnswerResponse } from './api/examClient'
 import AIPhotoGenerator from './components/AIPhotoGenerator'
@@ -11,1172 +28,1412 @@ import { toast } from '@/hooks/use-toast'
 import { useAuthState } from '@/context/AuthContext'
 
 interface Props {
- exam: ExamResponse
- onClose: () => void
- onExamDeleted?: () => void
- onExamUpdated?: (exam: ExamResponse) => void
+  exam: ExamResponse
+  onClose: () => void
+  onExamDeleted?: () => void
+  onExamUpdated?: (exam: ExamResponse) => void
 }
 
 type EditableQuestionPatch = Partial<QuestionResponse> & {
- image_file?: File | null
+  image_file?: File | null
 }
 
 const MONDAI_OPTIONS = [1, 2, 3, 4, 5]
 
 function extractMondaiNumber(label?: string | null) {
- if (!label) return -1
- const match = label.match(/(\d+)/)
- return match ? Number(match[1]) : -1
+  if (!label) return -1
+  const match = label.match(/(\d+)/)
+  return match ? Number(match[1]) : -1
 }
 
 function buildCloudinaryDownloadUrl(value?: string | null) {
- if (!value) return null
- if (value.includes('res.cloudinary.com') && value.includes('/upload/')) {
- return value.replace('/upload/', '/upload/fl_attachment/')
- }
- return value
+  if (!value) return null
+  if (value.includes('res.cloudinary.com') && value.includes('/upload/')) {
+    return value.replace('/upload/', '/upload/fl_attachment/')
+  }
+  return value
 }
 
 function extractFileName(value?: string | null) {
- if (!value) return 'audio-listening.mp3'
- const normalized = value.split('?')[0]?.split('#')[0] ?? value
- const segments = normalized.split('/')
- return segments[segments.length - 1] || 'audio-listening.mp3'
+  if (!value) return 'audio-listening.mp3'
+  const normalized = value.split('?')[0]?.split('#')[0] ?? value
+  const segments = normalized.split('/')
+  return segments[segments.length - 1] || 'audio-listening.mp3'
 }
 
 function buildQrCodeUrl(value: string) {
- const searchParams = new URLSearchParams({
- size: '280x280',
- data: value,
- })
- return `https://api.qrserver.com/v1/create-qr-code/?${searchParams.toString()}`
+  const searchParams = new URLSearchParams({
+    size: '280x280',
+    data: value,
+  })
+  return `https://api.qrserver.com/v1/create-qr-code/?${searchParams.toString()}`
 }
 
- function AudioPlayer({ url }: { url: string }) {
- return (
- <audio
- src={url}
- controls
- preload="metadata"
- className="w-full"
- />
- )
+function AudioPlayer({ url }: { url: string }) {
+  return <audio src={url} controls preload="metadata" className="w-full" />
 }
 
 function RawTranscriptDisplay({ text }: { text: string }) {
- return (
- <textarea
- value={text || ''}
- readOnly
- rows={6}
- placeholder="Nội dung nghe thô từ audio..."
- className="w-full px-4 py-3 border border-border rounded-xl text-sm bg-muted text-slate-700 dark:text-muted-foreground resize-none focus:outline-none focus:ring-1 focus:ring-blue-400 leading-relaxed cursor-default"
- />
- )
+  return (
+    <textarea
+      value={text || ''}
+      readOnly
+      rows={6}
+      placeholder="Nội dung nghe thô từ audio..."
+      className="w-full px-4 py-3 border border-border rounded-xl text-sm bg-muted text-slate-700 dark:text-muted-foreground resize-none focus:outline-none focus:ring-1 focus:ring-blue-400 leading-relaxed cursor-default"
+    />
+  )
 }
 
 // ─── Inline Audio Trimmer ─────────────────────────────────────────────────────�───────────────────────────────────────────
 
 function InlineAudioTrimmer({
- initialUrl,
- onSave,
- onCancel
+  initialUrl,
+  onSave,
+  onCancel,
 }: {
- initialUrl: string | null;
- onSave: (url: string) => void;
- onCancel: () => void;
+  initialUrl: string | null
+  onSave: (url: string) => void
+  onCancel: () => void
 }) {
- const getBaseUrl = () => {
- if (!initialUrl) return null;
- let base = initialUrl;
- base = base.replace(/so_[\d.]+,?/, '');
- base = base.replace(/eo_[\d.]+,?/, '');
- base = base.replace('upload//', 'upload/');
- return base;
- }
+  const getBaseUrl = () => {
+    if (!initialUrl) return null
+    let base = initialUrl
+    base = base.replace(/so_[\d.]+,?/, '')
+    base = base.replace(/eo_[\d.]+,?/, '')
+    base = base.replace('upload//', 'upload/')
+    return base
+  }
 
- const extractTime = (type: 'so' | 'eo') => {
- if (!initialUrl) return 0;
- const match = initialUrl.match(new RegExp(`${type}_([\\d.]+)`));
- return match ? parseFloat(match[1]) : 0;
- }
+  const extractTime = (type: 'so' | 'eo') => {
+    if (!initialUrl) return 0
+    const match = initialUrl.match(new RegExp(`${type}_([\\d.]+)`))
+    return match ? parseFloat(match[1]) : 0
+  }
 
- const baseUrl = getBaseUrl();
- const initialStart = extractTime('so');
- const initialEnd = extractTime('eo') || (initialStart + 15);
+  const baseUrl = getBaseUrl()
+  const initialStart = extractTime('so')
+  const initialEnd = extractTime('eo') || initialStart + 15
 
- const [start, setStart] = useState<number>(initialStart);
- const [end, setEnd] = useState<number>(initialEnd);
+  const [start, setStart] = useState<number>(initialStart)
+  const [end, setEnd] = useState<number>(initialEnd)
 
- const formatTime = (secs: number) => {
- const m = Math.floor(Math.max(0, secs) / 60);
- const s = Math.floor(Math.max(0, secs) % 60);
- return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
- }
+  const formatTime = (secs: number) => {
+    const m = Math.floor(Math.max(0, secs) / 60)
+    const s = Math.floor(Math.max(0, secs) % 60)
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+  }
 
- const [startText, setStartText] = useState(() => formatTime(initialStart));
- const [endText, setEndText] = useState(() => formatTime(initialEnd));
- const audioRef = useRef<HTMLAudioElement>(null);
+  const [startText, setStartText] = useState(() => formatTime(initialStart))
+  const [endText, setEndText] = useState(() => formatTime(initialEnd))
+  const audioRef = useRef<HTMLAudioElement>(null)
 
- const parseTime = (str: string, fallback: number) => {
- const p = str.split(':');
- if (p.length === 2) return (parseInt(p[0]) || 0) * 60 + (parseInt(p[1]) || 0);
- if (p.length === 1) return parseInt(p[0]) || 0;
- return fallback;
- }
+  const parseTime = (str: string, fallback: number) => {
+    const p = str.split(':')
+    if (p.length === 2) return (parseInt(p[0]) || 0) * 60 + (parseInt(p[1]) || 0)
+    if (p.length === 1) return parseInt(p[0]) || 0
+    return fallback
+  }
 
- const handleAdjustStart = (offset: number) => {
- setStart(v => {
- const next = Math.max(0, v + offset);
- setStartText(formatTime(next));
- if (audioRef.current) { audioRef.current.currentTime = next; audioRef.current.play().catch(()=>{}); }
- return next;
- });
- }
+  const handleAdjustStart = (offset: number) => {
+    setStart((v) => {
+      const next = Math.max(0, v + offset)
+      setStartText(formatTime(next))
+      if (audioRef.current) {
+        audioRef.current.currentTime = next
+        audioRef.current.play().catch(() => {})
+      }
+      return next
+    })
+  }
 
- const handleAdjustEnd = (offset: number) => {
- setEnd(v => {
- const next = Math.max(0, v + offset);
- setEndText(formatTime(next));
- if (audioRef.current) { audioRef.current.currentTime = next; audioRef.current.play().catch(()=>{}); }
- return next;
- });
- }
+  const handleAdjustEnd = (offset: number) => {
+    setEnd((v) => {
+      const next = Math.max(0, v + offset)
+      setEndText(formatTime(next))
+      if (audioRef.current) {
+        audioRef.current.currentTime = next
+        audioRef.current.play().catch(() => {})
+      }
+      return next
+    })
+  }
 
- const applyStart = () => {
- const s = parseTime(startText, start);
- setStart(s);
- setStartText(formatTime(s));
- if (audioRef.current) { audioRef.current.currentTime = s; audioRef.current.play().catch(()=>{}); }
- }
+  const applyStart = () => {
+    const s = parseTime(startText, start)
+    setStart(s)
+    setStartText(formatTime(s))
+    if (audioRef.current) {
+      audioRef.current.currentTime = s
+      audioRef.current.play().catch(() => {})
+    }
+  }
 
- const applyEnd = () => {
- const e = parseTime(endText, end);
- setEnd(e);
- setEndText(formatTime(e));
- if (audioRef.current) { audioRef.current.currentTime = e; audioRef.current.play().catch(()=>{}); }
- }
+  const applyEnd = () => {
+    const e = parseTime(endText, end)
+    setEnd(e)
+    setEndText(formatTime(e))
+    if (audioRef.current) {
+      audioRef.current.currentTime = e
+      audioRef.current.play().catch(() => {})
+    }
+  }
 
- const handleSave = () => {
- if (!baseUrl) {
- toast({ title: 'Lỗi', description: 'Audio gốc không hợp lệ', variant: 'destructive' });
- return;
- }
- let newUrl = baseUrl;
- if (newUrl.includes('cloudinary.com')) {
- newUrl = newUrl.replace('/upload/', `/upload/eo_${end},so_${start}/`);
- }
- onSave(newUrl);
- }
+  const handleSave = () => {
+    if (!baseUrl) {
+      toast({ title: 'Lỗi', description: 'Audio gốc không hợp lệ', variant: 'destructive' })
+      return
+    }
+    let newUrl = baseUrl
+    if (newUrl.includes('cloudinary.com')) {
+      newUrl = newUrl.replace('/upload/', `/upload/eo_${end},so_${start}/`)
+    }
+    onSave(newUrl)
+  }
 
- return (
- <div className="space-y-4 bg-muted p-4 rounded-xl border border-border w-full mt-2">
- {baseUrl ? (
- <audio ref={audioRef} src={baseUrl} controls className="w-full h-10 outline-none" />
- ) : (
- <p className="text-sm text-muted-foreground">Đang tải audio...</p>
- )}
- <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
- <div className="flex-1 w-full">
- <label className="text-xs font-bold text-muted-foreground block mb-1.5 flex items-center gap-1"><Play className="w-3 h-3"/> Bắt đầu (mm:ss)</label>
- <div className="flex items-center gap-2">
- <input 
- type="text" 
- value={startText} 
- onChange={e => setStartText(e.target.value)} 
- onBlur={applyStart}
- onKeyDown={e => e.key === 'Enter' && applyStart()}
- className="w-20 px-3 py-1.5 border border-border rounded-lg text-sm bg-card text-card-foreground outline-none focus:ring-1 focus:ring-blue-500 font-mono text-center" 
- />
- <button onClick={() => handleAdjustStart(-1)} className="px-2 py-1.5 text-xs font-medium bg-muted hover:bg-slate-300 rounded-md text-slate-700 dark:text-muted-foreground transition-colors">-1s</button>
- <button onClick={() => handleAdjustStart(+1)} className="px-2 py-1.5 text-xs font-medium bg-muted hover:bg-slate-300 rounded-md text-slate-700 dark:text-muted-foreground transition-colors">+1s</button>
- </div>
- </div>
- <div className="flex-1 w-full">
- <label className="text-xs font-bold text-muted-foreground block mb-1.5 flex items-center gap-1"><Pause className="w-3 h-3"/> Kết thúc (mm:ss)</label>
- <div className="flex items-center gap-2">
- <input 
- type="text" 
- value={endText} 
- onChange={e => setEndText(e.target.value)} 
- onBlur={applyEnd}
- onKeyDown={e => e.key === 'Enter' && applyEnd()}
- className="w-20 px-3 py-1.5 border border-border rounded-lg text-sm bg-card text-card-foreground outline-none focus:ring-1 focus:ring-blue-500 font-mono text-center" 
- />
- <button onClick={() => handleAdjustEnd(-1)} className="px-2 py-1.5 text-xs font-medium bg-muted hover:bg-slate-300 rounded-md text-slate-700 dark:text-muted-foreground transition-colors">-1s</button>
- <button onClick={() => handleAdjustEnd(+1)} className="px-2 py-1.5 text-xs font-medium bg-muted hover:bg-slate-300 rounded-md text-slate-700 dark:text-muted-foreground transition-colors">+1s</button>
- </div>
- </div>
- </div>
- <div className="flex items-center gap-2 pt-2 border-t border-border">
- <button onClick={handleSave} className="flex-1 px-3 py-2 flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl text-sm font-bold hover:from-emerald-600 hover:to-teal-600 transition-colors shadow-sm">
- <Scissors className="w-4 h-4"/> Lưu & Trích xuất
- </button>
- <button onClick={onCancel} className="px-4 py-2 bg-slate-100 text-muted-foreground dark:text-muted-foreground rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors">
- Hủy
- </button>
- </div>
- </div>
- );
+  return (
+    <div className="space-y-4 bg-muted p-4 rounded-xl border border-border w-full mt-2">
+      {baseUrl ? (
+        <audio ref={audioRef} src={baseUrl} controls className="w-full h-10 outline-none" />
+      ) : (
+        <p className="text-sm text-muted-foreground">Đang tải audio...</p>
+      )}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex-1 w-full">
+          <label className="text-xs font-bold text-muted-foreground block mb-1.5 flex items-center gap-1">
+            <Play className="w-3 h-3" /> Bắt đầu (mm:ss)
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={startText}
+              onChange={(e) => setStartText(e.target.value)}
+              onBlur={applyStart}
+              onKeyDown={(e) => e.key === 'Enter' && applyStart()}
+              className="w-20 px-3 py-1.5 border border-border rounded-lg text-sm bg-card text-card-foreground outline-none focus:ring-1 focus:ring-blue-500 font-mono text-center"
+            />
+            <button
+              onClick={() => handleAdjustStart(-1)}
+              className="px-2 py-1.5 text-xs font-medium bg-muted hover:bg-slate-300 rounded-md text-slate-700 dark:text-muted-foreground transition-colors"
+            >
+              -1s
+            </button>
+            <button
+              onClick={() => handleAdjustStart(+1)}
+              className="px-2 py-1.5 text-xs font-medium bg-muted hover:bg-slate-300 rounded-md text-slate-700 dark:text-muted-foreground transition-colors"
+            >
+              +1s
+            </button>
+          </div>
+        </div>
+        <div className="flex-1 w-full">
+          <label className="text-xs font-bold text-muted-foreground block mb-1.5 flex items-center gap-1">
+            <Pause className="w-3 h-3" /> Kết thúc (mm:ss)
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={endText}
+              onChange={(e) => setEndText(e.target.value)}
+              onBlur={applyEnd}
+              onKeyDown={(e) => e.key === 'Enter' && applyEnd()}
+              className="w-20 px-3 py-1.5 border border-border rounded-lg text-sm bg-card text-card-foreground outline-none focus:ring-1 focus:ring-blue-500 font-mono text-center"
+            />
+            <button
+              onClick={() => handleAdjustEnd(-1)}
+              className="px-2 py-1.5 text-xs font-medium bg-muted hover:bg-slate-300 rounded-md text-slate-700 dark:text-muted-foreground transition-colors"
+            >
+              -1s
+            </button>
+            <button
+              onClick={() => handleAdjustEnd(+1)}
+              className="px-2 py-1.5 text-xs font-medium bg-muted hover:bg-slate-300 rounded-md text-slate-700 dark:text-muted-foreground transition-colors"
+            >
+              +1s
+            </button>
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 pt-2 border-t border-border">
+        <button
+          onClick={handleSave}
+          className="flex-1 px-3 py-2 flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl text-sm font-bold hover:from-emerald-600 hover:to-teal-600 transition-colors shadow-sm"
+        >
+          <Scissors className="w-4 h-4" /> Lưu & Trích xuất
+        </button>
+        <button
+          onClick={onCancel}
+          className="px-4 py-2 bg-slate-100 text-muted-foreground dark:text-muted-foreground rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors"
+        >
+          Hủy
+        </button>
+      </div>
+    </div>
+  )
 }
 
 // ─── Main Modal ───────────────────────────────────────────────────────────────
 
 export default function ExamDetailModal({ exam, onClose, onExamDeleted, onExamUpdated }: Props) {
- const { user } = useAuthState()
- const navigate = useNavigate()
+  const { user } = useAuthState()
+  const navigate = useNavigate()
 
- const canEdit = user?.role === 'admin' || user?.id === exam.creator_id
- const imageInputRef = useRef<HTMLInputElement>(null)
- const [questions, setQuestions] = useState<QuestionResponse[]>([])
- const [loading, setLoading] = useState(true)
- const [activeQId, setActiveQId] = useState<string | null>(null)
+  const canEdit = user?.role === 'admin' || user?.id === exam.creator_id
+  const imageInputRef = useRef<HTMLInputElement>(null)
+  const [questions, setQuestions] = useState<QuestionResponse[]>([])
+  const [loading, setLoading] = useState(true)
+  const [activeQId, setActiveQId] = useState<string | null>(null)
 
- // Exam header editing
- const [editTitle, setEditTitle] = useState(exam.title)
- const [editTimeLimit, setEditTimeLimit] = useState(exam.time_limit ?? 0)
- const [editIsPublished, setEditIsPublished] = useState(exam.is_published)
- const [headerDirty, setHeaderDirty] = useState(false)
- const [savingHeader, setSavingHeader] = useState(false)
- const [deletingExam, setDeletingExam] = useState(false)
+  // Exam header editing
+  const [editTitle, setEditTitle] = useState(exam.title)
+  const [editTimeLimit, setEditTimeLimit] = useState(exam.time_limit ?? 0)
+  const [editIsPublished, setEditIsPublished] = useState(exam.is_published)
+  const [headerDirty, setHeaderDirty] = useState(false)
+  const [savingHeader, setSavingHeader] = useState(false)
+  const [deletingExam, setDeletingExam] = useState(false)
 
- // Per-question editing state
- const [editedQuestions, setEditedQuestions] = useState<Record<string, EditableQuestionPatch>>({})
- const [savingQ, setSavingQ] = useState<string | null>(null)
- const [deletingQ, setDeletingQ] = useState<string | null>(null)
- const [confirmDeleteQ, setConfirmDeleteQ] = useState<string | null>(null)
- const [isEditingAudio, setIsEditingAudio] = useState<string | null>(null)
- const [showAudioQr, setShowAudioQr] = useState(false)
+  // Per-question editing state
+  const [editedQuestions, setEditedQuestions] = useState<Record<string, EditableQuestionPatch>>({})
+  const [savingQ, setSavingQ] = useState<string | null>(null)
+  const [deletingQ, setDeletingQ] = useState<string | null>(null)
+  const [confirmDeleteQ, setConfirmDeleteQ] = useState<string | null>(null)
+  const [isEditingAudio, setIsEditingAudio] = useState<string | null>(null)
+  const [showAudioQr, setShowAudioQr] = useState(false)
 
- const handleOpenPdfExport = () => {
- window.open(`/exam/${exam.exam_id}/pdf?autoprint=1`, '_blank', 'noopener,noreferrer')
- }
+  const handleOpenPdfExport = () => {
+    window.open(`/exam/${exam.exam_id}/pdf?autoprint=1`, '_blank', 'noopener,noreferrer')
+  }
 
- useEffect(() => {
- examClient.getExamQuestions(exam.exam_id)
- .then(qs => { setQuestions(qs); if (qs.length > 0) setActiveQId(qs[0].question_id) })
- .catch(() => setQuestions([]))
- .finally(() => setLoading(false))}, [exam.exam_id])
+  useEffect(() => {
+    examClient
+      .getExamQuestions(exam.exam_id)
+      .then((qs) => {
+        setQuestions(qs)
+        if (qs.length > 0) setActiveQId(qs[0].question_id)
+      })
+      .catch(() => setQuestions([]))
+      .finally(() => setLoading(false))
+  }, [exam.exam_id])
 
- // ── Header actions ──────────────────────────────────────────────────────────
+  // ── Header actions ──────────────────────────────────────────────────────────
 
- const handleSaveHeader = async () => {
- setSavingHeader(true)
- try {
- const updated = await examClient.updateExam(exam.exam_id, {
- title: editTitle,
- time_limit: editTimeLimit,
- is_published: editIsPublished,
- })
- toast({ title: 'Đã cập nhật thông tin đề thi' })
- setHeaderDirty(false)
- if (onExamUpdated) onExamUpdated(updated)
- } catch (e: any) {
- toast({ title: 'Lỗi', description: e.message, variant: 'destructive' })
- } finally {
- setSavingHeader(false)
- }
- }
+  const handleSaveHeader = async () => {
+    setSavingHeader(true)
+    try {
+      const updated = await examClient.updateExam(exam.exam_id, {
+        title: editTitle,
+        time_limit: editTimeLimit,
+        is_published: editIsPublished,
+      })
+      toast({ title: 'Đã cập nhật thông tin đề thi' })
+      setHeaderDirty(false)
+      if (onExamUpdated) onExamUpdated(updated)
+    } catch (e: any) {
+      toast({ title: 'Lỗi', description: e.message, variant: 'destructive' })
+    } finally {
+      setSavingHeader(false)
+    }
+  }
 
- const handleDeleteExam = async () => {
- if (!confirm('Xoá đề thi này? Hành động không thể hoàn tác.')) return
- setDeletingExam(true)
- try {
- await examClient.deleteExam(exam.exam_id)
- toast({ title: 'Đã xoá đề thi' })
- if (onExamDeleted) onExamDeleted()
- } catch (e: any) {
- toast({ title: 'Lỗi', description: e.message, variant: 'destructive' })
- setDeletingExam(false)
- }
- }
+  const handleDeleteExam = async () => {
+    if (!confirm('Xoá đề thi này? Hành động không thể hoàn tác.')) return
+    setDeletingExam(true)
+    try {
+      await examClient.deleteExam(exam.exam_id)
+      toast({ title: 'Đã xoá đề thi' })
+      if (onExamDeleted) onExamDeleted()
+    } catch (e: any) {
+      toast({ title: 'Lỗi', description: e.message, variant: 'destructive' })
+      setDeletingExam(false)
+    }
+  }
 
- // ── Question editing helpers ────────────────────────────────────────────────
+  // ── Question editing helpers ────────────────────────────────────────────────
 
- const getEditQ = (q: QuestionResponse) => ({ ...q, ...(editedQuestions[q.question_id] ?? {}) })
+  const getEditQ = (q: QuestionResponse) => ({ ...q, ...(editedQuestions[q.question_id] ?? {}) })
 
- const patchQ = (qId: string, patch: EditableQuestionPatch) => {
-  setEditedQuestions(prev => ({ ...prev, [qId]: { ...(prev[qId] ?? {}), ...patch } }))
-}
+  const patchQ = (qId: string, patch: EditableQuestionPatch) => {
+    setEditedQuestions((prev) => ({ ...prev, [qId]: { ...(prev[qId] ?? {}), ...patch } }))
+  }
 
- const isHideQuestionEnabled = (question: QuestionResponse) => {
- const patched = editedQuestions[question.question_id]
- if (patched && Object.prototype.hasOwnProperty.call(patched, 'hide_question_text')) {
- return !!patched.hide_question_text
- }
- return !!question.hide_question_text
- }
+  const isHideQuestionEnabled = (question: QuestionResponse) => {
+    const patched = editedQuestions[question.question_id]
+    if (patched && Object.prototype.hasOwnProperty.call(patched, 'hide_question_text')) {
+      return !!patched.hide_question_text
+    }
+    return !!question.hide_question_text
+  }
 
- const hiddenMondaiNumbers = Array.from(
- new Set(
- questions
- .filter((q) => isHideQuestionEnabled(q))
- .map((q) => extractMondaiNumber(q.mondai_group))
- .filter((n) => n > 0)
- )
- ).sort((a, b) => a - b)
+  const hiddenMondaiNumbers = Array.from(
+    new Set(
+      questions
+        .filter((q) => isHideQuestionEnabled(q))
+        .map((q) => extractMondaiNumber(q.mondai_group))
+        .filter((n) => n > 0)
+    )
+  ).sort((a, b) => a - b)
 
- const toggleHideQuestionByMondai = (mondaiNumber: number) => {
- const shouldHide = !hiddenMondaiNumbers.includes(mondaiNumber)
- setEditedQuestions((prev) => {
- const next = { ...prev }
- for (const q of questions) {
- if (extractMondaiNumber(q.mondai_group) !== mondaiNumber) continue
- next[q.question_id] = { ...(next[q.question_id] ?? {}), hide_question_text: shouldHide }
- }
- return next
- })
- }
+  const toggleHideQuestionByMondai = (mondaiNumber: number) => {
+    const shouldHide = !hiddenMondaiNumbers.includes(mondaiNumber)
+    setEditedQuestions((prev) => {
+      const next = { ...prev }
+      for (const q of questions) {
+        if (extractMondaiNumber(q.mondai_group) !== mondaiNumber) continue
+        next[q.question_id] = { ...(next[q.question_id] ?? {}), hide_question_text: shouldHide }
+      }
+      return next
+    })
+  }
 
- const patchAnswer = (qId: string, aIdx: number, patch: Partial<AnswerResponse>) => {
- const q = questions.find(x => x.question_id === qId)!
- const base = editedQuestions[qId] ?? {}
- const answers = (base.answers ?? q.answers).map((a, i) => {
- if (patch.is_correct !== undefined) return { ...a, is_correct: i === aIdx }
- return i === aIdx ? { ...a, ...patch } : a
- })
- patchQ(qId, { answers })
- }
+  const patchAnswer = (qId: string, aIdx: number, patch: Partial<AnswerResponse>) => {
+    const q = questions.find((x) => x.question_id === qId)!
+    const base = editedQuestions[qId] ?? {}
+    const answers = (base.answers ?? q.answers).map((a, i) => {
+      if (patch.is_correct !== undefined) return { ...a, is_correct: i === aIdx }
+      return i === aIdx ? { ...a, ...patch } : a
+    })
+    patchQ(qId, { answers })
+  }
 
- const isDirtyQ = (qId: string) => !!editedQuestions[qId] && Object.keys(editedQuestions[qId]).length > 0
+  const isDirtyQ = (qId: string) =>
+    !!editedQuestions[qId] && Object.keys(editedQuestions[qId]).length > 0
 
- const getRawTranscriptPreview = (q: QuestionResponse) => {
- const edited = editedQuestions[q.question_id] as Partial<QuestionResponse> | undefined
- return edited?.raw_transcript ?? q.raw_transcript ?? ''
- }
+  const getRawTranscriptPreview = (q: QuestionResponse) => {
+    const edited = editedQuestions[q.question_id] as Partial<QuestionResponse> | undefined
+    return edited?.raw_transcript ?? q.raw_transcript ?? ''
+  }
 
- const handleSaveQ = async (q: QuestionResponse) => {
- const patch = editedQuestions[q.question_id]
- if (!patch) return
- setSavingQ(q.question_id)
- try {
- const { answers: patchAnswers, image_file, ...questionPatch } = patch
- const safeQuestionPatch = {
- ...questionPatch,
- ...(Object.prototype.hasOwnProperty.call(patch, 'image_url')
- ? {
- image_url: image_file
- ? null
- : ((patch.image_url && !patch.image_url.startsWith('blob:')) ? patch.image_url : null),
- }
- : {}),
- }
+  const handleSaveQ = async (q: QuestionResponse) => {
+    const patch = editedQuestions[q.question_id]
+    if (!patch) return
+    setSavingQ(q.question_id)
+    try {
+      const { answers: patchAnswers, image_file, ...questionPatch } = patch
+      const safeQuestionPatch = {
+        ...questionPatch,
+        ...(Object.prototype.hasOwnProperty.call(patch, 'image_url')
+          ? {
+              image_url: image_file
+                ? null
+                : patch.image_url && !patch.image_url.startsWith('blob:')
+                  ? patch.image_url
+                  : null,
+            }
+          : {}),
+      }
 
- await examClient.updateQuestion(q.question_id, safeQuestionPatch)
+      await examClient.updateQuestion(q.question_id, safeQuestionPatch)
 
- if (patchAnswers) {
- const removedAnswers = q.answers.filter(oa => !patchAnswers.find(pa => pa.answer_id === oa.answer_id))
- await Promise.all(removedAnswers.map(a => examClient.deleteAnswer(a.answer_id)))
+      if (patchAnswers) {
+        const removedAnswers = q.answers.filter(
+          (oa) => !patchAnswers.find((pa) => pa.answer_id === oa.answer_id)
+        )
+        await Promise.all(removedAnswers.map((a) => examClient.deleteAnswer(a.answer_id)))
 
- await Promise.all(
- patchAnswers.map((a, i) =>
- a.answer_id
- ? examClient.updateAnswer(a.answer_id, { content: a.content, is_correct: a.is_correct, order_index: i })
- : examClient.createAnswer({ question_id: q.question_id, content: a.content || '', is_correct: !!a.is_correct, order_index: i })
- )
- )
- }
+        await Promise.all(
+          patchAnswers.map((a, i) =>
+            a.answer_id
+              ? examClient.updateAnswer(a.answer_id, {
+                  content: a.content,
+                  is_correct: a.is_correct,
+                  order_index: i,
+                })
+              : examClient.createAnswer({
+                  question_id: q.question_id,
+                  content: a.content || '',
+                  is_correct: !!a.is_correct,
+                  order_index: i,
+                })
+          )
+        )
+      }
 
- if (image_file) {
- await examClient.uploadQuestionImage(q.question_id, image_file)
- }
+      if (image_file) {
+        await examClient.uploadQuestionImage(q.question_id, image_file)
+      }
 
- const allQs = await examClient.getExamQuestions(exam.exam_id)
- const refreshedQ = allQs.find(x => x.question_id === q.question_id)
- setQuestions(prev => prev.map(x => x.question_id === q.question_id ? (refreshedQ || x) : x))
+      const allQs = await examClient.getExamQuestions(exam.exam_id)
+      const refreshedQ = allQs.find((x) => x.question_id === q.question_id)
+      setQuestions((prev) =>
+        prev.map((x) => (x.question_id === q.question_id ? refreshedQ || x : x))
+      )
 
- setEditedQuestions(prev => { const n = { ...prev }; delete n[q.question_id]; return n })
- toast({ title: 'Đã lưu câu hỏi' })
- } catch (e: any) {
- toast({ title: 'Lỗi', description: e.message, variant: 'destructive' })
- } finally {
- setSavingQ(null)
- }
- }
+      setEditedQuestions((prev) => {
+        const n = { ...prev }
+        delete n[q.question_id]
+        return n
+      })
+      toast({ title: 'Đã lưu câu hỏi' })
+    } catch (e: any) {
+      toast({ title: 'Lỗi', description: e.message, variant: 'destructive' })
+    } finally {
+      setSavingQ(null)
+    }
+  }
 
- const getBaseAudioUrl = (): string | null => {
- const sourceUrl = exam.audio_file_url
- if (!sourceUrl) return null
- let base = sourceUrl
- base = base.replace(/so_[\d.]+,?/, '')
- base = base.replace(/eo_[\d.]+,?/, '')
- base = base.replace('upload//', 'upload/')
- return base
- }
+  const getBaseAudioUrl = (): string | null => {
+    const sourceUrl = exam.audio_file_url
+    if (!sourceUrl) return null
+    let base = sourceUrl
+    base = base.replace(/so_[\d.]+,?/, '')
+    base = base.replace(/eo_[\d.]+,?/, '')
+    base = base.replace('upload//', 'upload/')
+    return base
+  }
 
- const listeningFile = (() => {
- const baseUrl = getBaseAudioUrl()
- if (!baseUrl) return null
+  const listeningFile = (() => {
+    const baseUrl = getBaseAudioUrl()
+    if (!baseUrl) return null
 
- const downloadUrl = buildCloudinaryDownloadUrl(baseUrl) || baseUrl
- return {
- fileName: exam.audio_file_name || extractFileName(downloadUrl),
- url: downloadUrl,
- qrCodeUrl: buildQrCodeUrl(downloadUrl),
- }
- })()
+    const downloadUrl = buildCloudinaryDownloadUrl(baseUrl) || baseUrl
+    return {
+      fileName: exam.audio_file_name || extractFileName(downloadUrl),
+      url: downloadUrl,
+      qrCodeUrl: buildQrCodeUrl(downloadUrl),
+    }
+  })()
 
- const handleDeleteQ = async (qId: string) => {
- setDeletingQ(qId)
- try {
- await examClient.deleteQuestion(qId)
- const remaining = questions.filter(x => x.question_id !== qId)
- setQuestions(remaining)
- setActiveQId(remaining.length > 0 ? remaining[0].question_id : null)
- setConfirmDeleteQ(null)
- toast({ title: 'Đã xoá câu hỏi' })
- } catch (e: any) {
- toast({ title: 'Lỗi', description: e.message, variant: 'destructive' })
- } finally {
- setDeletingQ(null)
- }
- }
+  const handleDeleteQ = async (qId: string) => {
+    setDeletingQ(qId)
+    try {
+      await examClient.deleteQuestion(qId)
+      const remaining = questions.filter((x) => x.question_id !== qId)
+      setQuestions(remaining)
+      setActiveQId(remaining.length > 0 ? remaining[0].question_id : null)
+      setConfirmDeleteQ(null)
+      toast({ title: 'Đã xoá câu hỏi' })
+    } catch (e: any) {
+      toast({ title: 'Lỗi', description: e.message, variant: 'destructive' })
+    } finally {
+      setDeletingQ(null)
+    }
+  }
 
- const handlePickQuestionImage = (questionId: string, file: File | null) => {
- if (!file) return
- const localUrl = URL.createObjectURL(file)
- patchQ(questionId, { image_url: localUrl, image_file: file })
- toast({ title: 'Đã chọn ảnh', description: 'Ảnh sẽ được lưu khi bạn lưu câu hỏi.' })
- if (imageInputRef.current) imageInputRef.current.value = ''
- }
+  const handlePickQuestionImage = (questionId: string, file: File | null) => {
+    if (!file) return
+    const localUrl = URL.createObjectURL(file)
+    patchQ(questionId, { image_url: localUrl, image_file: file })
+    toast({ title: 'Đã chọn ảnh', description: 'Ảnh sẽ được lưu khi bạn lưu câu hỏi.' })
+    if (imageInputRef.current) imageInputRef.current.value = ''
+  }
 
- const handleRemoveQuestionImage = (questionId: string) => {
- patchQ(questionId, { image_url: '', image_file: null })
- if (imageInputRef.current) imageInputRef.current.value = ''
- }
+  const handleRemoveQuestionImage = (questionId: string) => {
+    patchQ(questionId, { image_url: '', image_file: null })
+    if (imageInputRef.current) imageInputRef.current.value = ''
+  }
 
- const handleAddQuestion = async (group: string) => {
- const questionsInGroup = questions.filter(q => q.mondai_group === group)
- const nums = questionsInGroup.map(q => q.question_number || 1).sort((a, b) => a - b)
+  const handleAddQuestion = async (group: string) => {
+    const questionsInGroup = questions.filter((q) => q.mondai_group === group)
+    const nums = questionsInGroup.map((q) => q.question_number || 1).sort((a, b) => a - b)
 
- let nextNum = 1
- if (nums.length > 0) {
- if (nums[0] > 1) {
- nextNum = 1
- } else {
- nextNum = nums[nums.length - 1] + 1
- for (let i = 0; i < nums.length - 1; i++) {
- if (nums[i + 1] - nums[i] > 1) {
- nextNum = nums[i] + 1
- break
- }
- }
- }
- }
+    let nextNum = 1
+    if (nums.length > 0) {
+      if (nums[0] > 1) {
+        nextNum = 1
+      } else {
+        nextNum = nums[nums.length - 1] + 1
+        for (let i = 0; i < nums.length - 1; i++) {
+          if (nums[i + 1] - nums[i] > 1) {
+            nextNum = nums[i] + 1
+            break
+          }
+        }
+      }
+    }
 
- try {
- const newQ = await examClient.createQuestion({
- exam_id: exam.exam_id,
- mondai_group: group,
- question_number: nextNum,
- question_text: '',
- script_text: '',
- raw_transcript: '',
- hide_question_text: hiddenMondaiNumbers.includes(extractMondaiNumber(group)),
- explanation: '',
- })
+    try {
+      const newQ = await examClient.createQuestion({
+        exam_id: exam.exam_id,
+        mondai_group: group,
+        question_number: nextNum,
+        question_text: '',
+        script_text: '',
+        raw_transcript: '',
+        hide_question_text: hiddenMondaiNumbers.includes(extractMondaiNumber(group)),
+        explanation: '',
+      })
 
- const newAnswers = await Promise.all([0, 1, 2, 3].map(i =>
- examClient.createAnswer({
- question_id: newQ.question_id,
- content: '',
- is_correct: i === 0,
- order_index: i
- })
- ))
+      const newAnswers = await Promise.all(
+        [0, 1, 2, 3].map((i) =>
+          examClient.createAnswer({
+            question_id: newQ.question_id,
+            content: '',
+            is_correct: i === 0,
+            order_index: i,
+          })
+        )
+      )
 
- const fullQ = { ...newQ, answers: newAnswers }
+      const fullQ = { ...newQ, answers: newAnswers }
 
- setQuestions(prev => {
- const next = [...prev, fullQ]
- return next.sort((a, b) => {
- if (a.mondai_group !== b.mondai_group) return (a.mondai_group || '').localeCompare(b.mondai_group || '')
- return (a.question_number || 0) - (b.question_number || 0)
- })
- })
- setActiveQId(newQ.question_id)
- toast({ title: 'Đã thêm câu hỏi mới' })
- } catch (e: any) {
- toast({ title: 'Lỗi', description: e.message, variant: 'destructive' })
- }
- }
+      setQuestions((prev) => {
+        const next = [...prev, fullQ]
+        return next.sort((a, b) => {
+          if (a.mondai_group !== b.mondai_group)
+            return (a.mondai_group || '').localeCompare(b.mondai_group || '')
+          return (a.question_number || 0) - (b.question_number || 0)
+        })
+      })
+      setActiveQId(newQ.question_id)
+      toast({ title: 'Đã thêm câu hỏi mới' })
+    } catch (e: any) {
+      toast({ title: 'Lỗi', description: e.message, variant: 'destructive' })
+    }
+  }
 
- const updateAnswerCount = (qId: string, count: 3 | 4) => {
- const q = questions.find(x => x.question_id === qId)!
- const base = editedQuestions[qId] ?? {}
- const currentAnswers = base.answers ?? q.answers
+  const updateAnswerCount = (qId: string, count: 3 | 4) => {
+    const q = questions.find((x) => x.question_id === qId)!
+    const base = editedQuestions[qId] ?? {}
+    const currentAnswers = base.answers ?? q.answers
 
- const nextAnswers = [...currentAnswers]
- while (nextAnswers.length > count) {
- nextAnswers.pop()
- }
- while (nextAnswers.length < count) {
- nextAnswers.push({ content: '', is_correct: false, answer_id: undefined } as any)
- }
- if (nextAnswers.length > 0 && !nextAnswers.some(a => a.is_correct)) {
- nextAnswers[0].is_correct = true
- }
- patchQ(qId, { answers: nextAnswers })
- }
+    const nextAnswers = [...currentAnswers]
+    while (nextAnswers.length > count) {
+      nextAnswers.pop()
+    }
+    while (nextAnswers.length < count) {
+      nextAnswers.push({ content: '', is_correct: false, answer_id: undefined } as any)
+    }
+    if (nextAnswers.length > 0 && !nextAnswers.some((a) => a.is_correct)) {
+      nextAnswers[0].is_correct = true
+    }
+    patchQ(qId, { answers: nextAnswers })
+  }
 
- // ── Derived data ────────────────────────────────────────────────────────────
+  // ── Derived data ────────────────────────────────────────────────────────────
 
- const groupedQuestions = questions.reduce((acc, q) => {
- const g = q.mondai_group || 'Khác'
- if (!acc[g]) acc[g] = []
- acc[g].push(q)
- return acc
- }, {} as Record<string, QuestionResponse[]>)
+  const groupedQuestions = questions.reduce(
+    (acc, q) => {
+      const g = q.mondai_group || 'Khác'
+      if (!acc[g]) acc[g] = []
+      acc[g].push(q)
+      return acc
+    },
+    {} as Record<string, QuestionResponse[]>
+  )
 
- const activeQ = questions.find(q => q.question_id === activeQId)
- const activeEdited = activeQ ? getEditQ(activeQ) : null
+  const activeQ = questions.find((q) => q.question_id === activeQId)
+  const activeEdited = activeQ ? getEditQ(activeQ) : null
 
- // ── Render ──────────────────────────────────────────────────────────────────
+  // ── Render ──────────────────────────────────────────────────────────────────
 
- return (
- <div
- className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
- onClick={e => { if (e.target === e.currentTarget) onClose() }}
- >
- <div className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col">
-
- {/* ── Header ── */}
- <div className="px-6 py-4 border-b border-border shrink-0 flex items-start justify-between gap-4">
- <div className="flex-1 min-w-0 space-y-2">
- <input
- value={editTitle}
- onChange={e => { setEditTitle(e.target.value); setHeaderDirty(true) }}
- readOnly={!canEdit}
- className={`w-full text-lg font-bold px-0 py-0 bg-transparent border-0 border-b border-transparent ${canEdit ? 'hover:border-border focus:border-blue-400' : ''} focus:outline-none text-card-foreground transition-colors`}
- placeholder="Tiêu đề đề thi"
- />
- <div className="flex items-center gap-4 flex-wrap">
- <div className="flex items-center gap-1.5 text-sm text-muted-foreground font-medium">
- <Clock className="w-4 h-4 text-blue-500" />
- <input
- type="number"
- value={editTimeLimit}
- disabled={!canEdit}
- onChange={e => { setEditTimeLimit(parseInt(e.target.value) || 0); setHeaderDirty(true) }}
- className="w-14 text-center bg-transparent border-b border-border hover:border-border focus:border-blue-500 focus:outline-none text-sm transition-colors"
- />
- <span>phút</span>
- </div>
- <label className="flex items-center gap-1.5 cursor-pointer">
- <input
- type="checkbox"
- checked={editIsPublished}
- disabled={!canEdit}
- onChange={e => { setEditIsPublished(e.target.checked); setHeaderDirty(true) }}
- className="w-3.5 h-3.5 rounded accent-emerald-500"
- />
- <span className={`text-xs font-semibold px-2 py-0.5 rounded-full
- ${editIsPublished
- ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
- : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'}`}>
- {editIsPublished ? '✓ Xuất bản' : '⏳ Nháp'}
- </span>
- </label>
-
- {headerDirty && canEdit && (
- <button
- onClick={handleSaveHeader}
- disabled={savingHeader}
- className="flex items-center gap-1.5 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-60 shadow-sm"
- >
- {savingHeader ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
- Lưu thay đổi
- </button>
- )}
- </div>
- </div>
-
- <div className="flex items-center gap-2 shrink-0">
- <button
- onClick={() => setShowAudioQr(true)}
- disabled={!listeningFile}
- className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-900/20 rounded-lg transition-colors disabled:opacity-50 disabled:hover:bg-transparent"
- >
- <QrCode className="w-3.5 h-3.5" />
- QR Audio
- </button>
- <button
- onClick={handleOpenPdfExport}
- className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-stone-700 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800 rounded-lg transition-colors"
- >
- <Download className="w-3.5 h-3.5" />
- Tải PDF
- </button>
- <button
- onClick={() => {
- onClose()
- navigate(`/test/exams/${exam.exam_id}`)
- }}
- className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
- >
- <ExternalLink className="w-3.5 h-3.5" />
- Làm bài thi
- </button>
- {canEdit && (<button
- onClick={handleDeleteExam}
- disabled={deletingExam}
- className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50"
- >
- {deletingExam ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
- Xoá đề thi
- </button>)}
- <button
- onClick={onClose}
- className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
- >
- <X className="w-4 h-4" />
- </button>
- </div>
- </div>
-
- {/* ── Body: Split Pane ── */}
- <div className="flex-1 overflow-hidden flex min-h-0">
- {loading ? (
- <div className="flex-1 flex items-center justify-center">
- <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
- </div>
- ) : questions.length === 0 ? (
- <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
- <Layers className="w-12 h-12 text-muted-foreground dark:text-muted-foreground mb-3" />
- <p className="text-sm font-medium text-muted-foreground">Đề thi này chưa có câu hỏi nào.</p>
- </div>
- ) : (
- <>
- {/* Left Sidebar */}
- <div className="w-[260px] shrink-0 border-r border-border flex flex-col overflow-hidden">
- <div className="px-4 py-3 border-b border-border flex items-center justify-between bg-muted/30">
- <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Danh sách câu hỏi</h3>
- <span className="text-[10px] font-bold bg-muted text-muted-foreground px-2 py-0.5 rounded-full border border-border">
- {questions.length} câu
- </span>
- </div>
- <div className="flex-1 overflow-y-auto p-4 space-y-6">
- {canEdit && (<div className="rounded-xl border border-border bg-muted/20 p-3.5">
- <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">
- Ẩn phần câu hỏi theo Mondai
- </p>
- <p className="mt-1 text-xs text-muted-foreground">
- Chọn Mondai cần ẩn nội dung câu hỏi khi làm bài thi (chỉ hiện A/B/C/D).
- </p>
- <div className="mt-3 flex flex-wrap gap-2">
- {MONDAI_OPTIONS.map((mondaiNumber) => {
- const selected = hiddenMondaiNumbers.includes(mondaiNumber)
- return (
- <button
- key={mondaiNumber}
- type="button"
- onClick={() => toggleHideQuestionByMondai(mondaiNumber)}
- className={`h-8 min-w-8 rounded-full border px-2.5 text-xs font-bold transition-colors ${
- selected
- ? 'border-blue-500 bg-blue-500 text-white'
- : 'border-border bg-card text-muted-foreground hover:border-blue-300'
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
+      <div className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col">
+        {/* ── Header ── */}
+        <div className="px-6 py-4 border-b border-border shrink-0 flex items-start justify-between gap-4">
+          <div className="flex-1 min-w-0 space-y-2">
+            <input
+              value={editTitle}
+              onChange={(e) => {
+                setEditTitle(e.target.value)
+                setHeaderDirty(true)
+              }}
+              readOnly={!canEdit}
+              className={`w-full text-lg font-bold px-0 py-0 bg-transparent border-0 border-b border-transparent ${canEdit ? 'hover:border-border focus:border-blue-400' : ''} focus:outline-none text-card-foreground transition-colors`}
+              placeholder="Tiêu đề đề thi"
+            />
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground font-medium">
+                <Clock className="w-4 h-4 text-blue-500" />
+                <input
+                  type="number"
+                  value={editTimeLimit}
+                  disabled={!canEdit}
+                  onChange={(e) => {
+                    setEditTimeLimit(parseInt(e.target.value) || 0)
+                    setHeaderDirty(true)
+                  }}
+                  className="w-14 text-center bg-transparent border-b border-border hover:border-border focus:border-blue-500 focus:outline-none text-sm transition-colors"
+                />
+                <span>phút</span>
+              </div>
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={editIsPublished}
+                  disabled={!canEdit}
+                  onChange={(e) => {
+                    setEditIsPublished(e.target.checked)
+                    setHeaderDirty(true)
+                  }}
+                  className="w-3.5 h-3.5 rounded accent-emerald-500"
+                />
+                <span
+                  className={`text-xs font-semibold px-2 py-0.5 rounded-full
+ ${
+   editIsPublished
+     ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+     : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
  }`}
- >
- {mondaiNumber}
- </button>
- )
- })}
- </div>
- </div>)}
+                >
+                  {editIsPublished ? '✓ Xuất bản' : '⏳ Nháp'}
+                </span>
+              </label>
 
- {Object.entries(groupedQuestions).map(([group, qs]) => (
- <div key={group}>
- <div className="flex items-center justify-between mb-3">
- <h4 className="text-xs font-bold text-slate-700 dark:text-muted-foreground">{group}</h4>
- <span className="text-[10px] font-semibold text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{qs.length} câu</span>
- </div>
- <div className="flex flex-wrap gap-2">
- {qs.map(q => {
- const isActive = activeQId === q.question_id
- const hasAnswer = q.answers?.some(a => a.is_correct)
- const hideQuestionText = isHideQuestionEnabled(q)
- return (
- <button
- key={q.question_id}
- onClick={() => setActiveQId(q.question_id)}
- title={hideQuestionText ? 'Ẩn câu hỏi khi thi' : 'Hiện câu hỏi khi thi'}
- className={`relative w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-200
- ${isActive
- ? 'border-blue-500 bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400 shadow-sm'
- : hasAnswer
- ? 'border-emerald-500 text-emerald-600 bg-card dark:border-emerald-600 dark:text-emerald-400 hover:bg-emerald-50'
- : 'border-border text-muted-foreground bg-card hover:border-border dark:text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+              {headerDirty && canEdit && (
+                <button
+                  onClick={handleSaveHeader}
+                  disabled={savingHeader}
+                  className="flex items-center gap-1.5 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-60 shadow-sm"
+                >
+                  {savingHeader ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Save className="w-3 h-3" />
+                  )}
+                  Lưu thay đổi
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setShowAudioQr(true)}
+              disabled={!listeningFile}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-900/20 rounded-lg transition-colors disabled:opacity-50 disabled:hover:bg-transparent"
+            >
+              <QrCode className="w-3.5 h-3.5" />
+              QR Audio
+            </button>
+            <button
+              onClick={handleOpenPdfExport}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-stone-700 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800 rounded-lg transition-colors"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Tải PDF
+            </button>
+            <button
+              onClick={() => {
+                onClose()
+                navigate(`/test/exams/${exam.exam_id}`)
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              Làm bài thi
+            </button>
+            {canEdit && (
+              <button
+                onClick={handleDeleteExam}
+                disabled={deletingExam}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {deletingExam ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="w-3.5 h-3.5" />
+                )}
+                Xoá đề thi
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* ── Body: Split Pane ── */}
+        <div className="flex-1 overflow-hidden flex min-h-0">
+          {loading ? (
+            <div className="flex-1 flex items-center justify-center">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+            </div>
+          ) : questions.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+              <Layers className="w-12 h-12 text-muted-foreground dark:text-muted-foreground mb-3" />
+              <p className="text-sm font-medium text-muted-foreground">
+                Đề thi này chưa có câu hỏi nào.
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Left Sidebar */}
+              <div className="w-[260px] shrink-0 border-r border-border flex flex-col overflow-hidden">
+                <div className="px-4 py-3 border-b border-border flex items-center justify-between bg-muted/30">
+                  <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                    Danh sách câu hỏi
+                  </h3>
+                  <span className="text-[10px] font-bold bg-muted text-muted-foreground px-2 py-0.5 rounded-full border border-border">
+                    {questions.length} câu
+                  </span>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                  {canEdit && (
+                    <div className="rounded-xl border border-border bg-muted/20 p-3.5">
+                      <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">
+                        Ẩn phần câu hỏi theo Mondai
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Chọn Mondai cần ẩn nội dung câu hỏi khi làm bài thi (chỉ hiện A/B/C/D).
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {MONDAI_OPTIONS.map((mondaiNumber) => {
+                          const selected = hiddenMondaiNumbers.includes(mondaiNumber)
+                          return (
+                            <button
+                              key={mondaiNumber}
+                              type="button"
+                              onClick={() => toggleHideQuestionByMondai(mondaiNumber)}
+                              className={`h-8 min-w-8 rounded-full border px-2.5 text-xs font-bold transition-colors ${
+                                selected
+                                  ? 'border-blue-500 bg-blue-500 text-white'
+                                  : 'border-border bg-card text-muted-foreground hover:border-blue-300'
+                              }`}
+                            >
+                              {mondaiNumber}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {Object.entries(groupedQuestions).map(([group, qs]) => (
+                    <div key={group}>
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-xs font-bold text-slate-700 dark:text-muted-foreground">
+                          {group}
+                        </h4>
+                        <span className="text-[10px] font-semibold text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                          {qs.length} câu
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {qs.map((q) => {
+                          const isActive = activeQId === q.question_id
+                          const hasAnswer = q.answers?.some((a) => a.is_correct)
+                          const hideQuestionText = isHideQuestionEnabled(q)
+                          return (
+                            <button
+                              key={q.question_id}
+                              onClick={() => setActiveQId(q.question_id)}
+                              title={
+                                hideQuestionText ? 'Ẩn câu hỏi khi thi' : 'Hiện câu hỏi khi thi'
+                              }
+                              className={`relative w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-200
+ ${
+   isActive
+     ? 'border-blue-500 bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400 shadow-sm'
+     : hasAnswer
+       ? 'border-emerald-500 text-emerald-600 bg-card dark:border-emerald-600 dark:text-emerald-400 hover:bg-emerald-50'
+       : 'border-border text-muted-foreground bg-card hover:border-border dark:text-muted-foreground hover:bg-accent hover:text-accent-foreground'
  }`}
- >
- {q.question_number ?? '?'}
- </button>
- )
- })}
- {canEdit && (
- <button
- onClick={() => handleAddQuestion(group)}
- className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 border-dashed border-border text-muted-foreground hover:border-blue-500 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 transition-colors"
- title="Thêm câu hỏi mới"
- >
- <Plus className="w-4 h-4" />
- </button>)}
- </div>
- </div>
- ))}
+                            >
+                              {q.question_number ?? '?'}
+                            </button>
+                          )
+                        })}
+                        {canEdit && (
+                          <button
+                            onClick={() => handleAddQuestion(group)}
+                            className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 border-dashed border-border text-muted-foreground hover:border-blue-500 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 transition-colors"
+                            title="Thêm câu hỏi mới"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
 
- {canEdit && (<button
- onClick={() => {
- const newGroup = prompt('Nhập tên phần thi mới (ví dụ: Mondai 1):');
- if (newGroup && newGroup.trim()) {
- handleAddQuestion(newGroup.trim());
- }
- }}
- className="w-full mt-4 flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-border rounded-xl text-muted-foreground font-medium hover:bg-accent hover:text-accent-foreground hover:border-blue-400 hover:text-blue-600 transition-colors text-sm"
- >
- <Plus className="w-4 h-4" /> Thêm phần thi mới
- </button>)}
- </div>
- </div>
+                  {canEdit && (
+                    <button
+                      onClick={() => {
+                        const newGroup = prompt('Nhập tên phần thi mới (ví dụ: Mondai 1):')
+                        if (newGroup && newGroup.trim()) {
+                          handleAddQuestion(newGroup.trim())
+                        }
+                      }}
+                      className="w-full mt-4 flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-border rounded-xl text-muted-foreground font-medium hover:bg-accent hover:text-accent-foreground hover:border-blue-400 hover:text-blue-600 transition-colors text-sm"
+                    >
+                      <Plus className="w-4 h-4" /> Thêm phần thi mới
+                    </button>
+                  )}
+                </div>
+              </div>
 
- {/* Right Detail Pane */}
- <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
- {activeQ && activeEdited ? (
- <>
- {/* Pane Header */}
- <div className="px-6 py-3.5 border-b border-border flex items-center justify-between bg-muted/20 shrink-0">
- <div className="flex items-center gap-2">
- <div className="flex flex-wrap gap-2 items-center">
- <span className="text-xs font-semibold bg-muted text-muted-foreground pl-2.5 pr-1 py-1 rounded-md flex items-center gap-1.5 border border-border">
- {activeQ.mondai_group}
- <span className="text-muted-foreground dark:text-muted-foreground mx-0.5">-</span>
- Câu
- <div className="flex items-center gap-0.5">
- <button onClick={() => patchQ(activeQ.question_id, { question_number: Math.max(1, (activeEdited.question_number || 1) - 1) })} className="w-5 h-5 flex items-center justify-center bg-muted rounded text-muted-foreground hover:bg-slate-300 font-bold select-none leading-none">-</button>
- <span className="w-6 text-center">{activeEdited.question_number}</span>
- <button onClick={() => patchQ(activeQ.question_id, { question_number: (activeEdited.question_number || 1) + 1 })} className="w-5 h-5 flex items-center justify-center bg-muted rounded text-muted-foreground hover:bg-slate-300 font-bold select-none leading-none">+</button>
- </div>
- </span>
- </div>
- {isDirtyQ(activeQ.question_id) && canEdit && (
- <span className="text-[10px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-700">
- Chưa lưu
- </span>
- )}
- </div>
- <div className="flex items-center gap-2">
- <div className="flex items-center gap-1 rounded-xl border border-border bg-card px-2 py-1">
- <span className="text-xs font-bold text-muted-foreground mr-1">IRT</span>
- {[1, 2, 3, 4, 5].map((star) => (
- <button
- key={star}
- onClick={() => canEdit && patchQ(activeQ.question_id, { difficulty: star })}
- className={`w-6 h-6 flex items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-accent-foreground ${(activeEdited.difficulty || 3) >= star ? 'text-amber-400' : 'text-muted-foreground dark:text-muted-foreground'}`}
- title={`${star} sao`}
- >
- <Star className={`w-4 h-4 ${(activeEdited.difficulty || 3) >= star ? 'fill-current' : ''}`} />
- </button>
- ))}
- </div>
- {/* Delete Question */}
- {canEdit && (confirmDeleteQ === activeQ.question_id ? (
- <div className="flex items-center gap-2">
- <span className="text-xs text-red-600 font-medium">Xác nhận xoá?</span>
- <button
- onClick={() => handleDeleteQ(activeQ.question_id)}
- disabled={!!deletingQ}
- className="px-2.5 py-1 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-700 transition-colors disabled:opacity-60"
- >
- {deletingQ === activeQ.question_id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Xoá'}
- </button>
- <button
- onClick={() => setConfirmDeleteQ(null)}
- className="px-2.5 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-lg transition-colors"
- >
- Huỷ
- </button>
- </div>
- ) : (
- <button
- onClick={() => setConfirmDeleteQ(activeQ.question_id)}
- className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
- >
- <Trash2 className="w-3.5 h-3.5" />
- Xoá câu hỏi
- </button>
- ))}
- {/* Save Question */}
- {isDirtyQ(activeQ.question_id) && canEdit && (
- <button
- onClick={() => handleSaveQ(activeQ)}
- disabled={savingQ === activeQ.question_id}
- className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-60 shadow-sm"
- >
- {savingQ === activeQ.question_id
- ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
- : <Save className="w-3.5 h-3.5" />}
- Lưu câu hỏi
- </button>
- )}
- </div>
- </div>
+              {/* Right Detail Pane */}
+              <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+                {activeQ && activeEdited ? (
+                  <>
+                    {/* Pane Header */}
+                    <div className="px-6 py-3.5 border-b border-border flex items-center justify-between bg-muted/20 shrink-0">
+                      <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap gap-2 items-center">
+                          <span className="text-xs font-semibold bg-muted text-muted-foreground pl-2.5 pr-1 py-1 rounded-md flex items-center gap-1.5 border border-border">
+                            {activeQ.mondai_group}
+                            <span className="text-muted-foreground dark:text-muted-foreground mx-0.5">
+                              -
+                            </span>
+                            Câu
+                            <div className="flex items-center gap-0.5">
+                              <button
+                                onClick={() =>
+                                  patchQ(activeQ.question_id, {
+                                    question_number: Math.max(
+                                      1,
+                                      (activeEdited.question_number || 1) - 1
+                                    ),
+                                  })
+                                }
+                                className="w-5 h-5 flex items-center justify-center bg-muted rounded text-muted-foreground hover:bg-slate-300 font-bold select-none leading-none"
+                              >
+                                -
+                              </button>
+                              <span className="w-6 text-center">
+                                {activeEdited.question_number}
+                              </span>
+                              <button
+                                onClick={() =>
+                                  patchQ(activeQ.question_id, {
+                                    question_number: (activeEdited.question_number || 1) + 1,
+                                  })
+                                }
+                                className="w-5 h-5 flex items-center justify-center bg-muted rounded text-muted-foreground hover:bg-slate-300 font-bold select-none leading-none"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </span>
+                        </div>
+                        {isDirtyQ(activeQ.question_id) && canEdit && (
+                          <span className="text-[10px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-700">
+                            Chưa lưu
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 rounded-xl border border-border bg-card px-2 py-1">
+                          <span className="text-xs font-bold text-muted-foreground mr-1">IRT</span>
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              onClick={() =>
+                                canEdit && patchQ(activeQ.question_id, { difficulty: star })
+                              }
+                              className={`w-6 h-6 flex items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-accent-foreground ${(activeEdited.difficulty || 3) >= star ? 'text-amber-400' : 'text-muted-foreground dark:text-muted-foreground'}`}
+                              title={`${star} sao`}
+                            >
+                              <Star
+                                className={`w-4 h-4 ${(activeEdited.difficulty || 3) >= star ? 'fill-current' : ''}`}
+                              />
+                            </button>
+                          ))}
+                        </div>
+                        {/* Delete Question */}
+                        {canEdit &&
+                          (confirmDeleteQ === activeQ.question_id ? (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-red-600 font-medium">
+                                Xác nhận xoá?
+                              </span>
+                              <button
+                                onClick={() => handleDeleteQ(activeQ.question_id)}
+                                disabled={!!deletingQ}
+                                className="px-2.5 py-1 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-700 transition-colors disabled:opacity-60"
+                              >
+                                {deletingQ === activeQ.question_id ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  'Xoá'
+                                )}
+                              </button>
+                              <button
+                                onClick={() => setConfirmDeleteQ(null)}
+                                className="px-2.5 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-lg transition-colors"
+                              >
+                                Huỷ
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setConfirmDeleteQ(activeQ.question_id)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              Xoá câu hỏi
+                            </button>
+                          ))}
+                        {/* Save Question */}
+                        {isDirtyQ(activeQ.question_id) && canEdit && (
+                          <button
+                            onClick={() => handleSaveQ(activeQ)}
+                            disabled={savingQ === activeQ.question_id}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-60 shadow-sm"
+                          >
+                            {savingQ === activeQ.question_id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Save className="w-3.5 h-3.5" />
+                            )}
+                            Lưu câu hỏi
+                          </button>
+                        )}
+                      </div>
+                    </div>
 
- {/* Pane Content */}
- <div className="flex-1 overflow-y-auto p-6 space-y-5">
+                    {/* Pane Content */}
+                    <div className="flex-1 overflow-y-auto p-6 space-y-5">
+                      {/* Audio */}
+                      <div className="bg-card border border-border rounded-xl p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Headphones className="w-4 h-4 text-blue-500" />
+                          <span className="text-sm font-bold text-slate-700 dark:text-muted-foreground">
+                            File âm thanh
+                          </span>
+                        </div>
+                        {isEditingAudio === activeQ.question_id ? (
+                          <div className="mt-2">
+                            <InlineAudioTrimmer
+                              initialUrl={activeEdited.audio_clip_url || getBaseAudioUrl()}
+                              onSave={(newUrl: string) => {
+                                patchQ(activeQ.question_id, { audio_clip_url: newUrl })
+                                setIsEditingAudio(null)
+                              }}
+                              onCancel={() => setIsEditingAudio(null)}
+                            />
+                          </div>
+                        ) : activeEdited.audio_clip_url ? (
+                          <div className="flex items-center gap-3 mt-2">
+                            <div className="flex-1 min-w-0">
+                              <AudioPlayer
+                                key={activeEdited.audio_clip_url}
+                                url={activeEdited.audio_clip_url}
+                              />
+                            </div>
+                            {canEdit && (
+                              <button
+                                onClick={() => setIsEditingAudio(activeQ.question_id)}
+                                title="Chỉnh sửa thời gian lấy Audio"
+                                className="px-3 py-2.5 shrink-0 rounded-xl bg-muted/60 hover:bg-muted text-muted-foreground flex items-center justify-center gap-1.5 transition-colors shadow-sm border border-border text-xs font-medium"
+                              >
+                                <Scissors className="w-4 h-4" />
+                                Chỉnh sửa
+                              </button>
+                            )}
+                          </div>
+                        ) : getBaseAudioUrl() ? (
+                          <div className="flex items-center justify-between gap-4">
+                            <p className="text-sm text-muted-foreground italic">
+                              Chưa lấy audio cho câu này từ file gốc
+                            </p>
+                            {canEdit && (
+                              <button
+                                onClick={() => setIsEditingAudio(activeQ.question_id)}
+                                className="text-xs px-3 py-1.5 rounded-lg bg-muted/50 hover:bg-muted text-muted-foreground font-medium shrink-0 flex items-center gap-1.5 transition-colors border border-border mt-2"
+                              >
+                                <Scissors className="w-3.5 h-3.5" /> Lấy từ bản gốc
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground italic">
+                            Bài thi chưa có audio gốc để cắt
+                          </p>
+                        )}
+                      </div>
 
- {/* Audio */}
- <div className="bg-card border border-border rounded-xl p-4">
- <div className="flex items-center gap-2 mb-2">
- <Headphones className="w-4 h-4 text-blue-500" />
- <span className="text-sm font-bold text-slate-700 dark:text-muted-foreground">File âm thanh</span>
- </div>
- {isEditingAudio === activeQ.question_id ? (
- <div className="mt-2">
- <InlineAudioTrimmer
- initialUrl={activeEdited.audio_clip_url || getBaseAudioUrl()}
- onSave={(newUrl: string) => {
- patchQ(activeQ.question_id, { audio_clip_url: newUrl })
- setIsEditingAudio(null)
- }}
- onCancel={() => setIsEditingAudio(null)}
- />
- </div>
- ) : activeEdited.audio_clip_url ? (
- <div className="flex items-center gap-3 mt-2">
- <div className="flex-1 min-w-0">
- <AudioPlayer key={activeEdited.audio_clip_url} url={activeEdited.audio_clip_url} />
- </div>
- {canEdit && (<button 
- onClick={() => setIsEditingAudio(activeQ.question_id)} 
- title="Chỉnh sửa thời gian lấy Audio"
- className="px-3 py-2.5 shrink-0 rounded-xl bg-muted/60 hover:bg-muted text-muted-foreground flex items-center justify-center gap-1.5 transition-colors shadow-sm border border-border text-xs font-medium"
- >
- <Scissors className="w-4 h-4" />
- Chỉnh sửa
- </button>)}
- </div>
- ) : getBaseAudioUrl() ? (
- <div className="flex items-center justify-between gap-4">
- <p className="text-sm text-muted-foreground italic">Chưa lấy audio cho câu này từ file gốc</p>
- {canEdit && (<button onClick={() => setIsEditingAudio(activeQ.question_id)} className="text-xs px-3 py-1.5 rounded-lg bg-muted/50 hover:bg-muted text-muted-foreground font-medium shrink-0 flex items-center gap-1.5 transition-colors border border-border mt-2">
- <Scissors className="w-3.5 h-3.5" /> Lấy từ bản gốc
- </button>)}
- </div>
- ) : (
- <p className="text-sm text-muted-foreground italic">Bài thi chưa có audio gốc để cắt</p>
- )}
- </div>
+                      <div>
+                        <label className="block text-sm font-bold text-card-foreground mb-2 flex items-center gap-1.5">
+                          <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+                          Kịch bản thô (Raw Transcript)
+                        </label>
+                        <RawTranscriptDisplay
+                          text={activeEdited.raw_transcript ?? getRawTranscriptPreview(activeQ)}
+                        />
+                      </div>
 
- <div>
- <label className="block text-sm font-bold text-card-foreground mb-2 flex items-center gap-1.5">
- <FileText className="w-3.5 h-3.5 text-muted-foreground" />
- Kịch bản thô (Raw Transcript)
- </label>
- <RawTranscriptDisplay
- text={activeEdited.raw_transcript ?? getRawTranscriptPreview(activeQ)}
- />
- </div>
+                      <div>
+                        <label className="block text-sm font-bold text-card-foreground mb-2 flex items-center gap-1.5">
+                          <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+                          Nội dung câu hỏi (Question)
+                        </label>
+                        <textarea
+                          value={activeEdited.question_text ?? ''}
+                          onChange={(e) =>
+                            patchQ(activeQ.question_id, { question_text: e.target.value })
+                          }
+                          rows={2}
+                          readOnly={!canEdit}
+                          placeholder="Nhập nội dung câu hỏi..."
+                          className="w-full px-4 py-3 border border-border rounded-xl text-sm bg-card text-card-foreground resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder:text-muted-foreground leading-relaxed transition-shadow"
+                        />
+                      </div>
 
- <div>
- <label className="block text-sm font-bold text-card-foreground mb-2 flex items-center gap-1.5">
- <FileText className="w-3.5 h-3.5 text-muted-foreground" />
- Nội dung câu hỏi (Question)
- </label>
- <textarea
- value={activeEdited.question_text ?? ''}
- onChange={e => patchQ(activeQ.question_id, { question_text: e.target.value })}
- rows={2}
- readOnly={!canEdit}
-  placeholder="Nhập nội dung câu hỏi..."
- className="w-full px-4 py-3 border border-border rounded-xl text-sm bg-card text-card-foreground resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder:text-muted-foreground leading-relaxed transition-shadow"
- />
- </div>
+                      {/* Question Text: Script */}
+                      <div>
+                        <label className="block text-sm font-bold text-card-foreground mb-2 flex items-center gap-1.5">
+                          <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+                          Kịch bản hội thoại (Script)
+                        </label>
+                        <textarea
+                          value={activeEdited.script_text ?? ''}
+                          onChange={(e) =>
+                            patchQ(activeQ.question_id, { script_text: e.target.value })
+                          }
+                          rows={7}
+                          readOnly={!canEdit}
+                          placeholder="Nhập nội dung hội thoại tiếng Nhật..."
+                          className="w-full px-4 py-3 border border-border rounded-xl text-sm bg-muted text-card-foreground resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 font-medium leading-relaxed placeholder:text-muted-foreground transition-shadow"
+                        />
+                      </div>
 
- {/* Question Text: Script */}
- <div>
- <label className="block text-sm font-bold text-card-foreground mb-2 flex items-center gap-1.5">
- <FileText className="w-3.5 h-3.5 text-muted-foreground" />
- Kịch bản hội thoại (Script)
- </label>
- <textarea
- value={activeEdited.script_text ?? ''}
- onChange={e => patchQ(activeQ.question_id, { script_text: e.target.value })}
- rows={7}
- readOnly={!canEdit}
-  placeholder="Nhập nội dung hội thoại tiếng Nhật..."
- className="w-full px-4 py-3 border border-border rounded-xl text-sm bg-muted text-card-foreground resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 font-medium leading-relaxed placeholder:text-muted-foreground transition-shadow"
- />
- </div>
+                      {/* Question Text: Explanation */}
+                      <div>
+                        <label className="block text-sm font-bold text-card-foreground mb-2 flex items-center gap-1.5">
+                          <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+                          Giải thích (Explanation)
+                        </label>
+                        <textarea
+                          value={activeEdited.explanation ?? ''}
+                          onChange={(e) =>
+                            patchQ(activeQ.question_id, { explanation: e.target.value })
+                          }
+                          rows={7}
+                          readOnly={!canEdit}
+                          placeholder="Nhập giải thích cho câu hỏi và đáp án đúng..."
+                          className="w-full px-4 py-3 border border-border rounded-xl text-sm bg-muted text-card-foreground resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 font-medium leading-relaxed placeholder:text-muted-foreground transition-shadow"
+                        />
+                      </div>
 
- {/* Question Text: Explanation */}
- <div>
- <label className="block text-sm font-bold text-card-foreground mb-2 flex items-center gap-1.5">
- <FileText className="w-3.5 h-3.5 text-muted-foreground" />
- Giải thích (Explanation)
- </label>
- <textarea
- value={activeEdited.explanation ?? ''}
- onChange={e => patchQ(activeQ.question_id, { explanation: e.target.value })}
- rows={7}
- readOnly={!canEdit}
-  placeholder="Nhập giải thích cho câu hỏi và đáp án đúng..."
- className="w-full px-4 py-3 border border-border rounded-xl text-sm bg-muted text-card-foreground resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 font-medium leading-relaxed placeholder:text-muted-foreground transition-shadow"
- />
- </div>
-
- {/* Answers */}
- <div>
- <div className="flex items-center justify-between gap-3 mb-3">
- <label className="block text-sm font-bold text-card-foreground">
- Đáp án lựa chọn (Choices)
- </label>
-  <div className="flex items-center gap-2">
-  {canEdit && (
-  <span className="text-xs font-medium text-muted-foreground">Số đáp án</span>
-  )}
- {[3, 4].map((count) => {
- const isActive = (activeEdited.answers ?? []).length === count;
- return (
- <button
- key={count}
- type="button"
- onClick={() => canEdit && updateAnswerCount(activeQ.question_id, count as 3 | 4)}
- className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${isActive
- ? 'border-blue-500 bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300'
- : 'border-border bg-card text-muted-foreground hover:bg-accent hover:text-accent-foreground dark:text-muted-foreground '
+                      {/* Answers */}
+                      <div>
+                        <div className="flex items-center justify-between gap-3 mb-3">
+                          <label className="block text-sm font-bold text-card-foreground">
+                            Đáp án lựa chọn (Choices)
+                          </label>
+                          <div className="flex items-center gap-2">
+                            {canEdit && (
+                              <span className="text-xs font-medium text-muted-foreground">
+                                Số đáp án
+                              </span>
+                            )}
+                            {[3, 4].map((count) => {
+                              const isActive = (activeEdited.answers ?? []).length === count
+                              return (
+                                <button
+                                  key={count}
+                                  type="button"
+                                  onClick={() =>
+                                    canEdit &&
+                                    updateAnswerCount(activeQ.question_id, count as 3 | 4)
+                                  }
+                                  className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
+                                    isActive
+                                      ? 'border-blue-500 bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300'
+                                      : 'border-border bg-card text-muted-foreground hover:bg-accent hover:text-accent-foreground dark:text-muted-foreground '
+                                  }`}
+                                >
+                                  {count} đáp án
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                        <div className="space-y-2.5">
+                          {(activeEdited.answers ?? []).map((a, ai) => (
+                            <div
+                              key={a.answer_id ?? ai}
+                              className="flex items-center gap-3 group/answer"
+                            >
+                              {/* Correct toggle */}
+                              <button
+                                onClick={() =>
+                                  canEdit &&
+                                  patchAnswer(activeQ.question_id, ai, { is_correct: true })
+                                }
+                                className="flex flex-col items-center w-10 shrink-0 opacity-70 hover:opacity-100 transition-opacity"
+                              >
+                                <div
+                                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all
+ ${a.is_correct ? 'border-emerald-500 bg-emerald-500' : 'border-border'}`}
+                                >
+                                  {a.is_correct && (
+                                    <span className="w-2 h-2 rounded-full bg-card" />
+                                  )}
+                                </div>
+                                {a.is_correct ? (
+                                  <span className="text-[9px] font-bold text-emerald-600 mt-0.5">
+                                    Đúng
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] font-medium text-muted-foreground mt-0.5 opacity-0 group-hover/answer:opacity-100 transition-opacity">
+                                    Chọn
+                                  </span>
+                                )}
+                              </button>
+                              {/* Content */}
+                              <div
+                                className={`flex-1 border rounded-xl px-4 py-2.5 transition-colors
+ ${
+   a.is_correct
+     ? 'border-emerald-400 bg-emerald-50/50 dark:border-emerald-500/50 dark:bg-emerald-900/10'
+     : 'border-border bg-card hover:border-border'
  }`}
- >
- {count} đáp án
- </button>
- );
- })}
- </div>
- </div>
- <div className="space-y-2.5">
- {(activeEdited.answers ?? []).map((a, ai) => (
- <div key={a.answer_id ?? ai} className="flex items-center gap-3 group/answer">
- {/* Correct toggle */}
- <button
- onClick={() => canEdit && patchAnswer(activeQ.question_id, ai, { is_correct: true })}
- className="flex flex-col items-center w-10 shrink-0 opacity-70 hover:opacity-100 transition-opacity"
- >
- <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all
- ${a.is_correct ? 'border-emerald-500 bg-emerald-500' : 'border-border'}`}>
- {a.is_correct && <span className="w-2 h-2 rounded-full bg-card" />}
- </div>
- {a.is_correct
- ? <span className="text-[9px] font-bold text-emerald-600 mt-0.5">Đúng</span>
- : <span className="text-[9px] font-medium text-muted-foreground mt-0.5 opacity-0 group-hover/answer:opacity-100 transition-opacity">Chọn</span>
- }
- </button>
- {/* Content */}
- <div className={`flex-1 border rounded-xl px-4 py-2.5 transition-colors
- ${a.is_correct
- ? 'border-emerald-400 bg-emerald-50/50 dark:border-emerald-500/50 dark:bg-emerald-900/10'
- : 'border-border bg-card hover:border-border'}`}>
- <div className="flex items-center gap-3">
- <span className={`text-sm font-bold shrink-0 ${a.is_correct ? 'text-emerald-500' : 'text-muted-foreground'}`}>
- {String.fromCharCode(65 + ai)}.
- </span>
- <input
- value={a.content ?? ''}
- onChange={e => patchAnswer(activeQ.question_id, ai, { content: e.target.value })}
- className="w-full text-sm bg-transparent border-0 outline-none text-slate-700 dark:text-muted-foreground font-medium placeholder:text-muted-foreground"
- placeholder="Nhập nội dung đáp án..."
- />
- </div>
- </div>
- </div>
- ))}
- </div>
- </div>
+                              >
+                                <div className="flex items-center gap-3">
+                                  <span
+                                    className={`text-sm font-bold shrink-0 ${a.is_correct ? 'text-emerald-500' : 'text-muted-foreground'}`}
+                                  >
+                                    {String.fromCharCode(65 + ai)}.
+                                  </span>
+                                  <input
+                                    value={a.content ?? ''}
+                                    onChange={(e) =>
+                                      patchAnswer(activeQ.question_id, ai, {
+                                        content: e.target.value,
+                                      })
+                                    }
+                                    className="w-full text-sm bg-transparent border-0 outline-none text-slate-700 dark:text-muted-foreground font-medium placeholder:text-muted-foreground"
+                                    placeholder="Nhập nội dung đáp án..."
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
 
- <div>
- <div className="mb-2 flex items-center justify-between gap-3">
- <label className="block text-sm font-bold text-card-foreground">
- Hình ảnh minh họa
- </label>
- {activeEdited.image_url && canEdit ? (
- <button
- type="button"
- onClick={() => handleRemoveQuestionImage(activeQ.question_id)}
- className="inline-flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 transition-colors hover:bg-red-100 dark:bg-red-950/30 dark:text-red-300 dark:hover:bg-red-950/50"
- >
- <Trash2 className="h-3.5 w-3.5" />
- Xoá ảnh
- </button>
- ) : null}
- </div>
- <div className="space-y-3">
- {activeEdited.image_url && canEdit ? (
- <img
- src={activeEdited.image_url}
- alt="Question illustration"
- className="w-full max-h-56 object-cover rounded-xl border border-border"
- />
- ) : null}
- <input
- value={activeEdited.image_url ?? ''}
- onChange={e => patchQ(activeQ.question_id, { image_url: e.target.value, image_file: null })}
- placeholder="Dán URL ảnh nếu cần..."
- className="w-full px-4 py-3 border border-border rounded-xl text-sm bg-card text-card-foreground focus:outline-none focus:ring-2 focus:ring-blue-400"
- />
- {canEdit && (<div
- onClick={() => imageInputRef.current?.click()}
- className="border-2 border-dashed border-border rounded-xl p-6 flex flex-col items-center justify-center bg-muted/10 hover:bg-muted/20 transition-colors cursor-pointer group"
- >
- <Edit3 className="w-8 h-8 text-muted-foreground group-hover:text-blue-500 mb-2 transition-colors" />
- <p className="text-sm text-muted-foreground text-center">
- <span className="text-blue-500 font-semibold">Thêm ảnh</span> hoặc kéo thả
- </p>
- <input
- ref={imageInputRef}
- type="file"
- accept="image/*"
- className="hidden"
- onChange={e => handlePickQuestionImage(activeQ.question_id, e.target.files?.[0] ?? null)}
- />
- </div>)}
- {canEdit && <AIPhotoGenerator
- 
- questionText={activeEdited.question_text}
- scriptText={activeEdited.script_text}
- answers={activeEdited.answers}
- onSelectImage={(file, previewUrl) => patchQ(activeQ.question_id, { image_url: previewUrl, image_file: file })}
- 
- />}
- </div>
- </div>
+                      <div>
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                          <label className="block text-sm font-bold text-card-foreground">
+                            Hình ảnh minh họa
+                          </label>
+                          {activeEdited.image_url && canEdit ? (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveQuestionImage(activeQ.question_id)}
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 transition-colors hover:bg-red-100 dark:bg-red-950/30 dark:text-red-300 dark:hover:bg-red-950/50"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Xoá ảnh
+                            </button>
+                          ) : null}
+                        </div>
+                        <div className="space-y-3">
+                          {activeEdited.image_url && canEdit ? (
+                            <img
+                              src={activeEdited.image_url}
+                              alt="Question illustration"
+                              className="w-full max-h-56 object-cover rounded-xl border border-border"
+                            />
+                          ) : null}
+                          <input
+                            value={activeEdited.image_url ?? ''}
+                            onChange={(e) =>
+                              patchQ(activeQ.question_id, {
+                                image_url: e.target.value,
+                                image_file: null,
+                              })
+                            }
+                            placeholder="Dán URL ảnh nếu cần..."
+                            className="w-full px-4 py-3 border border-border rounded-xl text-sm bg-card text-card-foreground focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          />
+                          {canEdit && (
+                            <div
+                              onClick={() => imageInputRef.current?.click()}
+                              className="border-2 border-dashed border-border rounded-xl p-6 flex flex-col items-center justify-center bg-muted/10 hover:bg-muted/20 transition-colors cursor-pointer group"
+                            >
+                              <Edit3 className="w-8 h-8 text-muted-foreground group-hover:text-blue-500 mb-2 transition-colors" />
+                              <p className="text-sm text-muted-foreground text-center">
+                                <span className="text-blue-500 font-semibold">Thêm ảnh</span> hoặc
+                                kéo thả
+                              </p>
+                              <input
+                                ref={imageInputRef}
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) =>
+                                  handlePickQuestionImage(
+                                    activeQ.question_id,
+                                    e.target.files?.[0] ?? null
+                                  )
+                                }
+                              />
+                            </div>
+                          )}
+                          {canEdit && (
+                            <AIPhotoGenerator
+                              questionText={activeEdited.question_text}
+                              scriptText={activeEdited.script_text}
+                              answers={activeEdited.answers}
+                              onSelectImage={(file, previewUrl) =>
+                                patchQ(activeQ.question_id, {
+                                  image_url: previewUrl,
+                                  image_file: file,
+                                })
+                              }
+                            />
+                          )}
+                        </div>
+                      </div>
+                    </div>
 
- </div>
+                    {/* Pane Footer */}
+                    <div className="px-6 py-3 border-t border-border shrink-0 flex justify-end gap-2 bg-muted/30">
+                      {canEdit && isDirtyQ(activeQ.question_id) ? (
+                        <>
+                          <button
+                            onClick={() =>
+                              setEditedQuestions((prev) => {
+                                const n = { ...prev }
+                                delete n[activeQ.question_id]
+                                return n
+                              })
+                            }
+                            className="px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-xl transition-colors"
+                          >
+                            <ChevronLeft className="w-3.5 h-3.5 inline mr-1" />
+                            Hoàn tác
+                          </button>
+                          <button
+                            onClick={() => handleSaveQ(activeQ)}
+                            disabled={savingQ === activeQ.question_id}
+                            className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-colors disabled:opacity-60 shadow-sm"
+                          >
+                            {savingQ === activeQ.question_id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Save className="w-4 h-4" />
+                            )}
+                            Lưu câu hỏi
+                          </button>
+                        </>
+                      ) : !canEdit ? (
+                        <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                          <AlertCircle className="w-3.5 h-3.5 text-blue-500" />
+                          Bạn đang ở chế độ xem. Chỉ Admin hoặc người sở hữu mới có quyền chỉnh sửa.
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                          <AlertCircle className="w-3.5 h-3.5" />
+                          Chỉnh sửa bất kỳ trường nào để kích hoạt nút lưu
+                        </span>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+                    <Brain className="w-12 h-12 text-muted-foreground dark:text-muted-foreground mb-3" />
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Chọn một câu hỏi ở danh sách bên trái để hiệu đính
+                    </p>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
 
- {/* Pane Footer */}
- <div className="px-6 py-3 border-t border-border shrink-0 flex justify-end gap-2 bg-muted/30">
- {canEdit && isDirtyQ(activeQ.question_id) ? (
- <>
- <button
- onClick={() => setEditedQuestions(prev => { const n = { ...prev }; delete n[activeQ.question_id]; return n })}
- className="px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-xl transition-colors"
- >
- <ChevronLeft className="w-3.5 h-3.5 inline mr-1" />Hoàn tác
- </button>
- <button
- onClick={() => handleSaveQ(activeQ)}
- disabled={savingQ === activeQ.question_id}
- className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-colors disabled:opacity-60 shadow-sm"
- >
- {savingQ === activeQ.question_id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
- Lưu câu hỏi
- </button>
- </>
- ) : !canEdit ? (
- <span className="text-xs text-muted-foreground flex items-center gap-1.5">
- <AlertCircle className="w-3.5 h-3.5 text-blue-500" />
- Bạn đang ở chế độ xem. Chỉ Admin hoặc người sở hữu mới có quyền chỉnh sửa.
- </span>
- ) : (
- <span className="text-xs text-muted-foreground flex items-center gap-1.5">
- <AlertCircle className="w-3.5 h-3.5" />
- Chỉnh sửa bất kỳ trường nào để kích hoạt nút lưu
- </span>
- )}
- </div>
- </>
- ) : (
- <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
- <Brain className="w-12 h-12 text-muted-foreground dark:text-muted-foreground mb-3" />
- <p className="text-sm font-medium text-muted-foreground">Chọn một câu hỏi ở danh sách bên trái để hiệu đính</p>
- </div>
- )}
- </div>
- </>
- )}
- </div>
- </div>
+      {showAudioQr && listeningFile && (
+        <div
+          className="absolute inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px]"
+          onClick={() => setShowAudioQr(false)}
+        >
+          <div
+            className="w-full max-w-xl rounded-[28px] border border-border bg-card shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-5">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-600">
+                  Audio QR
+                </p>
+                <h3 className="mt-2 text-2xl font-bold text-foreground">Quét mã để mở file nghe</h3>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  Dùng QR này để tải hoặc mở nhanh file audio của đề thi, tương tự flow xuất PDF.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowAudioQr(false)}
+                className="mt-1 flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
 
- {showAudioQr && listeningFile && (
- <div
- className="absolute inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px]"
- onClick={() => setShowAudioQr(false)}
- >
- <div
- className="w-full max-w-xl rounded-[28px] border border-border bg-card shadow-2xl"
- onClick={(e) => e.stopPropagation()}
- >
- <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-5">
- <div>
- <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-600">Audio QR</p>
- <h3 className="mt-2 text-2xl font-bold text-foreground">Quét mã để mở file nghe</h3>
- <p className="mt-2 text-sm leading-6 text-muted-foreground">
- Dùng QR này để tải hoặc mở nhanh file audio của đề thi, tương tự flow xuất PDF.
- </p>
- </div>
- <button
- onClick={() => setShowAudioQr(false)}
- className="mt-1 flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
- >
- <X className="h-4 w-4" />
- </button>
- </div>
+            <div className="grid gap-6 px-6 py-6 md:grid-cols-[minmax(0,1fr)_260px]">
+              <div>
+                <div className="rounded-2xl border border-border bg-muted/40 px-4 py-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                    Tên file
+                  </p>
+                  <p className="mt-2 break-all text-sm font-semibold text-foreground">
+                    {listeningFile.fileName}
+                  </p>
+                </div>
 
- <div className="grid gap-6 px-6 py-6 md:grid-cols-[minmax(0,1fr)_260px]">
- <div>
- <div className="rounded-2xl border border-border bg-muted/40 px-4 py-4">
- <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
- Tên file
- </p>
- <p className="mt-2 break-all text-sm font-semibold text-foreground">{listeningFile.fileName}</p>
- </div>
+                <div className="mt-4 rounded-2xl border border-border bg-muted/50 px-4 py-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                    URL tải file nghe
+                  </p>
+                  <p className="mt-3 break-all font-mono text-xs leading-6 text-slate-100">
+                    {listeningFile.url}
+                  </p>
+                </div>
 
- <div className="mt-4 rounded-2xl border border-border bg-muted/50 px-4 py-4">
- <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
- URL tải file nghe
- </p>
- <p className="mt-3 break-all font-mono text-xs leading-6 text-slate-100">{listeningFile.url}</p>
- </div>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <a
+                    href={listeningFile.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    download={listeningFile.fileName}
+                    className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 shadow-md shadow-blue-500/20"
+                  >
+                    <Download className="h-4 w-4" />
+                    Mở / tải file nghe
+                  </a>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard
+                        .writeText(listeningFile.url)
+                        .then(() => toast({ title: 'Đã copy link audio' }))
+                        .catch(() =>
+                          toast({ title: 'Không thể copy link', variant: 'destructive' })
+                        )
+                    }}
+                    className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Copy link
+                  </button>
+                </div>
+              </div>
 
- <div className="mt-4 flex flex-wrap gap-3">
- <a
- href={listeningFile.url}
- target="_blank"
- rel="noreferrer"
- download={listeningFile.fileName}
- className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 shadow-md shadow-blue-500/20"
- >
- <Download className="h-4 w-4" />
- Mở / tải file nghe
- </a>
- <button
- onClick={() => {
- navigator.clipboard.writeText(listeningFile.url)
- .then(() => toast({ title: 'Đã copy link audio' }))
- .catch(() => toast({ title: 'Không thể copy link', variant: 'destructive' }))
- }}
- className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted"
- >
- <FileText className="h-4 w-4" />
- Copy link
- </button>
- </div>
- </div>
-
- <div className="rounded-[24px] border border-emerald-100 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 p-5 text-center">
- <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Scan To Listen</p>
- <div className="mt-4 overflow-hidden rounded-3xl border border-white bg-white p-3 shadow-sm">
- <img
- src={listeningFile.qrCodeUrl}
- alt="Mã QR mở file nghe"
- className="mx-auto aspect-square w-full max-w-[280px] object-contain"
- />
- </div>
- <p className="mt-4 text-sm font-semibold text-foreground">Quét QR để mở file nghe</p>
- <p className="mt-2 text-xs leading-5 text-muted-foreground">
- Nếu máy không tải trực tiếp, hãy mở URL rồi dùng chức năng tải xuống của trình phát.
- </p>
- </div>
- </div>
- </div>
- </div>
- )}
- </div>
- )
+              <div className="rounded-[24px] border border-emerald-100 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 p-5 text-center">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
+                  Scan To Listen
+                </p>
+                <div className="mt-4 overflow-hidden rounded-3xl border border-white bg-white p-3 shadow-sm">
+                  <img
+                    src={listeningFile.qrCodeUrl}
+                    alt="Mã QR mở file nghe"
+                    className="mx-auto aspect-square w-full max-w-[280px] object-contain"
+                  />
+                </div>
+                <p className="mt-4 text-sm font-semibold text-foreground">
+                  Quét QR để mở file nghe
+                </p>
+                <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                  Nếu máy không tải trực tiếp, hãy mở URL rồi dùng chức năng tải xuống của trình
+                  phát.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }

@@ -60,12 +60,18 @@ def _format_seconds(seconds: float) -> str:
 
 
 def _strip_reazon_frame(text: str) -> str:
-    lines = [line.rstrip() for line in (text or "").splitlines() if line.strip() and line.strip() != "--------"]
+    lines = [
+        line.rstrip()
+        for line in (text or "").splitlines()
+        if line.strip() and line.strip() != "--------"
+    ]
     return "\n".join(lines).strip()
 
 
 def _split_sentences(text: str) -> list[str]:
-    return [item.strip() for item in re.findall(r"[^。！？\n]+[。！？]?", text or "") if item.strip()]
+    return [
+        item.strip() for item in re.findall(r"[^。！？\n]+[。！？]?", text or "") if item.strip()
+    ]
 
 
 def _normalize_sentence(sentence: str) -> str:
@@ -83,14 +89,31 @@ def _is_question_sentence(sentence: str) -> bool:
         return False
     if normalized.endswith(("か。", "か？", "ですか。", "でしょうか。", "ますか。")):
         return True
-    if any(keyword in normalized for keyword in ["何", "どれ", "どこ", "誰", "いつ", "どう", "どの", "どちら", "いくつ", "なぜ", "どうして"]):
+    if any(
+        keyword in normalized
+        for keyword in [
+            "何",
+            "どれ",
+            "どこ",
+            "誰",
+            "いつ",
+            "どう",
+            "どの",
+            "どちら",
+            "いくつ",
+            "なぜ",
+            "どうして",
+        ]
+    ):
         return True
     return False
 
 
 def _extract_question_texts(text: str) -> list[str]:
     sentences = _split_sentences(text)
-    candidates = [_normalize_sentence(sentence) for sentence in sentences if _is_question_sentence(sentence)]
+    candidates = [
+        _normalize_sentence(sentence) for sentence in sentences if _is_question_sentence(sentence)
+    ]
     deduped: list[str] = []
     for candidate in candidates:
         if candidate not in deduped:
@@ -199,7 +222,10 @@ def _question_type(question_text: str) -> str:
     text = question_text or ""
     if any(keyword in text for keyword in ["何時", "いつ", "何曜日", "何日"]):
         return "time"
-    if any(keyword in text for keyword in ["いくつ", "何個", "何本", "何枚", "何人", "いくら", "何階", "何冊"]):
+    if any(
+        keyword in text
+        for keyword in ["いくつ", "何個", "何本", "何枚", "何人", "いくら", "何階", "何冊"]
+    ):
         return "quantity"
     if any(keyword in text for keyword in ["どこ", "どちら", "どの場所"]):
         return "place"
@@ -258,8 +284,16 @@ def _mutate_time_option(base: str, offset: int) -> str:
         return base
     numeral = match.group(1)
     kanji_to_int = {
-        "一": 1, "二": 2, "三": 3, "四": 4, "五": 5,
-        "六": 6, "七": 7, "八": 8, "九": 9, "十": 10,
+        "一": 1,
+        "二": 2,
+        "三": 3,
+        "四": 4,
+        "五": 5,
+        "六": 6,
+        "七": 7,
+        "八": 8,
+        "九": 9,
+        "十": 10,
     }
     if numeral.isdigit():
         hour = int(numeral)
@@ -297,14 +331,18 @@ def _choose_correct_answer(question_type: str, script_text: str, question_text: 
     return fallback_sentences[-1] if fallback_sentences else "内容を確認する"
 
 
-def _build_answer_options(question_number: int, script_text: str, question_text: str) -> list[AIQuestionOption]:
+def _build_answer_options(
+    question_number: int, script_text: str, question_text: str
+) -> list[AIQuestionOption]:
     return [
         AIQuestionOption(label=label, content="", is_correct=False)
         for label in ["A", "B", "C", "D"]
     ]
 
 
-def _estimate_question_difficulty(script_text: str, question_text: str, answers: Sequence[AIQuestionOption]) -> int:
+def _estimate_question_difficulty(
+    script_text: str, question_text: str, answers: Sequence[AIQuestionOption]
+) -> int:
     question_type = _question_type(question_text)
     script_len = len(re.sub(r"\s+", "", script_text or ""))
     answer_count = len([answer for answer in answers if answer.content.strip()])
@@ -321,7 +359,9 @@ def _estimate_question_difficulty(script_text: str, question_text: str, answers:
     return max(1, min(5, difficulty))
 
 
-def _parse_formatted_segment(formatted_text: str, raw_text: str) -> tuple[Optional[str], str, list[str], Optional[int], Optional[int]]:
+def _parse_formatted_segment(
+    formatted_text: str, raw_text: str
+) -> tuple[Optional[str], str, list[str], Optional[int], Optional[int]]:
     cleaned = _strip_reazon_frame(formatted_text)
     blocks = [block.strip() for block in re.split(r"\n\s*\n", cleaned) if block.strip()]
 
@@ -344,7 +384,9 @@ def _parse_formatted_segment(formatted_text: str, raw_text: str) -> tuple[Option
         tail_source = blocks[-2] + "\n" + blocks[-1] if len(blocks) >= 2 else cleaned
         question_texts = _extract_question_texts(tail_source)
     if not question_texts:
-        fallback_question = _normalize_sentence(outro.strip()) if outro.strip() and "：" not in outro else ""
+        fallback_question = (
+            _normalize_sentence(outro.strip()) if outro.strip() and "：" not in outro else ""
+        )
         question_texts = [fallback_question] if fallback_question else [""]
 
     spoken_number = _extract_spoken_question_number(introduction or cleaned or raw_text)
@@ -354,7 +396,13 @@ def _parse_formatted_segment(formatted_text: str, raw_text: str) -> tuple[Option
         limited_question_texts = [
             _build_contextual_question_text(cleaned, limited_question_texts[0])
         ]
-    return introduction or None, script_text or raw_text, limited_question_texts, spoken_number, announced_mondai_number
+    return (
+        introduction or None,
+        script_text or raw_text,
+        limited_question_texts,
+        spoken_number,
+        announced_mondai_number,
+    )
 
 
 def _format_jlpt_master(chunks_data: Sequence[dict]) -> str:
@@ -382,14 +430,19 @@ def _format_jlpt_master(chunks_data: Sequence[dict]) -> str:
     if intro_str:
         intro_str += "。"
     intro_str = re.sub(r"(次。?)", "", intro_str).strip()
-    intro_str = re.sub(r"((?:一|二|三|四|五|六|七|八|九|十|1|2|3|4|5|6|7|8|9|10)番)？?。?", r"\1\n", intro_str)
+    intro_str = re.sub(
+        r"((?:一|二|三|四|五|六|七|八|九|十|1|2|3|4|5|6|7|8|9|10)番)？?。?", r"\1\n", intro_str
+    )
 
     dialogue_end = len(texts)
     for index in range(len(texts) - 1, dialogue_start - 1, -1):
         if texts[index].endswith("か") or texts[index].endswith("か？"):
             out_start = index
             for inner in range(index, max(dialogue_start - 1, index - 5), -1):
-                if any(subject in texts[inner] for subject in ["男の人", "女の人", "学生", "男の子", "女の子", "人", "何"]):
+                if any(
+                    subject in texts[inner]
+                    for subject in ["男の人", "女の人", "学生", "男の子", "女の子", "人", "何"]
+                ):
                     out_start = inner
             dialogue_end = out_start
             break
@@ -512,10 +565,15 @@ class BellAudioSplitter:
 
         valid_bell_times_ms: list[int] = []
         for bell_time in bell1_times_sec:
-            if any(abs(bell_time - trap_time) < self.trap_window_sec for trap_time in bell2_times_sec):
+            if any(
+                abs(bell_time - trap_time) < self.trap_window_sec for trap_time in bell2_times_sec
+            ):
                 continue
             bell_ms = int(bell_time * 1000)
-            if valid_bell_times_ms and bell_ms - valid_bell_times_ms[-1] < self.min_segment_length_ms:
+            if (
+                valid_bell_times_ms
+                and bell_ms - valid_bell_times_ms[-1] < self.min_segment_length_ms
+            ):
                 continue
             valid_bell_times_ms.append(bell_ms)
 
@@ -556,8 +614,14 @@ class BellAudioSplitter:
             audio = AudioSegment.from_file(tmp_path)
             segments: list[SplitAudioChunk] = []
             for index, start_ms in enumerate(bell_times_ms):
-                next_start_ms = bell_times_ms[index + 1] if index + 1 < len(bell_times_ms) else len(audio)
-                end_ms = next_start_ms - self.trim_before_next_bell_ms if index + 1 < len(bell_times_ms) else next_start_ms
+                next_start_ms = (
+                    bell_times_ms[index + 1] if index + 1 < len(bell_times_ms) else len(audio)
+                )
+                end_ms = (
+                    next_start_ms - self.trim_before_next_bell_ms
+                    if index + 1 < len(bell_times_ms)
+                    else next_start_ms
+                )
                 end_ms = max(end_ms, start_ms)
                 if end_ms - start_ms < self.min_segment_length_ms:
                     logger.warning(
@@ -581,7 +645,9 @@ class BellAudioSplitter:
                 )
 
             if not segments:
-                raise RuntimeError("Bell timestamps were detected, but no usable audio segments were produced.")
+                raise RuntimeError(
+                    "Bell timestamps were detected, but no usable audio segments were produced."
+                )
 
             return segments
         finally:
@@ -702,9 +768,11 @@ class ReazonTranscriber:
 
             raw_text = "".join(raw_parts)
             formatted_text = _format_jlpt_master(chunks_data) or raw_text
-            introduction, script_text, question_texts, spoken_number, announced_mondai_number = _parse_formatted_segment(
-                formatted_text,
-                raw_text,
+            introduction, script_text, question_texts, spoken_number, announced_mondai_number = (
+                _parse_formatted_segment(
+                    formatted_text,
+                    raw_text,
+                )
             )
             return {
                 "raw_text": raw_text,
@@ -742,7 +810,9 @@ class AIExamService:
         progress_callback: Optional[Callable[[str], None]] = None,
     ) -> AIExamResult:
         self._notify(progress_callback, "Step 2/7: Detecting bell timestamps...")
-        split_segments = self._splitter.split_audio(audio_bytes, suffix=Path(filename).suffix or ".mp3")
+        split_segments = self._splitter.split_audio(
+            audio_bytes, suffix=Path(filename).suffix or ".mp3"
+        )
         logger.info("Split audio into %s bell-based segments.", len(split_segments))
 
         self._notify(progress_callback, "Step 3/7: Cutting question audio with PyDub...")
@@ -805,19 +875,23 @@ class AIExamService:
             progress_callback(message)
 
     @staticmethod
-    def _build_structured_segments(split_segments: Sequence[SplitAudioChunk]) -> list[StructuredSegment]:
+    def _build_structured_segments(
+        split_segments: Sequence[SplitAudioChunk],
+    ) -> list[StructuredSegment]:
         structured: list[StructuredSegment] = []
         current_mondai = 1
         last_question_number = 0
 
         for segment in split_segments:
-            question_text = (segment.question_texts[-1] if segment.question_texts else "")
+            question_text = segment.question_texts[-1] if segment.question_texts else ""
             base_question_number = segment.spoken_question_number
             announced_mondai_number = segment.announced_mondai_number
 
             if announced_mondai_number is not None:
                 current_mondai = max(1, min(MAX_MONDAI, announced_mondai_number))
-                if not structured or current_mondai != _extract_mondai_number(structured[-1].mondai_group):
+                if not structured or current_mondai != _extract_mondai_number(
+                    structured[-1].mondai_group
+                ):
                     last_question_number = 0
 
             if base_question_number is None:
@@ -836,7 +910,9 @@ class AIExamService:
                     mondai_group=f"Mondai {current_mondai}",
                     question_number=base_question_number,
                     introduction=segment.introduction,
-                    script_text=segment.script_text or segment.refined_transcript or segment.transcript,
+                    script_text=segment.script_text
+                    or segment.refined_transcript
+                    or segment.transcript,
                     question_text=question_text,
                     refined_transcript=segment.refined_transcript or segment.transcript,
                 )
@@ -900,10 +976,14 @@ class AIExamService:
                     mondai_group=structured.mondai_group,
                     question_number=structured.question_number,
                     introduction=structured.introduction,
-                    script_text=structured.script_text or structured.refined_transcript or source.transcript,
+                    script_text=structured.script_text
+                    or structured.refined_transcript
+                    or source.transcript,
                     question_text=structured.question_text,
                     difficulty=_estimate_question_difficulty(
-                        structured.script_text or structured.refined_transcript or source.transcript,
+                        structured.script_text
+                        or structured.refined_transcript
+                        or source.transcript,
                         structured.question_text,
                         answers,
                     ),

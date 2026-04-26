@@ -15,12 +15,5 @@ export function TestAudioPlayer({ url }: TestAudioPlayerProps) {
     )
   }
 
-  return (
-    <audio
-      src={url}
-      controls
-      preload="metadata"
-      className="w-full"
-    />
-  )
+  return <audio src={url} controls preload="metadata" className="w-full" />
 }

@@ -20,7 +20,9 @@ class Contest(Base):
     start_time = Column(DateTime, nullable=False)
     end_time = Column(DateTime, nullable=False)
     creator_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    exam_id = Column(UUID(as_uuid=True), ForeignKey("exams.exam_id", ondelete="CASCADE"), nullable=False)
+    exam_id = Column(
+        UUID(as_uuid=True), ForeignKey("exams.exam_id", ondelete="CASCADE"), nullable=False
+    )
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -41,7 +43,9 @@ class ContestParticipant(Base):
         primary_key=True,
     )
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
-    result_id = Column(UUID(as_uuid=True), ForeignKey("user_results.result_id", ondelete="SET NULL"), nullable=True)
+    result_id = Column(
+        UUID(as_uuid=True), ForeignKey("user_results.result_id", ondelete="SET NULL"), nullable=True
+    )
     joined_at = Column(DateTime, server_default=func.now(), nullable=False)
 
     contest = relationship("Contest", back_populates="participants")

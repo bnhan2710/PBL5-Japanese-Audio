@@ -95,7 +95,12 @@ class RandomExamService:
             return False
         haystack = f"{exam.title or ''} {exam.description or ''}"
         # Match tokens like: [N2], N2, (N2)
-        return re.search(rf"(?<![A-Z0-9])\[?{re.escape(jlpt_level)}\]?(?![A-Z0-9])", haystack, re.IGNORECASE) is not None
+        return (
+            re.search(
+                rf"(?<![A-Z0-9])\[?{re.escape(jlpt_level)}\]?(?![A-Z0-9])", haystack, re.IGNORECASE
+            )
+            is not None
+        )
 
     @staticmethod
     def validate_mondai_pool(

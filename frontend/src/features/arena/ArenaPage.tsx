@@ -29,18 +29,11 @@ function formatDateTime(value: string) {
   })
 }
 
-function ArenaCard({
-  contest,
-  onUpdate,
-}: {
-  contest: ArenaContest
-  onUpdate: () => void
-}) {
+function ArenaCard({ contest, onUpdate }: { contest: ArenaContest; onUpdate: () => void }) {
   const { user } = useAuth()
   const navigate = useNavigate()
   const status = getArenaStatus(contest)
   const isOwner = user?.id === contest.creator_id || user?.role === 'admin'
-
 
   return (
     <Card className="group overflow-hidden border-border/80 bg-card/90 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg">
@@ -69,13 +62,11 @@ function ArenaCard({
           </div>
 
           {isOwner && (
-            <div className="absolute left-3 top-3 flex gap-2 opacity-0 transition-opacity group-hover:opacity-100">
-            </div>
+            <div className="absolute left-3 top-3 flex gap-2 opacity-0 transition-opacity group-hover:opacity-100"></div>
           )}
         </div>
 
         <div className="space-y-4 p-5">
-
           <div className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
             <div className="flex items-center gap-2">
               <CalendarRange className="h-4 w-4 text-orange-500" />
@@ -104,7 +95,9 @@ function ArenaCard({
           </div>
 
           <Link to={`/arena/${contest.contest_id}`}>
-            <Button className="w-full bg-orange-600 hover:bg-orange-700">Xem chi tiết cuộc thi</Button>
+            <Button className="w-full bg-orange-600 hover:bg-orange-700">
+              Xem chi tiết cuộc thi
+            </Button>
           </Link>
         </div>
       </CardContent>
@@ -279,11 +272,7 @@ export default function ArenaPage() {
       ) : (
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {filteredContests.map((contest) => (
-            <ArenaCard
-              key={contest.contest_id}
-              contest={contest}
-              onUpdate={fetchContests}
-            />
+            <ArenaCard key={contest.contest_id} contest={contest} onUpdate={fetchContests} />
           ))}
         </div>
       )}

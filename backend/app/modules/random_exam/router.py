@@ -391,12 +391,16 @@ async def create_exam_from_random(
         source_questions: list[Question] = []
         if source_ids:
             source_questions = (
-                await db.execute(
-                    select(Question)
-                    .where(Question.question_id.in_(source_ids))
-                    .options(selectinload(Question.answers))
+                (
+                    await db.execute(
+                        select(Question)
+                        .where(Question.question_id.in_(source_ids))
+                        .options(selectinload(Question.answers))
+                    )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
 
         source_index = {q.question_id: q for q in source_questions}
         ordered_source_questions: list[Question] = []
@@ -416,7 +420,9 @@ async def create_exam_from_random(
 
                 # Renumber questions from 1 within each mondai group for the new exam.
                 mondai_key = (
-                    edited.mondai_group if edited and edited.mondai_group else src_question.mondai_group
+                    edited.mondai_group
+                    if edited and edited.mondai_group
+                    else src_question.mondai_group
                 ) or "Khác"
                 next_question_number = mondai_counters.get(mondai_key, 0) + 1
                 mondai_counters[mondai_key] = next_question_number
@@ -485,10 +491,26 @@ async def create_exam_from_random(
                 )
 
                 for idx, src_answer in enumerate(source_answers):
-                    content = src_answer.content if hasattr(src_answer, "content") else src_answer.get("content")
-                    image_url = src_answer.image_url if hasattr(src_answer, "image_url") else src_answer.get("image_url")
-                    is_correct = src_answer.is_correct if hasattr(src_answer, "is_correct") else src_answer.get("is_correct", False)
-                    order_index = src_answer.order_index if hasattr(src_answer, "order_index") else src_answer.get("order_index")
+                    content = (
+                        src_answer.content
+                        if hasattr(src_answer, "content")
+                        else src_answer.get("content")
+                    )
+                    image_url = (
+                        src_answer.image_url
+                        if hasattr(src_answer, "image_url")
+                        else src_answer.get("image_url")
+                    )
+                    is_correct = (
+                        src_answer.is_correct
+                        if hasattr(src_answer, "is_correct")
+                        else src_answer.get("is_correct", False)
+                    )
+                    order_index = (
+                        src_answer.order_index
+                        if hasattr(src_answer, "order_index")
+                        else src_answer.get("order_index")
+                    )
                     new_answer = Answer(
                         answer_id=uuid.uuid4(),
                         question_id=new_question.question_id,

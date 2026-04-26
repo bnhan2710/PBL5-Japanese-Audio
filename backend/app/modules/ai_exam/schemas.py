@@ -14,7 +14,7 @@ class AIGenerateRequest(BaseModel):
 
 
 class AIQuestionOption(BaseModel):
-    label: str       # A, B, C, D
+    label: str  # A, B, C, D
     content: str
     is_correct: bool
 

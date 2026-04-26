@@ -53,8 +53,7 @@ def create_refresh_token(data: dict) -> str:
 
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    db: AsyncSession = Depends(get_db)
+    token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)
 ) -> User:
     """
     Get current logged in user from token.
@@ -79,25 +78,26 @@ async def get_current_user(
     user = result.scalar_one_or_none()
     if user is None:
         raise credentials_exception
-    
+
     # Check if account is locked or inactive
     if not user.is_active or user.is_locked():
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Quản trị viên để biết thêm chi tiết."
+            detail="Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Quản trị viên để biết thêm chi tiết.",
         )
-    
+
     return user
 
 
 class RoleChecker:
     """
     Dependency for checking user roles.
-    
+
     Usage:
         Depends(RoleChecker(["admin"]))
         Depends(RoleChecker(["admin", "user"]))
     """
+
     def __init__(self, allowed_roles: List[str]):
         self.allowed_roles = allowed_roles
 
@@ -105,6 +105,6 @@ class RoleChecker:
         if user.role not in self.allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Role '{user.role}' not authorized. Allowed: {self.allowed_roles}"
+                detail=f"Role '{user.role}' not authorized. Allowed: {self.allowed_roles}",
             )
         return user

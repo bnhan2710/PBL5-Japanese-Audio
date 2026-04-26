@@ -75,8 +75,12 @@ class Settings(BaseSettings):
     LM_STUDIO_API_URL: str = "http://127.0.0.1:1234/v1/chat/completions"
     LM_STUDIO_MODEL: str = "gemma-4-e2b-it"
     DRAW_THINGS_API_URL: str = "http://127.0.0.1:7860/sdapi/v1/txt2img"
-    AI_PHOTO_BASE_PROMPT: str = "(masterpiece, best quality:1.2), (strictly monochrome, black lines on pure white background:1.5), (clean lineart, clear outline, simple outline, coloring page style, clean vector flats:1.5), high contrast, line art, minimalist style, 2D graphic, sharp defined lines, no fill, black and white only, print ready, vector graphics, precise edges, high resolution"
-    AI_PHOTO_NEGATIVE_PROMPT: str = "(grey background, grey lines, white lines on grey, inverted colors:1.6), (colors, color, gradient, shading:1.6), grayscale tones, gray tones, (messy lines, rough sketch, crosshatching, rough draft, noisy textures:1.4), text, typography, 3d, realistic, photorealistic, blurry, bad anatomy, lowres, jpeg artifacts, compression noise, smudges, halftone, half tones"
+    AI_PHOTO_BASE_PROMPT: str = (
+        "(masterpiece, best quality:1.2), (strictly monochrome, black lines on pure white background:1.5), (clean lineart, clear outline, simple outline, coloring page style, clean vector flats:1.5), high contrast, line art, minimalist style, 2D graphic, sharp defined lines, no fill, black and white only, print ready, vector graphics, precise edges, high resolution"
+    )
+    AI_PHOTO_NEGATIVE_PROMPT: str = (
+        "(grey background, grey lines, white lines on grey, inverted colors:1.6), (colors, color, gradient, shading:1.6), grayscale tones, gray tones, (messy lines, rough sketch, crosshatching, rough draft, noisy textures:1.4), text, typography, 3d, realistic, photorealistic, blurry, bad anatomy, lowres, jpeg artifacts, compression noise, smudges, halftone, half tones"
+    )
     AI_PHOTO_OUTPUT_DIR: str = "generated/ai-photos"
     AI_PHOTO_WIDTH: int = 512
     AI_PHOTO_HEIGHT: int = 512
@@ -87,6 +91,7 @@ class Settings(BaseSettings):
     AI_PHOTO_BATCH_SIZE: int = 1
     AI_PHOTO_N_ITER: int = 1
     AI_PHOTO_USE_NEGATIVE_PROMPT: bool = False
+
 
 @lru_cache()
 def get_settings() -> Settings:

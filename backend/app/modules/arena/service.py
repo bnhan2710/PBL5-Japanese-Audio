@@ -41,7 +41,9 @@ class ArenaService:
             select(Contest)
             .options(
                 selectinload(Contest.exam).selectinload(Exam.audio),
-                selectinload(Contest.exam).selectinload(Exam.questions).selectinload(Question.answers),
+                selectinload(Contest.exam)
+                .selectinload(Exam.questions)
+                .selectinload(Question.answers),
                 selectinload(Contest.participants).selectinload(ContestParticipant.user),
                 selectinload(Contest.participants).selectinload(ContestParticipant.result),
             )
@@ -69,9 +71,7 @@ class ArenaService:
             first_name = getattr(user, "first_name", None)
             last_name = getattr(user, "last_name", None)
             display_name = (
-                f"{first_name} {last_name}".strip()
-                if first_name or last_name
-                else username
+                f"{first_name} {last_name}".strip() if first_name or last_name else username
             )
             leaderboard.append(
                 ContestLeaderboardEntry(
@@ -87,7 +87,9 @@ class ArenaService:
         return leaderboard
 
     def _serialize_contest(self, contest: Contest, current_user: User) -> ContestResponse:
-        participant = next((item for item in contest.participants if item.user_id == current_user.id), None)
+        participant = next(
+            (item for item in contest.participants if item.user_id == current_user.id), None
+        )
         return ContestResponse(
             contest_id=contest.contest_id,
             title=contest.title,
@@ -120,7 +122,7 @@ class ArenaService:
         cutoff = _utcnow() - timedelta(days=30)
         # Database stores naive UTC from _normalize_naive_utc
         cutoff_naive = cutoff.replace(tzinfo=None)
-        
+
         # User requested to hide old ones, we keep that logic but remove is_active check
         query = query.where(Contest.end_time >= cutoff_naive)
 
@@ -132,18 +134,24 @@ class ArenaService:
         contest = await self._get_contest_entity(contest_id)
         return self._serialize_contest(contest, current_user)
 
-    async def create_contest(self, payload: ContestCreateRequest, current_user: User) -> ContestResponse:
+    async def create_contest(
+        self, payload: ContestCreateRequest, current_user: User
+    ) -> ContestResponse:
         start_time = _normalize_naive_utc(payload.start_time)
         end_time = _normalize_naive_utc(payload.end_time)
 
         if end_time <= start_time:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="End time must be after start time")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="End time must be after start time"
+            )
 
         exam = await self.db.get(Exam, payload.exam_id)
         if not exam:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found")
         if exam.creator_id != current_user.id and current_user.role != "admin":
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You cannot use this exam")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="You cannot use this exam"
+            )
 
         contest = Contest(
             title=payload.title,
@@ -166,12 +174,15 @@ class ArenaService:
         self, contest_id: UUID, payload: ContestUpdateRequest, current_user: User
     ) -> ContestResponse:
         contest = await self._get_contest_entity(contest_id)
-        
+
         if contest.creator_id != current_user.id and current_user.role != "admin":
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have permission to edit this contest")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have permission to edit this contest",
+            )
 
         update_data = payload.model_dump(exclude_unset=True)
-        
+
         if "start_time" in update_data:
             update_data["start_time"] = _normalize_naive_utc(update_data["start_time"])
         if "end_time" in update_data:
@@ -181,14 +192,18 @@ class ArenaService:
         final_start = update_data.get("start_time", contest.start_time)
         final_end = update_data.get("end_time", contest.end_time)
         if final_end <= final_start:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="End time must be after start time")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="End time must be after start time"
+            )
 
         if "exam_id" in update_data:
             exam = await self.db.get(Exam, update_data["exam_id"])
             if not exam:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found")
             if exam.creator_id != current_user.id and current_user.role != "admin":
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You cannot use this exam")
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN, detail="You cannot use this exam"
+                )
 
         for key, value in update_data.items():
             setattr(contest, key, value)
@@ -204,13 +219,20 @@ class ArenaService:
         contest_end = contest.end_time.replace(tzinfo=timezone.utc)
 
         if contest_end < now:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Contest has expired")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Contest has expired"
+            )
 
-        existing = next((item for item in contest.participants if item.user_id == current_user.id), None)
+        existing = next(
+            (item for item in contest.participants if item.user_id == current_user.id), None
+        )
         if existing:
             return self._serialize_contest(contest, current_user)
 
-        if contest.max_participants is not None and len(contest.participants) >= contest.max_participants:
+        if (
+            contest.max_participants is not None
+            and len(contest.participants) >= contest.max_participants
+        ):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Contest is full")
 
         participant = ContestParticipant(contest_id=contest.contest_id, user_id=current_user.id)
@@ -223,9 +245,13 @@ class ArenaService:
         self, contest_id: UUID, current_user: User
     ) -> tuple[ContestResponse, TestExamDetailResponse]:
         contest = await self._get_contest_entity(contest_id)
-        participant = next((item for item in contest.participants if item.user_id == current_user.id), None)
+        participant = next(
+            (item for item in contest.participants if item.user_id == current_user.id), None
+        )
         if not participant:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Join the contest first")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Join the contest first"
+            )
 
         exam_detail = self.test_service._build_exam_detail_response(contest.exam)
         exam_detail.time_limit = contest.time_limit
@@ -238,13 +264,21 @@ class ArenaService:
         current_user: User,
     ) -> tuple[ContestResponse, TestSubmitResponse]:
         contest = await self._get_contest_entity(contest_id)
-        participant = next((item for item in contest.participants if item.user_id == current_user.id), None)
+        participant = next(
+            (item for item in contest.participants if item.user_id == current_user.id), None
+        )
         if not participant:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Join the contest first")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Join the contest first"
+            )
         if participant.result_id:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Contest already submitted")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Contest already submitted"
+            )
 
-        submission = await self.test_service._submit_exam_from_entity(contest.exam, payload, current_user)
+        submission = await self.test_service._submit_exam_from_entity(
+            contest.exam, payload, current_user
+        )
 
         result = await self.db.get(UserResult, submission.result_id)
         if result:

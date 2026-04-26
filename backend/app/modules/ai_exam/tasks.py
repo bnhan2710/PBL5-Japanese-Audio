@@ -62,7 +62,9 @@ async def _update_cache_status(
                     file_name=filename,
                     content_hash=content_hash,
                     file_url=cloudinary_res["secure_url"],
-                    duration=int(cloudinary_res["duration"]) if cloudinary_res.get("duration") else None,
+                    duration=(
+                        int(cloudinary_res["duration"]) if cloudinary_res.get("duration") else None
+                    ),
                     ai_status="completed",
                     ai_model=MODEL_NAME,
                     raw_transcript=result.raw_transcript,
@@ -72,7 +74,11 @@ async def _update_cache_status(
             else:
                 audio.file_name = audio.file_name or filename
                 audio.file_url = cloudinary_res["secure_url"]
-                audio.duration = int(cloudinary_res["duration"]) if cloudinary_res.get("duration") else audio.duration
+                audio.duration = (
+                    int(cloudinary_res["duration"])
+                    if cloudinary_res.get("duration")
+                    else audio.duration
+                )
                 audio.ai_status = "completed"
                 audio.ai_model = MODEL_NAME
                 audio.raw_transcript = result.raw_transcript
@@ -176,6 +182,7 @@ async def _run_generate_exam_task(
         )
         if user_id:
             from app.modules.notifications.service import create_notification
+
             await create_notification(
                 user_id=user_id,
                 title="Sinh đề AI thất bại",

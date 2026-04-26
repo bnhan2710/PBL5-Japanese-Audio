@@ -94,8 +94,7 @@ export function AIChatWidget() {
         ...prev,
         {
           role: 'assistant',
-          content:
-            'Mình chưa thể trả lời lúc này vì kết nối LM Studio lỗi. Bạn thử lại sau nhé.',
+          content: 'Mình chưa thể trả lời lúc này vì kết nối LM Studio lỗi. Bạn thử lại sau nhé.',
         },
       ])
       scrollToBottom()
@@ -153,9 +152,15 @@ export function AIChatWidget() {
             </button>
           </div>
 
-          <div ref={messagesBoxRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-3 bg-background">
+          <div
+            ref={messagesBoxRef}
+            className="flex-1 overflow-y-auto px-3 py-3 space-y-3 bg-background"
+          >
             {messages.map((message, idx) => (
-              <div key={idx} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div
+                key={idx}
+                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
                 <div
                   className={`max-w-[88%] rounded-xl px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap ${
                     message.role === 'user'

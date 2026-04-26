@@ -35,9 +35,13 @@ async def get_notifications(
     result = await db.execute(query)
     notifications = result.scalars().all()
 
-    count_query = select(func.count()).select_from(Notification).where(
-        Notification.user_id == current_user.id,
-        Notification.is_read == False,  # noqa: E712
+    count_query = (
+        select(func.count())
+        .select_from(Notification)
+        .where(
+            Notification.user_id == current_user.id,
+            Notification.is_read == False,  # noqa: E712
+        )
     )
     count_result = await db.execute(count_query)
     unread_count = count_result.scalar_one()
@@ -71,6 +75,7 @@ async def mark_notification_read(
     current_user: User = Depends(get_current_user),
 ):
     import uuid
+
     result = await db.execute(
         select(Notification).where(
             Notification.id == uuid.UUID(notification_id),
@@ -124,6 +129,7 @@ async def delete_notification(
     current_user: User = Depends(get_current_user),
 ):
     import uuid
+
     result = await db.execute(
         select(Notification).where(
             Notification.id == uuid.UUID(notification_id),

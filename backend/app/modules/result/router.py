@@ -11,8 +11,10 @@ from app.modules.users.models import User
 
 router = APIRouter(prefix="/results", tags=["results"])
 
+
 def get_result_service(db: AsyncSession = Depends(get_db)) -> ResultService:
     return ResultService(db)
+
 
 @router.get("/me", response_model=UserResultListResponse)
 async def get_my_results(
@@ -24,18 +26,17 @@ async def get_my_results(
     """
     Get the exam attempts (results) for the currently authenticated user.
     """
-    return await service.get_user_results(
-        current_user=current_user,
-        page=page,
-        page_size=page_size
-    )
+    return await service.get_user_results(current_user=current_user, page=page, page_size=page_size)
+
 
 from uuid import UUID
 from app.modules.result.schemas import CompetencyAnalysisResponse
 from app.modules.result.competency_service import CompetencyAnalysisService
 
+
 def get_competency_service(db: AsyncSession = Depends(get_db)) -> CompetencyAnalysisService:
     return CompetencyAnalysisService(db)
+
 
 @router.get("/{result_id}/competency", response_model=CompetencyAnalysisResponse)
 async def get_competency_analysis(

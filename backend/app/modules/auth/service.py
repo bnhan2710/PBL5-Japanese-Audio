@@ -11,14 +11,27 @@ from pydantic import EmailStr
 
 from app.core.config import get_settings
 from app.modules.users.models import User
-from app.modules.auth.schemas import UserCreate, LoginRequest, ChangePasswordRequest, ResetPasswordRequest
-from app.shared.email import send_password_reset_link_email, send_password_changed_notification_email
+from app.modules.auth.schemas import (
+    UserCreate,
+    LoginRequest,
+    ChangePasswordRequest,
+    ResetPasswordRequest,
+)
+from app.shared.email import (
+    send_password_reset_link_email,
+    send_password_changed_notification_email,
+)
 from app.modules.users.repository import UserRepository
-from app.core.security import verify_password, get_password_hash, create_access_token, create_refresh_token
+from app.core.security import (
+    verify_password,
+    get_password_hash,
+    create_access_token,
+    create_refresh_token,
+)
 from app.shared.exceptions import (
     UserAlreadyExistsException,
     InvalidCredentialsException,
-    InvalidResetTokenException
+    InvalidResetTokenException,
 )
 
 
@@ -54,7 +67,7 @@ class AuthService:
             hashed_password=get_password_hash(user_data.password),
             first_name=user_data.first_name,
             last_name=user_data.last_name,
-            avatar_url=user_data.avatar_url
+            avatar_url=user_data.avatar_url,
         )
 
         return await self.repository.create(user)
@@ -69,7 +82,7 @@ class AuthService:
         if not user.is_active or user.is_locked():
             raise HTTPException(
                 status_code=403,
-                detail="Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Quản trị viên để biết thêm chi tiết."
+                detail="Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Quản trị viên để biết thêm chi tiết.",
             )
 
         return self._build_token_pair(user)
@@ -80,7 +93,7 @@ class AuthService:
         if user:
             user.generate_reset_token()
             await self.repository.update(user)
-            
+
             # Send email
             frontend_url = self.settings.FRONTEND_URL.rstrip("/")
             reset_link = f"{frontend_url}/reset-password?token={user.reset_token}"
@@ -137,7 +150,7 @@ class AuthService:
         if not user.is_active or user.is_locked():
             raise HTTPException(
                 status_code=403,
-                detail="Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Quản trị viên để biết thêm chi tiết."
+                detail="Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Quản trị viên để biết thêm chi tiết.",
             )
 
         return self._build_token_pair(user)

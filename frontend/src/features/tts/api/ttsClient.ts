@@ -24,11 +24,11 @@ export interface SpeakerConfig {
 }
 
 export interface TTSGenerateRequest {
-  dialogues: DialogueLine[];
-  speaker_configs: Record<string, SpeakerConfig>;
-  title?: string;
-  dialogue_pause?: number;
-  narrator_pause?: number;
+  dialogues: DialogueLine[]
+  speaker_configs: Record<string, SpeakerConfig>
+  title?: string
+  dialogue_pause?: number
+  narrator_pause?: number
 }
 
 export interface TTSGenerateResponse {
@@ -43,13 +43,13 @@ export const ttsClient = {
       method: 'POST',
       body: JSON.stringify(data),
     }).then(handleResponse<TTSGenerateResponse>),
-    
+
   uploadSample: (file: File): Promise<{ file_url: string }> => {
-     const formData = new FormData()
-     formData.append('file', file)
-     return apiFetch(`${API_BASE}/api/tts/upload-sample`, {
-       method: 'POST',
-       body: formData,
-     }).then(handleResponse<{ file_url: string }>)
-  }
+    const formData = new FormData()
+    formData.append('file', file)
+    return apiFetch(`${API_BASE}/api/tts/upload-sample`, {
+      method: 'POST',
+      body: formData,
+    }).then(handleResponse<{ file_url: string }>)
+  },
 }

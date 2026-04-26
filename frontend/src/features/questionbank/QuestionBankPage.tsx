@@ -1,6 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BookOpen, Clock, Layers, FileText, CheckCircle2, Search, Filter, Calendar } from 'lucide-react'
+import {
+  BookOpen,
+  Clock,
+  Layers,
+  FileText,
+  CheckCircle2,
+  Search,
+  Filter,
+  Calendar,
+} from 'lucide-react'
 import { examClient, ExamResponse } from '../exam/api/examClient'
 import ExamDetailModal from '../exam/ExamDetailModal'
 
@@ -28,9 +37,12 @@ interface ExamCardProps {
 }
 
 function ExamCard({ exam, onClick }: ExamCardProps) {
-  const safeTitle = typeof exam.title === 'string' && exam.title.trim() ? exam.title : 'Đề chưa đặt tên'
+  const safeTitle =
+    typeof exam.title === 'string' && exam.title.trim() ? exam.title : 'Đề chưa đặt tên'
   const date = new Date(exam.created_at || '').toLocaleDateString('vi-VN', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
   })
 
   return (
@@ -57,11 +69,13 @@ function ExamCard({ exam, onClick }: ExamCardProps) {
       <div className="flex items-center gap-4 mt-3 flex-wrap">
         {exam.time_limit != null && (
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Clock className="w-3.5 h-3.5" />{exam.time_limit} phút
+            <Clock className="w-3.5 h-3.5" />
+            {exam.time_limit} phút
           </span>
         )}
         <span className="flex items-center gap-1 text-xs text-muted-foreground">
-          <FileText className="w-3.5 h-3.5" />{date}
+          <FileText className="w-3.5 h-3.5" />
+          {date}
         </span>
       </div>
     </button>
@@ -83,8 +97,9 @@ export default function QuestionBankPage() {
   const fetchExams = () => {
     setLoading(true)
     // Fetch with meOnly=false, publishedOnly=true
-    examClient.listExams(false, true)
-      .then(data => {
+    examClient
+      .listExams(false, true)
+      .then((data) => {
         const normalized = Array.isArray(data)
           ? data
               .filter((item): item is ExamResponse => !!item && typeof item === 'object')
@@ -96,7 +111,7 @@ export default function QuestionBankPage() {
           : []
         setExams(normalized)
       })
-      .catch(e => setError(e.message || 'Không thể tải danh sách đề thi'))
+      .catch((e) => setError(e.message || 'Không thể tải danh sách đề thi'))
       .finally(() => setLoading(false))
   }
 
@@ -104,18 +119,26 @@ export default function QuestionBankPage() {
     fetchExams()
   }, [])
 
-  const filteredExams = exams.filter(exam => {
+  const filteredExams = exams.filter((exam) => {
     const safeTitle = typeof exam.title === 'string' ? exam.title : ''
     const safeDescription = typeof exam.description === 'string' ? exam.description : ''
     const safeCreatedAt = typeof exam.created_at === 'string' ? exam.created_at : ''
 
-    if (searchQuery && !safeTitle.toLowerCase().includes(searchQuery.toLowerCase()) && !safeDescription.toLowerCase().includes(searchQuery.toLowerCase())) {
+    if (
+      searchQuery &&
+      !safeTitle.toLowerCase().includes(searchQuery.toLowerCase()) &&
+      !safeDescription.toLowerCase().includes(searchQuery.toLowerCase())
+    ) {
       return false
     }
-    if (levelFilter !== 'all' && !safeTitle.includes(levelFilter) && !safeDescription.includes(levelFilter)) {
+    if (
+      levelFilter !== 'all' &&
+      !safeTitle.includes(levelFilter) &&
+      !safeDescription.includes(levelFilter)
+    ) {
       return false
     }
-    
+
     if (dateFilter !== 'all') {
       const examDate = new Date(safeCreatedAt)
       if (Number.isNaN(examDate.getTime())) return false
@@ -132,7 +155,7 @@ export default function QuestionBankPage() {
         if (examDate < monthAgo) return false
       }
     }
-    
+
     return true
   })
 
@@ -161,7 +184,7 @@ export default function QuestionBankPage() {
               className="w-full pl-9 pr-4 py-2 bg-muted border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 dark:text-muted-foreground"
             />
           </div>
-          
+
           <div className="flex items-center gap-3">
             <div className="relative">
               <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10 pointer-events-none" />
@@ -206,7 +229,9 @@ export default function QuestionBankPage() {
       {/* Loading state */}
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
+          {Array.from({ length: 6 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
         </div>
       ) : exams.length === 0 ? (
         /* Empty state */
@@ -244,7 +269,7 @@ export default function QuestionBankPage() {
               <span className="text-xs text-muted-foreground">({filteredExams.length})</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredExams.map(exam => (
+              {filteredExams.map((exam) => (
                 <ExamCard key={exam.exam_id} exam={exam} onClick={() => setSelected(exam)} />
               ))}
             </div>
@@ -254,9 +279,9 @@ export default function QuestionBankPage() {
 
       {/* Detail Modal */}
       {selected && (
-        <ExamDetailModal 
-          exam={selected} 
-          onClose={() => setSelected(null)} 
+        <ExamDetailModal
+          exam={selected}
+          onClose={() => setSelected(null)}
           onExamDeleted={() => {
             setSelected(null)
             fetchExams()
@@ -270,4 +295,3 @@ export default function QuestionBankPage() {
     </div>
   )
 }
-

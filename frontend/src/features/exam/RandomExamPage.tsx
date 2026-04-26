@@ -1,8 +1,17 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  ChevronRight, ChevronLeft, Check, Loader2, AlertCircle, Download,
-  Trash2, Star, Headphones, Brain, Plus,
+  ChevronRight,
+  ChevronLeft,
+  Check,
+  Loader2,
+  AlertCircle,
+  Download,
+  Trash2,
+  Star,
+  Headphones,
+  Brain,
+  Plus,
 } from 'lucide-react'
 import { randomExamClient } from './api/examClient'
 import { toast } from '@/hooks/use-toast'
@@ -62,37 +71,175 @@ interface RandomExamResult {
 
 const MONDAI_CONFIG_BY_LEVEL: Record<Level, MondaiConfig[]> = {
   N5: [
-    { id: 1, label: 'Mondai 1: Task-based Comprehension', nameJa: 'Kadairikai (課題理解)', enabled: true, count: 7 },
-    { id: 2, label: 'Mondai 2: Point Comprehension', nameJa: 'Pointorikai (ポイント理解)', enabled: true, count: 6 },
-    { id: 3, label: 'Mondai 3: Verbal Expressions', nameJa: 'Hatsuwa Hyougen (発話表現)', enabled: true, count: 5 },
-    { id: 4, label: 'Mondai 4: Quick Response', nameJa: 'Sokujioutou (即時応答)', enabled: true, count: 6 },
+    {
+      id: 1,
+      label: 'Mondai 1: Task-based Comprehension',
+      nameJa: 'Kadairikai (課題理解)',
+      enabled: true,
+      count: 7,
+    },
+    {
+      id: 2,
+      label: 'Mondai 2: Point Comprehension',
+      nameJa: 'Pointorikai (ポイント理解)',
+      enabled: true,
+      count: 6,
+    },
+    {
+      id: 3,
+      label: 'Mondai 3: Verbal Expressions',
+      nameJa: 'Hatsuwa Hyougen (発話表現)',
+      enabled: true,
+      count: 5,
+    },
+    {
+      id: 4,
+      label: 'Mondai 4: Quick Response',
+      nameJa: 'Sokujioutou (即時応答)',
+      enabled: true,
+      count: 6,
+    },
   ],
   N4: [
-    { id: 1, label: 'Mondai 1: Task-based Comprehension', nameJa: 'Kadairikai (課題理解)', enabled: true, count: 8 },
-    { id: 2, label: 'Mondai 2: Point Comprehension', nameJa: 'Pointorikai (ポイント理解)', enabled: true, count: 7 },
-    { id: 3, label: 'Mondai 3: Verbal Expressions', nameJa: 'Hatsuwa Hyougen (発話表現)', enabled: true, count: 5 },
-    { id: 4, label: 'Mondai 4: Quick Response', nameJa: 'Sokujioutou (即時応答)', enabled: true, count: 8 },
+    {
+      id: 1,
+      label: 'Mondai 1: Task-based Comprehension',
+      nameJa: 'Kadairikai (課題理解)',
+      enabled: true,
+      count: 8,
+    },
+    {
+      id: 2,
+      label: 'Mondai 2: Point Comprehension',
+      nameJa: 'Pointorikai (ポイント理解)',
+      enabled: true,
+      count: 7,
+    },
+    {
+      id: 3,
+      label: 'Mondai 3: Verbal Expressions',
+      nameJa: 'Hatsuwa Hyougen (発話表現)',
+      enabled: true,
+      count: 5,
+    },
+    {
+      id: 4,
+      label: 'Mondai 4: Quick Response',
+      nameJa: 'Sokujioutou (即時応答)',
+      enabled: true,
+      count: 8,
+    },
   ],
   N3: [
-    { id: 1, label: 'Mondai 1: Task-based Comprehension', nameJa: 'Kadairikai (課題理解)', enabled: true, count: 6 },
-    { id: 2, label: 'Mondai 2: Point Comprehension', nameJa: 'Pointorikai (ポイント理解)', enabled: true, count: 6 },
-    { id: 3, label: 'Mondai 3: Summary Comprehension', nameJa: 'Gaiyourikai (概要理解)', enabled: true, count: 3 },
-    { id: 4, label: 'Mondai 4: Verbal Expressions', nameJa: 'Hatsuwa Hyougen (発話表現)', enabled: true, count: 4 },
-    { id: 5, label: 'Mondai 5: Quick Response', nameJa: 'Sokujioutou (即時応答)', enabled: true, count: 9 },
+    {
+      id: 1,
+      label: 'Mondai 1: Task-based Comprehension',
+      nameJa: 'Kadairikai (課題理解)',
+      enabled: true,
+      count: 6,
+    },
+    {
+      id: 2,
+      label: 'Mondai 2: Point Comprehension',
+      nameJa: 'Pointorikai (ポイント理解)',
+      enabled: true,
+      count: 6,
+    },
+    {
+      id: 3,
+      label: 'Mondai 3: Summary Comprehension',
+      nameJa: 'Gaiyourikai (概要理解)',
+      enabled: true,
+      count: 3,
+    },
+    {
+      id: 4,
+      label: 'Mondai 4: Verbal Expressions',
+      nameJa: 'Hatsuwa Hyougen (発話表現)',
+      enabled: true,
+      count: 4,
+    },
+    {
+      id: 5,
+      label: 'Mondai 5: Quick Response',
+      nameJa: 'Sokujioutou (即時応答)',
+      enabled: true,
+      count: 9,
+    },
   ],
   N2: [
-    { id: 1, label: 'Mondai 1: Task-based Comprehension', nameJa: 'Kadairikai (課題理解)', enabled: true, count: 5 },
-    { id: 2, label: 'Mondai 2: Point Comprehension', nameJa: 'Pointorikai (ポイント理解)', enabled: true, count: 6 },
-    { id: 3, label: 'Mondai 3: Summary Comprehension', nameJa: 'Gaiyourikai (概要理解)', enabled: true, count: 5 },
-    { id: 4, label: 'Mondai 4: Quick Response', nameJa: 'Sokujioutou (即時応答)', enabled: true, count: 12 },
-    { id: 5, label: 'Mondai 5: Integrated Comprehension', nameJa: 'Sougourikai (統合理解)', enabled: true, count: 3 },
+    {
+      id: 1,
+      label: 'Mondai 1: Task-based Comprehension',
+      nameJa: 'Kadairikai (課題理解)',
+      enabled: true,
+      count: 5,
+    },
+    {
+      id: 2,
+      label: 'Mondai 2: Point Comprehension',
+      nameJa: 'Pointorikai (ポイント理解)',
+      enabled: true,
+      count: 6,
+    },
+    {
+      id: 3,
+      label: 'Mondai 3: Summary Comprehension',
+      nameJa: 'Gaiyourikai (概要理解)',
+      enabled: true,
+      count: 5,
+    },
+    {
+      id: 4,
+      label: 'Mondai 4: Quick Response',
+      nameJa: 'Sokujioutou (即時応答)',
+      enabled: true,
+      count: 12,
+    },
+    {
+      id: 5,
+      label: 'Mondai 5: Integrated Comprehension',
+      nameJa: 'Sougourikai (統合理解)',
+      enabled: true,
+      count: 3,
+    },
   ],
   N1: [
-    { id: 1, label: 'Mondai 1: Task-based Comprehension', nameJa: 'Kadairikai (課題理解)', enabled: true, count: 6 },
-    { id: 2, label: 'Mondai 2: Point Comprehension', nameJa: 'Pointorikai (ポイント理解)', enabled: true, count: 7 },
-    { id: 3, label: 'Mondai 3: Summary Comprehension', nameJa: 'Gaiyourikai (概要理解)', enabled: true, count: 6 },
-    { id: 4, label: 'Mondai 4: Quick Response', nameJa: 'Sokujioutou (即時応答)', enabled: true, count: 14 },
-    { id: 5, label: 'Mondai 5: Integrated Comprehension', nameJa: 'Sougourikai (統合理解)', enabled: true, count: 4 },
+    {
+      id: 1,
+      label: 'Mondai 1: Task-based Comprehension',
+      nameJa: 'Kadairikai (課題理解)',
+      enabled: true,
+      count: 6,
+    },
+    {
+      id: 2,
+      label: 'Mondai 2: Point Comprehension',
+      nameJa: 'Pointorikai (ポイント理解)',
+      enabled: true,
+      count: 7,
+    },
+    {
+      id: 3,
+      label: 'Mondai 3: Summary Comprehension',
+      nameJa: 'Gaiyourikai (概要理解)',
+      enabled: true,
+      count: 6,
+    },
+    {
+      id: 4,
+      label: 'Mondai 4: Quick Response',
+      nameJa: 'Sokujioutou (即時応答)',
+      enabled: true,
+      count: 14,
+    },
+    {
+      id: 5,
+      label: 'Mondai 5: Integrated Comprehension',
+      nameJa: 'Sougourikai (統合理解)',
+      enabled: true,
+      count: 4,
+    },
   ],
 }
 
@@ -206,21 +353,21 @@ function Step1_Configuration({ config, onConfigChange, onNext }: Step1Props) {
   }
 
   const handleMondaiToggle = (id: number) => {
-    const updatedConfig = config.mondaiConfig.map(m =>
+    const updatedConfig = config.mondaiConfig.map((m) =>
       m.id === id ? { ...m, enabled: !m.enabled } : m
     )
     onConfigChange({ ...config, mondaiConfig: updatedConfig })
   }
 
   const handleMondaiCountChange = (id: number, count: number) => {
-    const updatedConfig = config.mondaiConfig.map(m =>
+    const updatedConfig = config.mondaiConfig.map((m) =>
       m.id === id ? { ...m, count: Math.max(1, count) } : m
     )
     onConfigChange({ ...config, mondaiConfig: updatedConfig })
   }
 
   const totalQuestions = config.mondaiConfig
-    .filter(m => m.enabled)
+    .filter((m) => m.enabled)
     .reduce((sum, m) => sum + m.count, 0)
 
   const canProceed = config.title.trim().length > 0 && totalQuestions > 0
@@ -261,7 +408,7 @@ function Step1_Configuration({ config, onConfigChange, onNext }: Step1Props) {
             Trình độ <span className="text-red-500">*</span>
           </label>
           <div className="grid grid-cols-5 gap-2">
-            {LEVELS.map(lvl => (
+            {LEVELS.map((lvl) => (
               <button
                 key={lvl}
                 onClick={() => handleLevelChange(lvl)}
@@ -311,16 +458,12 @@ function Step1_Configuration({ config, onConfigChange, onNext }: Step1Props) {
       {/* Mondai Configuration */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <label className="block text-sm font-bold text-gray-800">
-            Cấu hình bộ câu hỏi
-          </label>
-          <span className="text-sm font-semibold text-blue-600">
-            Tổng: {totalQuestions} câu
-          </span>
+          <label className="block text-sm font-bold text-gray-800">Cấu hình bộ câu hỏi</label>
+          <span className="text-sm font-semibold text-blue-600">Tổng: {totalQuestions} câu</span>
         </div>
 
         <div className="space-y-3">
-          {config.mondaiConfig.map(mondai => (
+          {config.mondaiConfig.map((mondai) => (
             <div
               key={mondai.id}
               className="flex items-center gap-4 p-4 rounded-lg border border-gray-200 bg-gray-50 hover:border-gray-300 transition"
@@ -347,7 +490,9 @@ function Step1_Configuration({ config, onConfigChange, onNext }: Step1Props) {
                     type="number"
                     min="1"
                     value={mondai.count}
-                    onChange={(e) => handleMondaiCountChange(mondai.id, parseInt(e.target.value) || 1)}
+                    onChange={(e) =>
+                      handleMondaiCountChange(mondai.id, parseInt(e.target.value) || 1)
+                    }
                     className="w-12 text-center rounded border border-gray-300 py-1 text-sm font-medium focus:ring-1 focus:ring-blue-500 outline-none"
                   />
                   <button
@@ -408,8 +553,8 @@ function Step2_Progress({ config, onComplete, onBack }: Step2Props) {
 
         // Start random exam generation
         const mondaiConfig = config.mondaiConfig
-          .filter(m => m.enabled)
-          .map(m => ({
+          .filter((m) => m.enabled)
+          .map((m) => ({
             mondai_id: m.id,
             count: m.count,
           }))
@@ -428,7 +573,7 @@ function Step2_Progress({ config, onComplete, onBack }: Step2Props) {
 
         // Poll job status
         while (!jobComplete && pollCount < maxPolls) {
-          await new Promise(r => setTimeout(r, 1000))
+          await new Promise((r) => setTimeout(r, 1000))
           pollCount++
 
           const statusResponse = await randomExamClient.getRandomExamJobStatus(jobId)
@@ -531,8 +676,8 @@ function Step2_Progress({ config, onComplete, onBack }: Step2Props) {
             <p className="font-semibold text-gray-900">{config.timeLimit} phút</p>
           </div>
           {config.mondaiConfig
-            .filter(m => m.enabled)
-            .map(m => (
+            .filter((m) => m.enabled)
+            .map((m) => (
               <div key={m.id}>
                 <span className="text-sm text-gray-600">{m.label}:</span>
                 <p className="font-semibold text-gray-900">{m.count} câu</p>
@@ -586,10 +731,14 @@ function Step3_ReviewEdit({ result, onEdit, onNext, onBack }: Step3Props) {
 
   const updateQuestion = (idx: number, patch: Partial<GeneratedQuestion>) => {
     setHasUnsavedChanges(true)
-    setQuestions(prev => prev.map((q, i) => (i === idx ? { ...q, ...patch } : q)))
+    setQuestions((prev) => prev.map((q, i) => (i === idx ? { ...q, ...patch } : q)))
   }
 
-  const updateAnswer = (qIdx: number, aIdx: number, patch: { content?: string; is_correct?: boolean }) => {
+  const updateAnswer = (
+    qIdx: number,
+    aIdx: number,
+    patch: { content?: string; is_correct?: boolean }
+  ) => {
     const current = questions[qIdx]
     if (!current) return
     const nextAnswers = current.answers.map((a, i) =>
@@ -624,12 +773,15 @@ function Step3_ReviewEdit({ result, onEdit, onNext, onBack }: Step3Props) {
 
   const activeQ = questions[activeQIdx]
 
-  const groupedQuestions = questions.reduce((acc, q, idx) => {
-    const g = q.mondai_group || 'Khác'
-    if (!acc[g]) acc[g] = []
-    acc[g].push({ q, idx })
-    return acc
-  }, {} as Record<string, Array<{ q: GeneratedQuestion; idx: number }>>)
+  const groupedQuestions = questions.reduce(
+    (acc, q, idx) => {
+      const g = q.mondai_group || 'Khác'
+      if (!acc[g]) acc[g] = []
+      acc[g].push({ q, idx })
+      return acc
+    },
+    {} as Record<string, Array<{ q: GeneratedQuestion; idx: number }>>
+  )
 
   const orderedGroupedQuestions = Object.entries(groupedQuestions).sort(
     ([a], [b]) => extractMondaiNumber(a) - extractMondaiNumber(b)
@@ -680,7 +832,9 @@ function Step3_ReviewEdit({ result, onEdit, onNext, onBack }: Step3Props) {
   }
 
   const handleAddMondai = () => {
-    const numbers = questions.map((q) => extractMondaiNumber(q.mondai_group || '')).filter((n) => n < 999)
+    const numbers = questions
+      .map((q) => extractMondaiNumber(q.mondai_group || ''))
+      .filter((n) => n < 999)
     const nextMondai = (numbers.length ? Math.max(...numbers) : 0) + 1
     handleAddQuestion(`Mondai ${nextMondai}`)
   }
@@ -693,7 +847,9 @@ function Step3_ReviewEdit({ result, onEdit, onNext, onBack }: Step3Props) {
         exam_id: result.exam_id,
         title: result.title,
         description: `Sinh từ ${questions.length} câu ngẫu nhiên - ${result.level}`,
-        question_ids: normalizedEditedQuestions.map((q) => q.question_id).filter((id) => isUUID(id)),
+        question_ids: normalizedEditedQuestions
+          .map((q) => q.question_id)
+          .filter((id) => isUUID(id)),
         edited_questions: normalizedEditedQuestions,
         time_limit: result.time_limit,
         is_published: false,
@@ -735,7 +891,11 @@ function Step3_ReviewEdit({ result, onEdit, onNext, onBack }: Step3Props) {
                 : 'bg-emerald-600 text-white hover:bg-emerald-700'
             }`}
           >
-            {isSavingDraft ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            {isSavingDraft ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Check className="h-4 w-4" />
+            )}
             Lưu bản nháp
           </button>
         </div>
@@ -806,7 +966,11 @@ function Step3_ReviewEdit({ result, onEdit, onNext, onBack }: Step3Props) {
                     Câu
                     <div className="flex items-center gap-0.5">
                       <button
-                        onClick={() => updateQuestion(activeQIdx, { question_number: Math.max(1, (activeQ.question_number || 1) - 1) })}
+                        onClick={() =>
+                          updateQuestion(activeQIdx, {
+                            question_number: Math.max(1, (activeQ.question_number || 1) - 1),
+                          })
+                        }
                         className="w-5 h-5 flex items-center justify-center bg-muted rounded text-muted-foreground hover:bg-slate-300 font-bold leading-none"
                         type="button"
                       >
@@ -814,7 +978,11 @@ function Step3_ReviewEdit({ result, onEdit, onNext, onBack }: Step3Props) {
                       </button>
                       <span className="w-6 text-center">{activeQ.question_number}</span>
                       <button
-                        onClick={() => updateQuestion(activeQIdx, { question_number: (activeQ.question_number || 1) + 1 })}
+                        onClick={() =>
+                          updateQuestion(activeQIdx, {
+                            question_number: (activeQ.question_number || 1) + 1,
+                          })
+                        }
                         className="w-5 h-5 flex items-center justify-center bg-muted rounded text-muted-foreground hover:bg-slate-300 font-bold leading-none"
                         type="button"
                       >
@@ -834,7 +1002,9 @@ function Step3_ReviewEdit({ result, onEdit, onNext, onBack }: Step3Props) {
                         onClick={() => updateQuestion(activeQIdx, { difficulty: star })}
                         className={`w-6 h-6 flex items-center justify-center rounded-md transition-colors hover:bg-accent ${(activeQ.difficulty || 3) >= star ? 'text-amber-400' : 'text-muted-foreground'}`}
                       >
-                        <Star className={`w-4 h-4 ${(activeQ.difficulty || 3) >= star ? 'fill-current' : ''}`} />
+                        <Star
+                          className={`w-4 h-4 ${(activeQ.difficulty || 3) >= star ? 'fill-current' : ''}`}
+                        />
                       </button>
                     ))}
                   </div>
@@ -860,7 +1030,9 @@ function Step3_ReviewEdit({ result, onEdit, onNext, onBack }: Step3Props) {
                 ) : null}
 
                 <div>
-                  <label className="block text-sm font-bold text-card-foreground mb-2">Nội dung câu hỏi</label>
+                  <label className="block text-sm font-bold text-card-foreground mb-2">
+                    Nội dung câu hỏi
+                  </label>
                   <textarea
                     value={activeQ.question_text || ''}
                     onChange={(e) => updateQuestion(activeQIdx, { question_text: e.target.value })}
@@ -871,7 +1043,9 @@ function Step3_ReviewEdit({ result, onEdit, onNext, onBack }: Step3Props) {
                 </div>
 
                 <div>
-                  <label className="text-sm font-bold text-card-foreground">Kịch bản hội thoại</label>
+                  <label className="text-sm font-bold text-card-foreground">
+                    Kịch bản hội thoại
+                  </label>
                   <textarea
                     value={activeQ.script_text || ''}
                     onChange={(e) => updateQuestion(activeQIdx, { script_text: e.target.value })}
@@ -882,7 +1056,9 @@ function Step3_ReviewEdit({ result, onEdit, onNext, onBack }: Step3Props) {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-card-foreground mb-2">Giải thích</label>
+                  <label className="block text-sm font-bold text-card-foreground mb-2">
+                    Giải thích
+                  </label>
                   <textarea
                     value={activeQ.explanation || ''}
                     onChange={(e) => updateQuestion(activeQIdx, { explanation: e.target.value })}
@@ -894,7 +1070,9 @@ function Step3_ReviewEdit({ result, onEdit, onNext, onBack }: Step3Props) {
 
                 <div>
                   <div className="flex items-center justify-between gap-3 mb-3">
-                    <label className="block text-sm font-bold text-card-foreground">Đáp án lựa chọn</label>
+                    <label className="block text-sm font-bold text-card-foreground">
+                      Đáp án lựa chọn
+                    </label>
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-medium text-muted-foreground">Số đáp án</span>
                       {[3, 4].map((count) => {
@@ -919,7 +1097,10 @@ function Step3_ReviewEdit({ result, onEdit, onNext, onBack }: Step3Props) {
 
                   <div className="space-y-3">
                     {activeQ.answers.map((a, ai) => (
-                      <div key={`${a.answer_id}-${ai}`} className="flex items-center gap-4 group/answer">
+                      <div
+                        key={`${a.answer_id}-${ai}`}
+                        className="flex items-center gap-4 group/answer"
+                      >
                         <button
                           onClick={() => updateAnswer(activeQIdx, ai, { is_correct: true })}
                           className="flex flex-col items-center justify-center w-12 shrink-0 transition-opacity opacity-70 hover:opacity-100"
@@ -930,9 +1111,15 @@ function Step3_ReviewEdit({ result, onEdit, onNext, onBack }: Step3Props) {
                               a.is_correct ? 'border-emerald-500 bg-emerald-500' : 'border-border'
                             }`}
                           >
-                            {a.is_correct ? <span className="w-2.5 h-2.5 rounded-full bg-card" /> : null}
+                            {a.is_correct ? (
+                              <span className="w-2.5 h-2.5 rounded-full bg-card" />
+                            ) : null}
                           </div>
-                          {a.is_correct ? <span className="text-[10px] font-bold text-emerald-600 mt-1">Đúng</span> : null}
+                          {a.is_correct ? (
+                            <span className="text-[10px] font-bold text-emerald-600 mt-1">
+                              Đúng
+                            </span>
+                          ) : null}
                         </button>
                         <div
                           className={`flex-1 border rounded-xl px-4 py-3 transition-colors ${
@@ -942,12 +1129,16 @@ function Step3_ReviewEdit({ result, onEdit, onNext, onBack }: Step3Props) {
                           }`}
                         >
                           <div className="flex items-center gap-3">
-                            <span className={`text-sm font-bold ${a.is_correct ? 'text-emerald-500' : 'text-muted-foreground'}`}>
+                            <span
+                              className={`text-sm font-bold ${a.is_correct ? 'text-emerald-500' : 'text-muted-foreground'}`}
+                            >
                               {ai + 1}.
                             </span>
                             <input
                               value={a.content || ''}
-                              onChange={(e) => updateAnswer(activeQIdx, ai, { content: e.target.value })}
+                              onChange={(e) =>
+                                updateAnswer(activeQIdx, ai, { content: e.target.value })
+                              }
                               className="w-full text-sm bg-transparent border-0 outline-none text-card-foreground font-medium"
                               placeholder="Nhập nội dung đáp án..."
                             />
@@ -962,7 +1153,9 @@ function Step3_ReviewEdit({ result, onEdit, onNext, onBack }: Step3Props) {
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center bg-card rounded-2xl border border-border">
               <Brain className="w-12 h-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground font-medium">Chọn một câu hỏi ở danh sách bên trái để hiệu đính</p>
+              <p className="text-muted-foreground font-medium">
+                Chọn một câu hỏi ở danh sách bên trái để hiệu đính
+              </p>
             </div>
           )}
         </div>
@@ -1022,8 +1215,8 @@ function Step4_FinalReview({ result, onBack }: Step4Props) {
       setMergeProgress('Chuẩn bị merge audio...')
 
       const audioUrls = result.questions
-        .filter(q => q.audio_clip_url)
-        .map(q => q.audio_clip_url as string)
+        .filter((q) => q.audio_clip_url)
+        .map((q) => q.audio_clip_url as string)
 
       let mergedAudioUrl: string | undefined
       if (audioUrls.length > 0) {
@@ -1073,7 +1266,8 @@ function Step4_FinalReview({ result, onBack }: Step4Props) {
           <div>
             <h3 className="font-bold text-green-900 mb-2">Đề thi đã sẵn sàng!</h3>
             <p className="text-green-800">
-              Quá trình sinh đề đã hoàn tất. Vui lòng kiểm tra lại thông tin bên dưới trước khi xuất.
+              Quá trình sinh đề đã hoàn tất. Vui lòng kiểm tra lại thông tin bên dưới trước khi
+              xuất.
             </p>
           </div>
         </div>
@@ -1105,14 +1299,17 @@ function Step4_FinalReview({ result, onBack }: Step4Props) {
         <div>
           <span className="text-sm font-bold text-gray-600">Có file audio</span>
           <p className="text-lg font-semibold text-gray-900">
-            {result.questions.filter(q => q.audio_clip_url).length}/{result.total_questions} câu
+            {result.questions.filter((q) => q.audio_clip_url).length}/{result.total_questions} câu
           </p>
         </div>
         <div>
           <span className="text-sm font-bold text-gray-600">Phân bố theo Mondai</span>
           <div className="mt-2 grid grid-cols-2 gap-2">
             {Object.entries(result.mondai_summary).map(([key, count]) => (
-              <div key={key} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded">
+              <div
+                key={key}
+                className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded"
+              >
                 <span className="text-sm text-gray-700">{key}</span>
                 <span className="font-semibold text-gray-900">{count}</span>
               </div>
@@ -1217,7 +1414,9 @@ export default function RandomExamPage() {
             ← Quay lại
           </button>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Sinh Đề Thi Ngẫu Nhiên</h1>
-          <p className="text-gray-700">Tạo bài thi bằng cách random hoá các câu hỏi hiện có trong hệ thống</p>
+          <p className="text-gray-700">
+            Tạo bài thi bằng cách random hoá các câu hỏi hiện có trong hệ thống
+          </p>
         </div>
 
         <div className="mb-5 overflow-x-auto pb-2">
@@ -1226,7 +1425,11 @@ export default function RandomExamPage() {
 
         <div className="rounded-xl bg-white p-5 lg:p-6 shadow-lg">
           {step === 1 && (
-            <Step1_Configuration config={config} onConfigChange={setConfig} onNext={handleStep1Next} />
+            <Step1_Configuration
+              config={config}
+              onConfigChange={setConfig}
+              onNext={handleStep1Next}
+            />
           )}
           {step === 2 && (
             <Step2_Progress config={config} onComplete={handleStep2Complete} onBack={handleBack} />
