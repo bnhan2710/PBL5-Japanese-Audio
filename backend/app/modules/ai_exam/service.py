@@ -59,6 +59,15 @@ def _format_seconds(seconds: float) -> str:
     return f"{hours:02d}:{minutes:02d}:{secs:02d}.{ms:03d}"
 
 
+def _format_transcript_timestamp(seconds: float) -> str:
+    total_seconds = max(0, int(seconds))
+    minutes, secs = divmod(total_seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+    if hours > 0:
+        return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+    return f"{minutes:02d}:{secs:02d}"
+
+
 def _strip_reazon_frame(text: str) -> str:
     lines = [line.rstrip() for line in (text or "").splitlines() if line.strip() and line.strip() != "--------"]
     return "\n".join(lines).strip()
@@ -443,6 +452,7 @@ class SplitAudioChunk:
     end_ms: int
     audio_bytes: bytes
     transcript: str = ""
+    timestamped_transcript: str = ""
     refined_transcript: str = ""
     introduction: Optional[str] = None
     script_text: str = ""
@@ -647,10 +657,10 @@ class ReazonTranscriber:
             logger.warning("Gender classification failed for %s: %s", audio_path, exc)
             return "Unknown"
 
-    def transcribe(self, audio_bytes: bytes, suffix: str = ".wav") -> dict:
+    def transcribe(self, audio_bytes: bytes, suffix: str = ".wav", base_offset_ms: int = 0) -> dict:
         try:
             from pydub import AudioSegment
-            from pydub.silence import split_on_silence
+            from pydub.silence import detect_nonsilent, split_on_silence
             from reazonspeech.k2.asr import audio_from_path, transcribe
         except ImportError as exc:
             raise RuntimeError(f"Missing dependency: {exc}") from exc
@@ -665,21 +675,43 @@ class ReazonTranscriber:
         try:
             audio = AudioSegment.from_file(tmp_path)
             silence_thresh = audio.dBFS - 14 if audio.dBFS != float("-inf") else -50
+            keep_silence = 150
             chunks = split_on_silence(
                 audio,
                 min_silence_len=400,
                 silence_thresh=silence_thresh,
-                keep_silence=150,
+                keep_silence=keep_silence,
             )
+            raw_ranges = detect_nonsilent(
+                audio,
+                min_silence_len=400,
+                silence_thresh=silence_thresh,
+            )
+            chunk_ranges: list[tuple[int, int]] = []
+            for index, (start_ms, end_ms) in enumerate(raw_ranges):
+                next_start_ms = raw_ranges[index + 1][0] if index + 1 < len(raw_ranges) else None
+                prev_end_ms = raw_ranges[index - 1][1] if index > 0 else None
+                adjusted_start_ms = max(0, start_ms - keep_silence)
+                adjusted_end_ms = min(len(audio), end_ms + keep_silence)
+                if prev_end_ms is not None:
+                    adjusted_start_ms = max(adjusted_start_ms, prev_end_ms)
+                if next_start_ms is not None:
+                    adjusted_end_ms = min(adjusted_end_ms, next_start_ms)
+                chunk_ranges.append((adjusted_start_ms, adjusted_end_ms))
             if not chunks:
                 chunks = [audio]
+            if not chunk_ranges:
+                chunk_ranges = [(0, len(audio))]
 
             chunk_dir = tempfile.mkdtemp(prefix="reazon_chunks_")
             chunks_data: list[dict] = []
             raw_parts: list[str] = []
+            timeline_parts: list[str] = []
+            fallback_cursor_ms = 0
             try:
                 for index, chunk in enumerate(chunks):
                     if len(chunk) < 300:
+                        fallback_cursor_ms += len(chunk)
                         continue
                     chunk_path = os.path.join(chunk_dir, f"chunk_{index}.wav")
                     chunk.export(chunk_path, format="wav")
@@ -688,13 +720,21 @@ class ReazonTranscriber:
                         result = transcribe(self._model, audio_content)
                         text = self._clean_text(result.text if result else "")
                         if not text:
+                            fallback_cursor_ms += len(chunk)
                             continue
                         gender = self._predict_gender(chunk_path)
                         raw_parts.append(text)
                         chunks_data.append({"text": text, "gender": gender})
+                        if index < len(chunk_ranges):
+                            chunk_start_ms = chunk_ranges[index][0]
+                        else:
+                            chunk_start_ms = fallback_cursor_ms
+                        timestamp = _format_transcript_timestamp((base_offset_ms + chunk_start_ms) / 1000.0)
+                        timeline_parts.append(f"{timestamp}: {text}")
                     except Exception as exc:
                         logger.warning("Chunk %s transcription error: %s", index, exc)
                     finally:
+                        fallback_cursor_ms += len(chunk)
                         if os.path.exists(chunk_path):
                             os.remove(chunk_path)
             finally:
@@ -708,6 +748,7 @@ class ReazonTranscriber:
             )
             return {
                 "raw_text": raw_text,
+                "timestamped_raw_text": "\n".join(timeline_parts).strip(),
                 "formatted_text": formatted_text,
                 "introduction": introduction,
                 "script_text": script_text,
@@ -750,8 +791,13 @@ class AIExamService:
 
         self._notify(progress_callback, "Step 4/7: ReazonSpeech transcribing split audio...")
         for segment in split_segments:
-            transcript_result = self._reazon.transcribe(segment.audio_bytes, suffix=".wav")
+            transcript_result = self._reazon.transcribe(
+                segment.audio_bytes,
+                suffix=".wav",
+                base_offset_ms=segment.start_ms,
+            )
             segment.transcript = transcript_result["raw_text"]
+            segment.timestamped_transcript = transcript_result.get("timestamped_raw_text", "").strip()
             segment.refined_transcript = transcript_result["formatted_text"]
             segment.introduction = transcript_result["introduction"]
             segment.script_text = transcript_result["script_text"]
@@ -850,12 +896,12 @@ class AIExamService:
     def _build_raw_transcript(split_segments: Sequence[SplitAudioChunk]) -> str:
         lines = []
         for segment in split_segments:
-            lines.append(
-                f"[Segment {segment.segment_index:02d}] "
-                f"{_format_seconds(segment.start_ms / 1000.0)} -> {_format_seconds(segment.end_ms / 1000.0)}"
-            )
-            lines.append(segment.transcript or "(empty)")
-            lines.append("")
+            content = (segment.timestamped_transcript or "").strip()
+            if content:
+                lines.append(content)
+            else:
+                fallback_timestamp = _format_transcript_timestamp(segment.start_ms / 1000.0)
+                lines.append(f"{fallback_timestamp}: {segment.transcript or '(empty)'}")
         return "\n".join(lines).strip()
 
     @staticmethod
@@ -912,7 +958,7 @@ class AIExamService:
                     source_question_index=structured.source_question_index,
                     source_start_time=source.start_ms / 1000.0,
                     source_end_time=source.end_ms / 1000.0,
-                    source_transcript=source.transcript,
+                    source_transcript=source.timestamped_transcript or source.transcript,
                     answers=answers,
                 )
             )

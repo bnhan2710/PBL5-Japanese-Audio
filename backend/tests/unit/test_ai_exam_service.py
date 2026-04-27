@@ -97,10 +97,11 @@ class _FakeReazon:
     def _load_model(self):
         return None
 
-    def transcribe(self, audio_bytes: bytes, suffix: str = ".wav") -> dict:
+    def transcribe(self, audio_bytes: bytes, suffix: str = ".wav", base_offset_ms: int = 0) -> dict:
         if audio_bytes == b"segment-1":
             return {
                 "raw_text": "二番会社での会話です男会議は三時です男の人は何時に会議をしますか",
+                "timestamped_raw_text": "00:01: 二番会社での会話です\n00:03: 男会議は三時です\n00:04: 男の人は何時に会議をしますか",
                 "formatted_text": "--------\n二番\n会社での会話です。\n\n男：会議は三時です。\n\n男の人は何時に会議をしますか。\n--------",
                 "introduction": "二番\n会社での会話です。",
                 "script_text": "男：会議は三時です。",
@@ -110,6 +111,7 @@ class _FakeReazon:
             }
         return {
             "raw_text": "一番お店での会話です女りんごを二つください男はいわかりました男の人はどう返事をしましたか",
+            "timestamped_raw_text": "00:07: 一番お店での会話です\n00:08: 女りんごを二つください\n00:10: 男はいわかりました\n00:10: 男の人はどう返事をしましたか",
             "formatted_text": "--------\n一番\nお店での会話です。\n\n女：りんごを二つください。\n男：はい、わかりました。\n\n男の人はどう返事をしましたか。\n--------",
             "introduction": "一番\nお店での会話です。",
             "script_text": "女：りんごを二つください。\n男：はい、わかりました。",
@@ -144,6 +146,20 @@ def test_generate_uses_local_reazon_only_and_keeps_one_question_per_segment():
     assert result.questions[1].source_segment_index == 2
     assert result.questions[1].source_question_index == 1
     assert result.questions[1].question_text == "お店での会話です。"
+    assert result.questions[0].source_transcript == (
+        "00:01: 二番会社での会話です\n"
+        "00:03: 男会議は三時です\n"
+        "00:04: 男の人は何時に会議をしますか"
+    )
+    assert result.raw_transcript == (
+        "00:01: 二番会社での会話です\n"
+        "00:03: 男会議は三時です\n"
+        "00:04: 男の人は何時に会議をしますか\n"
+        "00:07: 一番お店での会話です\n"
+        "00:08: 女りんごを二つください\n"
+        "00:10: 男はいわかりました\n"
+        "00:10: 男の人はどう返事をしましたか"
+    )
     assert len(result.questions[0].answers) == 4
     assert all(not answer.is_correct for answer in result.questions[0].answers)
     assert all(answer.content == "" for answer in result.questions[0].answers)
@@ -157,6 +173,23 @@ def test_generate_uses_local_reazon_only_and_keeps_one_question_per_segment():
         "Step 6/7: Building local question drafts...",
         "Step 7/7: Attaching clipped audio URLs...",
     ]
+
+
+def test_build_raw_transcript_falls_back_to_segment_start_timestamp():
+    split_segments = [
+        SplitAudioChunk(
+            segment_index=1,
+            file_name="segment_01.wav",
+            start_ms=65000,
+            end_ms=70000,
+            audio_bytes=b"",
+            transcript="レストランで男の人が話しています",
+        )
+    ]
+
+    raw_transcript = AIExamService._build_raw_transcript(split_segments)
+
+    assert raw_transcript == "01:05: レストランで男の人が話しています"
 
 
 def test_build_structured_segments_caps_mondai_at_five():
