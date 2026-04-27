@@ -10,6 +10,8 @@ from app.modules.ai_exam.service import (
     BELL_SOUND_PATH,
     BellAudioSplitter,
     SplitAudioChunk,
+    _extract_numbered_answer_options,
+    _extract_spoken_question_number,
     _parse_formatted_segment,
 )
 
@@ -192,6 +194,100 @@ def test_build_raw_transcript_falls_back_to_segment_start_timestamp():
     assert raw_transcript == "01:05: レストランで男の人が話しています"
 
 
+def test_extract_numbered_answer_options_from_timestamped_transcript():
+    transcript = (
+        "40:16: 一\n"
+        "40:17: ほんと偶然ですね\n"
+        "40:21: 二\n"
+        "40:22: わざわざ会いに来てくれたんですか\n"
+        "40:26: 三\n"
+        "40:27: あっ\n"
+        "40:28: じゃあ\n"
+        "40:29: ここじゃないところにしましょう"
+    )
+
+    options = _extract_numbered_answer_options(transcript)
+
+    assert [(option.label, option.content) for option in options] == [
+        ("A", "ほんと偶然ですね"),
+        ("B", "わざわざ会いに来てくれたんですか"),
+        ("C", "あっ じゃあ ここじゃないところにしましょう"),
+    ]
+
+
+def test_build_questions_uses_numbered_answer_options_when_present_in_transcript():
+    split_segments = [
+        SplitAudioChunk(
+            segment_index=1,
+            file_name="segment_01.wav",
+            start_ms=2416000,
+            end_ms=2443000,
+            audio_bytes=b"",
+            transcript="短い会話です",
+            timestamped_transcript=(
+                "40:16: 一\n"
+                "40:17: ほんと偶然ですね\n"
+                "40:21: 二\n"
+                "40:22: わざわざ会いに来てくれたんですか\n"
+                "40:26: 三\n"
+                "40:27: あっ\n"
+                "40:28: じゃあ\n"
+                "40:29: ここじゃないところにしましょう"
+            ),
+            refined_transcript="短い会話です",
+            introduction="一番\n短い会話です。",
+            script_text="男：今日はありがとうございます。",
+            question_texts=["女の人は何と言いましたか。"],
+            spoken_question_number=1,
+        )
+    ]
+
+    structured = AIExamService._build_structured_segments(split_segments, jlpt_level="N2")
+    questions = AIExamService._build_questions(structured, split_segments)
+
+    assert len(questions) == 1
+    assert [(answer.label, answer.content) for answer in questions[0].answers] == [
+        ("A", "ほんと偶然ですね"),
+        ("B", "わざわざ会いに来てくれたんですか"),
+        ("C", "あっ じゃあ ここじゃないところにしましょう"),
+    ]
+
+
+def test_build_questions_does_not_use_numbered_answer_options_outside_25_to_35_seconds():
+    split_segments = [
+        SplitAudioChunk(
+            segment_index=1,
+            file_name="segment_01.wav",
+            start_ms=2416000,
+            end_ms=2436000,
+            audio_bytes=b"",
+            transcript="短い会話です",
+            timestamped_transcript=(
+                "40:16: 一\n"
+                "40:17: ほんと偶然ですね\n"
+                "40:21: 二\n"
+                "40:22: わざわざ会いに来てくれたんですか\n"
+                "40:26: 三\n"
+                "40:27: あっ\n"
+                "40:28: じゃあ\n"
+                "40:29: ここじゃないところにしましょう"
+            ),
+            refined_transcript="短い会話です",
+            introduction="一番\n短い会話です。",
+            script_text="男：今日はありがとうございます。",
+            question_texts=["女の人は何と言いましたか。"],
+            spoken_question_number=1,
+        )
+    ]
+
+    structured = AIExamService._build_structured_segments(split_segments, jlpt_level="N2")
+    questions = AIExamService._build_questions(structured, split_segments)
+
+    assert len(questions) == 1
+    assert len(questions[0].answers) == 4
+    assert all(answer.content == "" for answer in questions[0].answers)
+
+
 def test_build_structured_segments_caps_mondai_at_five():
     split_segments = [
         SplitAudioChunk(
@@ -210,7 +306,7 @@ def test_build_structured_segments_caps_mondai_at_five():
         for index in range(1, 11)
     ]
 
-    structured = AIExamService._build_structured_segments(split_segments)
+    structured = AIExamService._build_structured_segments(split_segments, jlpt_level="N2")
 
     assert structured[-1].mondai_group == "Mondai 5"
     assert len({item.mondai_group for item in structured}) == 5
@@ -259,7 +355,7 @@ def test_build_structured_segments_uses_leading_ban_and_opens_new_mondai_on_ichi
         ),
     ]
 
-    structured = AIExamService._build_structured_segments(split_segments)
+    structured = AIExamService._build_structured_segments(split_segments, jlpt_level="N2")
 
     assert [(item.mondai_group, item.question_number) for item in structured] == [
         ("Mondai 1", 2),
@@ -285,7 +381,7 @@ def test_build_questions_generates_non_empty_time_options():
         )
     ]
 
-    structured = AIExamService._build_structured_segments(split_segments)
+    structured = AIExamService._build_structured_segments(split_segments, jlpt_level="N2")
     questions = AIExamService._build_questions(structured, split_segments)
 
     assert len(questions) == 1
@@ -317,6 +413,50 @@ def test_parse_formatted_segment_expands_question_text_from_ban_to_current_quest
     assert question_texts == ["会社での会話です。"]
     assert spoken_number == 2
     assert announced_mondai_number is None
+
+
+def test_extract_spoken_question_number_detects_rei_as_zero():
+    assert _extract_spoken_question_number("れいを聞いてください。") == 0
+    assert _extract_spoken_question_number("例です。") == 0
+    assert _extract_spoken_question_number("問題一\nれい\n会話です。") == 0
+
+
+def test_build_structured_segments_keeps_rei_as_question_zero():
+    split_segments = [
+        SplitAudioChunk(
+            segment_index=1,
+            file_name="segment_01.wav",
+            start_ms=1000,
+            end_ms=2000,
+            audio_bytes=b"",
+            transcript="segment-rei",
+            refined_transcript="segment-rei",
+            introduction="れい\n会話です。",
+            script_text="男：...",
+            question_texts=["質問例。"],
+            spoken_question_number=0,
+        ),
+        SplitAudioChunk(
+            segment_index=2,
+            file_name="segment_02.wav",
+            start_ms=3000,
+            end_ms=4000,
+            audio_bytes=b"",
+            transcript="segment-1",
+            refined_transcript="segment-1",
+            introduction="一番\n会話です。",
+            script_text="女：...",
+            question_texts=["質問1。"],
+            spoken_question_number=1,
+        ),
+    ]
+
+    structured = AIExamService._build_structured_segments(split_segments, jlpt_level="N2")
+
+    assert [(item.mondai_group, item.question_number) for item in structured] == [
+        ("Mondai 1", 0),
+        ("Mondai 1", 1),
+    ]
 
 
 def test_build_structured_segments_prefers_announced_mondai_number():
@@ -351,9 +491,143 @@ def test_build_structured_segments_prefers_announced_mondai_number():
         ),
     ]
 
-    structured = AIExamService._build_structured_segments(split_segments)
+    structured = AIExamService._build_structured_segments(split_segments, jlpt_level="N2")
 
     assert [(item.mondai_group, item.question_number) for item in structured] == [
         ("Mondai 1", 1),
         ("Mondai 5", 1),
+    ]
+
+
+def test_build_structured_segments_respects_n4_max_four_mondai():
+    split_segments = [
+        SplitAudioChunk(
+            segment_index=index,
+            file_name=f"segment_{index:02d}.wav",
+            start_ms=index * 1000,
+            end_ms=index * 1000 + 900,
+            audio_bytes=b"",
+            transcript=f"segment-{index}",
+            refined_transcript=f"segment-{index}",
+            introduction=f"問題{index}\n一番\n会話です。",
+            script_text=f"男：segment-{index}",
+            question_texts=[f"質問 {index}。"],
+            spoken_question_number=1,
+            announced_mondai_number=index,
+        )
+        for index in range(1, 6)
+    ]
+
+    structured = AIExamService._build_structured_segments(split_segments, jlpt_level="N4")
+
+    assert [item.mondai_group for item in structured] == [
+        "Mondai 1",
+        "Mondai 2",
+        "Mondai 3",
+        "Mondai 4",
+        "Mondai 4",
+    ]
+
+
+def test_build_structured_segments_starts_new_mondai_when_number_rolls_over_to_one():
+    split_segments = [
+        SplitAudioChunk(
+            segment_index=1,
+            file_name="segment_01.wav",
+            start_ms=25000,
+            end_ms=30000,
+            audio_bytes=b"",
+            transcript="segment-5",
+            refined_transcript="segment-5",
+            introduction="五番\n会話です。",
+            script_text="男：...",
+            question_texts=["質問5。"],
+            spoken_question_number=5,
+        ),
+        SplitAudioChunk(
+            segment_index=2,
+            file_name="segment_02.wav",
+            start_ms=30000,
+            end_ms=35000,
+            audio_bytes=b"",
+            transcript="segment-1",
+            refined_transcript="segment-1",
+            introduction="一番\n会話です。",
+            script_text="女：...",
+            question_texts=["質問1。"],
+            spoken_question_number=1,
+        ),
+    ]
+
+    structured = AIExamService._build_structured_segments(split_segments, jlpt_level="N3")
+
+    assert [(item.mondai_group, item.question_number) for item in structured] == [
+        ("Mondai 1", 5),
+        ("Mondai 2", 1),
+    ]
+
+
+def test_build_structured_segments_repairs_false_seven_before_new_mondai_two():
+    split_segments = [
+        SplitAudioChunk(
+            segment_index=1,
+            file_name="segment_01.wav",
+            start_ms=10000,
+            end_ms=15000,
+            audio_bytes=b"",
+            transcript="segment-5",
+            refined_transcript="segment-5",
+            introduction="五番\n会話です。",
+            script_text="男：...",
+            question_texts=["質問5。"],
+            spoken_question_number=5,
+        ),
+        SplitAudioChunk(
+            segment_index=2,
+            file_name="segment_02.wav",
+            start_ms=15000,
+            end_ms=20000,
+            audio_bytes=b"",
+            transcript="segment-6",
+            refined_transcript="segment-6",
+            introduction="六番\n会話です。",
+            script_text="女：...",
+            question_texts=["質問6。"],
+            spoken_question_number=6,
+        ),
+        SplitAudioChunk(
+            segment_index=3,
+            file_name="segment_03.wav",
+            start_ms=20000,
+            end_ms=25000,
+            audio_bytes=b"",
+            transcript="segment-misread-7",
+            refined_transcript="segment-misread-7",
+            introduction="七番\n会話です。",
+            script_text="男：...",
+            question_texts=["質問1。"],
+            spoken_question_number=7,
+        ),
+        SplitAudioChunk(
+            segment_index=4,
+            file_name="segment_04.wav",
+            start_ms=25000,
+            end_ms=30000,
+            audio_bytes=b"",
+            transcript="segment-2",
+            refined_transcript="segment-2",
+            introduction="二番\n会話です。",
+            script_text="女：...",
+            question_texts=["質問2。"],
+            spoken_question_number=2,
+        ),
+    ]
+
+    structured = AIExamService._build_structured_segments(split_segments, jlpt_level="N3")
+
+    assert [(item.mondai_group, item.question_number) for item in structured] == [
+        ("Mondai 1", 5),
+        ("Mondai 1", 6),
+        ("Mondai 2", 1),
+        ("Mondai 2", 2),
     ]

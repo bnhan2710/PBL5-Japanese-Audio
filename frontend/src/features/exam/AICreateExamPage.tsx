@@ -1717,6 +1717,7 @@ export default function AICreateExamPage() {
       if (status.status === 'done' && status.result) {
         const result = status.result
         setAiResult(result)
+        setDraftId(result.draft_exam_id || '')
         setJobId(jobParam)
         const mapped = result.questions.map((question) => ({
           ...question,
@@ -1822,6 +1823,7 @@ export default function AICreateExamPage() {
 
   const handleJobDone = (result: AIExamResult) => {
     setAiResult(result)
+    setDraftId(result.draft_exam_id || '')
     const mappedQuestions = result.questions.map((question) => ({
       ...question,
       explanation: question.explanation || '',
@@ -1831,21 +1833,6 @@ export default function AICreateExamPage() {
     }))
     setEditableQuestions(mappedQuestions)
     setStep(3)
-
-    // Auto-save draft in the background
-    saveDraftToServer(mappedQuestions, result, level, title, description, draftId).then((newDraftId) => {
-      if (newDraftId) {
-        setDraftId(newDraftId)
-        toast({ title: '✅ Đã tự động lưu bản nháp', description: `Đề "${title}" đã được lưu nháp tự động.` })
-        // Save pending notification to localStorage for re-login scenario
-        localStorage.setItem('ai_exam_draft_saved', JSON.stringify({
-          title,
-          level,
-          draftId: newDraftId,
-          timestamp: Date.now(),
-        }))
-      }
-    })
   }
 
   const handleJobFailed = (err: string) => {

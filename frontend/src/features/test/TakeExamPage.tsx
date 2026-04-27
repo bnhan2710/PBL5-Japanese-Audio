@@ -41,6 +41,10 @@ function getQuestionStatus(question: TestQuestion, answers: AnswerMap, reviews: 
  return 'idle'
 }
 
+function isScoredQuestion(question: TestQuestion) {
+ return (question.question_number ?? 0) > 0
+}
+
 function getGlobalAudioUrl(exam: TestExamDetail | null): string | undefined {
  if (!exam) return undefined
  if (exam.audio_url) return exam.audio_url
@@ -204,12 +208,13 @@ export function TakeExamContent({
  const activeQuestion = exam?.questions.find((question) => question.question_id === activeQuestionId) || null
  const activeIndex = exam?.questions.findIndex((question) => question.question_id === activeQuestionId) ?? -1
 
- const answeredCount = exam?.questions.filter((question) => answers[question.question_id]).length || 0
+ const answeredCount =
+ exam?.questions.filter((question) => isScoredQuestion(question) && answers[question.question_id]).length || 0
  const activeGroup = activeQuestion?.mondai_group || 'Mondai'
  const activeGroupQuestions = groupedQuestions.find((group) => group.label === activeGroup)?.questions || []
- const activeGroupStart = activeGroupQuestions[0]?.question_number || 1
+ const activeGroupStart = activeGroupQuestions[0]?.question_number ?? 1
  const activeGroupEnd =
- activeGroupQuestions[activeGroupQuestions.length - 1]?.question_number || activeGroupQuestions.length || 1
+ activeGroupQuestions[activeGroupQuestions.length - 1]?.question_number ?? activeGroupQuestions.length ?? 1
 
  useEffect(() => {
  return () => {
@@ -433,7 +438,7 @@ export function TakeExamContent({
  toneClass,
  ].join(' ')}
  >
- {question.question_number || '?'}
+ {question.question_number ?? '?'}
  {status === 'review' && (
  <Flag className="absolute -right-1 -top-1 h-4 w-4 text-amber-500" />
  )}
@@ -455,7 +460,7 @@ export function TakeExamContent({
  {activeGroup}
  </span>
  <span className="text-lg font-black text-foreground sm:text-xl">
- Câu {activeQuestion.question_number || '?'}
+ Câu {activeQuestion.question_number ?? '?'}
  </span>
  </div>
 
@@ -579,7 +584,7 @@ export function TakeExamContent({
  <button
  type="button"
  onClick={() => moveQuestion(1)}
- disabled={activeIndex >= exam.total_questions - 1}
+ disabled={activeIndex >= exam.questions.length - 1}
  className="inline-flex h-12 w-24 items-center justify-center rounded-full border-2 border-emerald-400 bg-card text-emerald-500 transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
  >
  <ChevronRight className="h-6 w-6" />

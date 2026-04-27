@@ -441,7 +441,7 @@ export default function ExamPrintPage() {
                               Question
                             </p>
                             <h3 className="mt-2 text-xl font-bold text-stone-900">
-                              Câu {question.question_number || '?'}
+                              Câu {question.question_number ?? '?'}
                             </h3>
                           </div>
                         </div>
@@ -546,7 +546,7 @@ export default function ExamPrintPage() {
                       >
                         <div className="flex items-center justify-between gap-4">
                           <p className="text-sm font-semibold text-stone-900">
-                            Câu {question.question_number || '?'}
+                            Câu {question.question_number ?? '?'}
                           </p>
                           <span className="rounded-full bg-stone-900 px-3 py-1 text-xs font-bold text-white">
                             Đáp án đúng:{' '}
@@ -615,7 +615,7 @@ export default function ExamPrintPage() {
                         className="flex items-center justify-between rounded-2xl border border-border bg-stone-50 px-4 py-3 text-sm"
                       >
                         <span className="font-medium text-stone-700">
-                          Câu {question.question_number || '?'}
+                          Câu {question.question_number ?? '?'}
                         </span>
                         <span className="rounded-full bg-stone-900 px-3 py-1 text-xs font-bold text-white">
                           {correctAnswerIndex >= 0

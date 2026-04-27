@@ -3,6 +3,7 @@ import json
 import hashlib
 import logging
 from typing import Optional
+from pathlib import Path
 
 from fastapi import APIRouter, UploadFile, File, Form, BackgroundTasks, HTTPException, Depends
 from sqlalchemy import select
@@ -14,6 +15,8 @@ from app.core.security import get_current_user
 from app.modules.users.models import User
 from app.modules.audio.models import Audio
 from app.modules.ai_exam.models import AIExamCache
+from app.modules.exam.models import Exam
+from app.modules.questions.models import Question, Answer
 from app.modules.ai_exam.schemas import (
     AIGenerateRequest, AIGenerateResponse, AIJobStatusResponse,
     AIExamResult, MondaiCountConfig
@@ -82,6 +85,67 @@ def _job_from_result(job_id: str, result: AIExamResult, progress_message: str) -
         progress_message=progress_message,
         result=result,
     )
+
+
+def _build_draft_title(jlpt_level: str, exam_title: str, filename: str) -> str:
+    base_title = (exam_title or "").strip()
+    if not base_title:
+        base_title = Path(filename).stem
+    return f"[Nháp] [{jlpt_level}] {base_title}"
+
+
+async def _create_exam_draft_from_ai_result(
+    db: AsyncSession,
+    *,
+    user_id: int,
+    jlpt_level: str,
+    exam_title: str,
+    filename: str,
+    audio_id: Optional[uuid.UUID],
+    result: AIExamResult,
+) -> Exam:
+    exam = Exam(
+        creator_id=user_id,
+        title=_build_draft_title(jlpt_level, exam_title, filename),
+        description=None,
+        time_limit=60,
+        audio_id=audio_id,
+        current_step=3,
+        is_published=False,
+    )
+    db.add(exam)
+    await db.flush()
+
+    for question in result.questions:
+        db_question = Question(
+            exam_id=exam.exam_id,
+            mondai_group=question.mondai_group,
+            question_number=question.question_number,
+            audio_clip_url=question.audio_url,
+            question_text=question.question_text,
+            image_url=question.image_url,
+            script_text=question.script_text,
+            explanation=getattr(question, "explanation", None) or "",
+            raw_transcript=question.source_transcript,
+            hide_question_text=bool(getattr(question, "hide_question_text", False)),
+            difficulty=question.difficulty,
+        )
+        db.add(db_question)
+        await db.flush()
+
+        for index, answer in enumerate(question.answers):
+            db.add(
+                Answer(
+                    question_id=db_question.question_id,
+                    content=answer.content,
+                    image_url=None,
+                    is_correct=answer.is_correct,
+                    order_index=index,
+                )
+            )
+
+    await db.flush()
+    return exam
 
 
 async def _run_pipeline(
@@ -172,12 +236,23 @@ async def _run_pipeline(
             cache.cloudinary_public_id = public_id
             cache.cloudinary_format = fmt
             result.confidence_error_score = 0.10
+            if user_id:
+                draft_exam = await _create_exam_draft_from_ai_result(
+                    db,
+                    user_id=user_id,
+                    jlpt_level=jlpt_level,
+                    exam_title=exam_title,
+                    filename=filename,
+                    audio_id=audio.audio_id,
+                    result=result,
+                )
+                result.draft_exam_id = str(draft_exam.exam_id)
             cache.result_json = result.model_dump_json()
             cache.error_message = None
             await db.commit()
 
         job.status = "done"
-        job.progress_message = f"Done! Generated {len(result.questions)} questions."
+        job.progress_message = f"Done! Generated {len(result.questions)} questions and saved a draft exam."
         job.result = result
 
         if user_id:
@@ -185,9 +260,9 @@ async def _run_pipeline(
             await create_notification(
                 user_id=user_id,
                 title="Sinh đề AI hoàn thành!",
-                message=f'Đề "{title_display}" ({jlpt_level}) đã được tạo xong với {len(result.questions)} câu hỏi. Nhấn để xem kết quả.',
+                message=f'Đề "{title_display}" ({jlpt_level}) đã được tạo xong và tự động lưu vào bản nháp.',
                 type="success",
-                link=f"/exam/ai-create?job={job_id}",
+                link="/exam",
             )
 
     except Exception as exc:

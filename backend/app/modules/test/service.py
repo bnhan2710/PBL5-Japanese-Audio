@@ -46,6 +46,10 @@ def _sort_questions(questions: List[Question]) -> List[Question]:
     )
 
 
+def _is_scored_question(question: Question) -> bool:
+    return (question.question_number or 0) > 0
+
+
 def _difficulty_to_b(difficulty: int) -> float:
     bounded = max(1, min(5, int(difficulty)))
     # Calibrated widening: Original was [-1.5, 1.5]
@@ -225,6 +229,8 @@ class TestService:
         ]
 
         audio_url = exam.audio.file_url if isinstance(exam.audio, Audio) else None
+        total_scored_questions = sum(1 for question in sorted_questions if _is_scored_question(question))
+
         return TestExamDetailResponse(
             exam_id=exam.exam_id,
             title=exam.title,
@@ -233,7 +239,7 @@ class TestService:
             time_limit=exam.time_limit,
             is_published=exam.is_published,
             audio_url=audio_url,
-            total_questions=len(serialized_questions),
+            total_questions=total_scored_questions,
             mondai_groups=mondai_groups,
             questions=serialized_questions,
         )
@@ -309,6 +315,8 @@ class TestService:
         ]
 
         audio_url = exam.audio.file_url if isinstance(exam.audio, Audio) else None
+        total_scored_questions = sum(1 for question in sorted_questions if _is_scored_question(question))
+
         exam_review = TestExamReviewDetailResponse(
             exam_id=exam.exam_id,
             title=exam.title,
@@ -317,7 +325,7 @@ class TestService:
             time_limit=exam.time_limit,
             is_published=exam.is_published,
             audio_url=audio_url,
-            total_questions=len(serialized_questions),
+            total_questions=total_scored_questions,
             mondai_groups=mondai_groups,
             questions=serialized_questions,
         )
@@ -353,6 +361,9 @@ class TestService:
         responses: List[Tuple[int, int]] = []
 
         for question in sorted_questions:
+            if not _is_scored_question(question):
+                continue
+
             selected_answer_id = submitted_answers.get(question.question_id)
             is_correct = 0
             
@@ -367,7 +378,7 @@ class TestService:
             difficulty = _estimate_question_difficulty(question)
             responses.append((difficulty, is_correct))
 
-        total_questions = len(sorted_questions)
+        total_questions = sum(1 for question in sorted_questions if _is_scored_question(question))
         score = round(calculate_irt_score(responses), 2)
 
         user_answers_dict = {str(k): str(v) for k, v in submitted_answers.items() if v}

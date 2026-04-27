@@ -61,6 +61,7 @@ class AISplitSegment(BaseModel):
 
 
 class AIExamResult(BaseModel):
+    draft_exam_id: Optional[str] = None
     audio_id: Optional[str] = None
     audio_file_url: Optional[str] = None
     raw_transcript: str

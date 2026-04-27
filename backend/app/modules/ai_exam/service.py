@@ -5,7 +5,7 @@ import re
 import shutil
 import tempfile
 from collections import OrderedDict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Callable, Optional, Sequence
 
@@ -19,15 +19,18 @@ from app.modules.ai_exam.schemas import (
 )
 
 logger = logging.getLogger(__name__)
-PIPELINE_VERSION = "ai-exam-cache-v6-reazon-local-ban-aware-numbering"
+PIPELINE_VERSION = "ai-exam-cache-v7-reazon-local-mondai-timeline-aware"
 REPO_ROOT = Path(__file__).resolve().parents[4]
 REAZON_SPLIT_DIR = REPO_ROOT / "R&D" / "Reazon" / "Spilit"
 BELL_SOUND_PATH = REAZON_SPLIT_DIR / "Bell_sound.mp3"
 BELL_2BAKU_PATH = REAZON_SPLIT_DIR / "Bell_2baku.mp3"
 MAX_MONDAI = 5
 MAX_QUESTIONS_PER_SEGMENT = 1
+SHORT_OPTION_SEGMENT_MIN_SECONDS = 25.0
+SHORT_OPTION_SEGMENT_MAX_SECONDS = 35.0
 
 QUESTION_NUMBER_PATTERNS = [
+    (re.compile(r"^(?:れい|レイ|例)(?:$|[。、「」『』\s]|を|で|は|の|だ|です)"), 0),
     (re.compile(r"^(?:第)?(?:十二|じゅうに|ジュウニ|12)\s*番"), 12),
     (re.compile(r"^(?:第)?(?:十一|じゅういち|ジュウイチ|11)\s*番"), 11),
     (re.compile(r"^(?:第)?(?:十|じゅう|ジュウ|10)\s*番"), 10),
@@ -111,9 +114,20 @@ def _extract_question_texts(text: str) -> list[str]:
 
 
 def _extract_spoken_question_number(text: str) -> Optional[int]:
-    normalized_text = re.sub(r"^[\s。、「」『』\-\n]+", "", text or "")
+    normalized_text = text or ""
+    candidate_lines = [
+        re.sub(r"^[\s。、「」『』\-]+", "", line.strip())
+        for line in normalized_text.splitlines()
+        if line.strip()
+    ]
+    for candidate in candidate_lines[:4]:
+        for pattern, number in QUESTION_NUMBER_PATTERNS:
+            if pattern.search(candidate):
+                return number
+
+    compact_text = re.sub(r"^[\s。、「」『』\-\n]+", "", normalized_text)
     for pattern, number in QUESTION_NUMBER_PATTERNS:
-        if pattern.search(normalized_text):
+        if pattern.search(compact_text):
             return number
     return None
 
@@ -131,6 +145,13 @@ def _extract_mondai_number(label: str | None) -> int:
         return 0
     match = re.search(r"\d+", label)
     return int(match.group()) if match else 0
+
+
+def _max_mondai_for_level(jlpt_level: str | None) -> int:
+    normalized = (jlpt_level or "").upper().strip()
+    if normalized in {"N4", "N5"}:
+        return 4
+    return 5
 
 
 def _strip_leading_ban_block(text: str) -> str:
@@ -261,6 +282,52 @@ def _fallback_candidates(script_text: str) -> list[str]:
     return candidates
 
 
+def _strip_timestamp_prefix(line: str) -> str:
+    match = re.match(r"^\d{2}:\d{2}(?::\d{2})?:\s*(.+)$", (line or "").strip())
+    return (match.group(1) if match else line).strip()
+
+
+def _extract_numbered_answer_options(transcript_text: str) -> list[AIQuestionOption]:
+    marker_to_label = {"一": "A", "二": "B", "三": "C", "四": "D"}
+    marker_order = list(marker_to_label.keys())
+    option_map: dict[str, list[str]] = {}
+    current_marker: Optional[str] = None
+
+    for raw_line in (transcript_text or "").splitlines():
+        line = _strip_timestamp_prefix(raw_line)
+        if not line:
+            continue
+        if line in marker_to_label:
+            current_marker = line
+            option_map.setdefault(current_marker, [])
+            continue
+        if current_marker:
+            option_map[current_marker].append(line)
+
+    contiguous_markers: list[str] = []
+    for marker in marker_order:
+        if marker in option_map:
+            contiguous_markers.append(marker)
+        elif contiguous_markers:
+            break
+
+    if len(contiguous_markers) < 3:
+        return []
+
+    options: list[AIQuestionOption] = []
+    for marker in contiguous_markers:
+        content_parts = option_map.get(marker, [])
+        content = " ".join(part.strip() for part in content_parts if part.strip()).strip()
+        options.append(
+            AIQuestionOption(
+                label=marker_to_label[marker],
+                content=content,
+                is_correct=False,
+            )
+        )
+    return options
+
+
 def _mutate_time_option(base: str, offset: int) -> str:
     match = re.search(r"(\d{1,2}|[一二三四五六七八九十]+)時", base)
     if not match:
@@ -306,7 +373,21 @@ def _choose_correct_answer(question_type: str, script_text: str, question_text: 
     return fallback_sentences[-1] if fallback_sentences else "内容を確認する"
 
 
-def _build_answer_options(question_number: int, script_text: str, question_text: str) -> list[AIQuestionOption]:
+def _build_answer_options(
+    question_number: int,
+    script_text: str,
+    question_text: str,
+    source_transcript: str = "",
+    source_duration_seconds: Optional[float] = None,
+) -> list[AIQuestionOption]:
+    numbered_options = _extract_numbered_answer_options(source_transcript)
+    if (
+        numbered_options
+        and source_duration_seconds is not None
+        and SHORT_OPTION_SEGMENT_MIN_SECONDS <= source_duration_seconds <= SHORT_OPTION_SEGMENT_MAX_SECONDS
+    ):
+        return numbered_options
+
     return [
         AIQuestionOption(label=label, content="", is_correct=False)
         for label in ["A", "B", "C", "D"]
@@ -806,7 +887,7 @@ class AIExamService:
             segment.announced_mondai_number = transcript_result.get("announced_mondai_number")
 
         self._notify(progress_callback, "Step 5/7: Formatting scripts with local Reazon rules...")
-        structured_segments = self._build_structured_segments(split_segments)
+        structured_segments = self._build_structured_segments(split_segments, jlpt_level=jlpt_level)
 
         self._notify(progress_callback, "Step 6/7: Building local question drafts...")
         questions = self._build_questions(structured_segments, split_segments)
@@ -851,36 +932,68 @@ class AIExamService:
             progress_callback(message)
 
     @staticmethod
-    def _build_structured_segments(split_segments: Sequence[SplitAudioChunk]) -> list[StructuredSegment]:
+    def _build_structured_segments(
+        split_segments: Sequence[SplitAudioChunk],
+        jlpt_level: str = "N2",
+    ) -> list[StructuredSegment]:
         structured: list[StructuredSegment] = []
-        current_mondai = 1
-        last_question_number = 0
+        max_mondai = _max_mondai_for_level(jlpt_level)
+        ordered_segments = sorted(
+            split_segments,
+            key=lambda segment: (segment.start_ms, segment.end_ms, segment.segment_index),
+        )
 
-        for segment in split_segments:
+        current_mondai = 1
+        last_scored_question_number: Optional[int] = None
+
+        for segment in ordered_segments:
             question_text = (segment.question_texts[-1] if segment.question_texts else "")
             base_question_number = segment.spoken_question_number
             announced_mondai_number = segment.announced_mondai_number
 
             if announced_mondai_number is not None:
-                current_mondai = max(1, min(MAX_MONDAI, announced_mondai_number))
-                if not structured or current_mondai != _extract_mondai_number(structured[-1].mondai_group):
-                    last_question_number = 0
+                next_mondai = max(1, min(max_mondai, announced_mondai_number))
+                if next_mondai >= current_mondai:
+                    if next_mondai != current_mondai:
+                        last_scored_question_number = None
+                    current_mondai = next_mondai
+
+            if announced_mondai_number is None and base_question_number is not None:
+                if base_question_number == 0 and last_scored_question_number is not None:
+                    if current_mondai < max_mondai:
+                        current_mondai += 1
+                    last_scored_question_number = None
+                elif (
+                    base_question_number == 1
+                    and last_scored_question_number is not None
+                    and last_scored_question_number >= 1
+                ):
+                    if current_mondai < max_mondai:
+                        current_mondai += 1
+                    last_scored_question_number = None
+                elif (
+                    base_question_number > 0
+                    and last_scored_question_number is not None
+                    and base_question_number < last_scored_question_number
+                ):
+                    if current_mondai < max_mondai:
+                        current_mondai += 1
+                    last_scored_question_number = None
 
             if base_question_number is None:
-                base_question_number = last_question_number + 1 if last_question_number else 1
-            elif structured and base_question_number == 1 and last_question_number >= 1:
-                if current_mondai < MAX_MONDAI:
-                    current_mondai += 1
-                    last_question_number = 0
+                if last_scored_question_number is not None and last_scored_question_number > 0:
+                    resolved_question_number = last_scored_question_number + 1
                 else:
-                    base_question_number = last_question_number + 1
+                    resolved_question_number = 1
+            else:
+                resolved_question_number = base_question_number
 
             structured.append(
                 StructuredSegment(
                     source_segment_index=segment.segment_index,
                     source_question_index=1,
                     mondai_group=f"Mondai {current_mondai}",
-                    question_number=base_question_number,
+                    question_number=resolved_question_number,
                     introduction=segment.introduction,
                     script_text=segment.script_text or segment.refined_transcript or segment.transcript,
                     question_text=question_text,
@@ -888,9 +1001,42 @@ class AIExamService:
                 )
             )
 
-            last_question_number = base_question_number
+            if resolved_question_number > 0:
+                last_scored_question_number = resolved_question_number
 
-        return structured
+        return AIExamService._repair_false_rollover_misreads(structured)
+
+    @staticmethod
+    def _repair_false_rollover_misreads(
+        structured_segments: Sequence[StructuredSegment],
+    ) -> list[StructuredSegment]:
+        repaired = list(structured_segments)
+        for index in range(1, len(repaired)):
+            previous = repaired[index - 1]
+            current = repaired[index]
+
+            if previous.mondai_group == current.mondai_group:
+                continue
+            if current.question_number != 2:
+                continue
+            if previous.question_number < 7:
+                continue
+
+            previous_previous = repaired[index - 2] if index >= 2 else None
+            if previous_previous is None:
+                continue
+            if previous_previous.mondai_group != previous.mondai_group:
+                continue
+            if previous_previous.question_number != previous.question_number - 1:
+                continue
+
+            repaired[index - 1] = replace(
+                previous,
+                mondai_group=current.mondai_group,
+                question_number=1,
+            )
+
+        return repaired
 
     @staticmethod
     def _build_raw_transcript(split_segments: Sequence[SplitAudioChunk]) -> str:
@@ -936,10 +1082,14 @@ class AIExamService:
         questions: list[AIQuestion] = []
         for structured in structured_segments:
             source = segment_map[structured.source_segment_index]
+            source_transcript = source.timestamped_transcript or source.transcript
+            source_duration_seconds = max(0.0, (source.end_ms - source.start_ms) / 1000.0)
             answers = _build_answer_options(
                 structured.question_number,
                 structured.script_text or structured.refined_transcript or source.transcript,
                 structured.question_text,
+                source_transcript,
+                source_duration_seconds,
             )
             questions.append(
                 AIQuestion(
@@ -958,7 +1108,7 @@ class AIExamService:
                     source_question_index=structured.source_question_index,
                     source_start_time=source.start_ms / 1000.0,
                     source_end_time=source.end_ms / 1000.0,
-                    source_transcript=source.timestamped_transcript or source.transcript,
+                    source_transcript=source_transcript,
                     answers=answers,
                 )
             )
@@ -966,8 +1116,18 @@ class AIExamService:
 
     @staticmethod
     def _build_timestamps(questions: Sequence[AIQuestion]) -> list[AITimestampMondai]:
+        ordered_questions = sorted(
+            questions,
+            key=lambda question: (
+                float(question.source_start_time) if question.source_start_time is not None else float("inf"),
+                float(question.source_end_time) if question.source_end_time is not None else float("inf"),
+                _extract_mondai_number(question.mondai_group),
+                question.question_number,
+            ),
+        )
+
         grouped: "OrderedDict[str, list[AIQuestion]]" = OrderedDict()
-        for question in questions:
+        for question in ordered_questions:
             grouped.setdefault(question.mondai_group, []).append(question)
 
         timestamps: list[AITimestampMondai] = []
@@ -1001,7 +1161,14 @@ class AIExamService:
                             end_time=float(question.source_end_time),
                             text=question.question_text or question.source_transcript,
                         )
-                        for question in valid_questions
+                        for question in sorted(
+                            valid_questions,
+                            key=lambda item: (
+                                float(item.source_start_time),
+                                float(item.source_end_time),
+                                item.question_number,
+                            ),
+                        )
                     ],
                 )
             )

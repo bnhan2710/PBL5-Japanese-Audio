@@ -261,6 +261,7 @@ export interface AISplitSegment {
 }
 
 export interface AIExamResult {
+  draft_exam_id?: string
   audio_id?: string
   audio_file_url?: string | null
   raw_transcript: string

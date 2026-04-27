@@ -77,9 +77,9 @@ export default function TestResultReviewPage() {
 
   const activeGroup = activeQuestion?.mondai_group || 'Mondai'
   const activeGroupQuestions = groupedQuestions.find((group) => group.label === activeGroup)?.questions || []
-  const activeGroupStart = activeGroupQuestions[0]?.question_number || 1
+  const activeGroupStart = activeGroupQuestions[0]?.question_number ?? 1
   const activeGroupEnd =
-    activeGroupQuestions[activeGroupQuestions.length - 1]?.question_number || activeGroupQuestions.length || 1
+    activeGroupQuestions[activeGroupQuestions.length - 1]?.question_number ?? activeGroupQuestions.length ?? 1
 
   const moveQuestion = (step: number) => {
     if (!data || activeIndex < 0) return
@@ -199,7 +199,7 @@ export default function TestResultReviewPage() {
                             onClick={() => setActiveQuestionId(question.question_id)}
                             className={['relative flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold transition-all', toneClass].join(' ')}
                           >
-                            {question.question_number || '?'}
+                            {question.question_number ?? '?'}
                           </button>
                         )
                       })}
@@ -220,7 +220,7 @@ export default function TestResultReviewPage() {
                         {activeGroup}
                       </span>
                       <span className="text-lg font-black text-foreground sm:text-xl">
-                        Câu {activeQuestion.question_number || '?'}
+                        Câu {activeQuestion.question_number ?? '?'}
                       </span>
                     </div>
 
@@ -366,7 +366,7 @@ export default function TestResultReviewPage() {
               <button
                 type="button"
                 onClick={() => moveQuestion(1)}
-                disabled={activeIndex >= exam.total_questions - 1}
+                disabled={activeIndex >= exam.questions.length - 1}
                 className="inline-flex h-12 w-24 items-center justify-center rounded-full border-2 border-border bg-card text-muted-foreground transition-colors hover:border-indigo-300 hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <ChevronRight className="h-6 w-6" />
