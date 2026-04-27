@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import base64
 import io
+import re
 import logging
 import json
 from datetime import datetime
-from typing import List
+from typing import TYPE_CHECKING, Any, List
 from uuid import uuid4
 
 from fastapi import HTTPException
@@ -17,6 +18,11 @@ except ImportError:  # pragma: no cover
     Image = None
     ImageDraw = None
     ImageFont = None
+
+if TYPE_CHECKING:
+    from PIL.Image import Image as PILImage
+else:
+    PILImage = Any
 
 from app.core.config import BASE_DIR, get_settings
 from app.modules.ai_photos.schemas import PhotoType
@@ -72,11 +78,99 @@ class AIPhotoService:
         answers: list[str] | None,
         answer_focus: str | None = None,
     ) -> str:
-        """Compose LM input from user-entered prompt only (no extra semantic context)."""
+        """Compose LM input from user-entered prompt and strict scene requirements."""
         user_prompt = self._clean_text(description)
         if not user_prompt:
             user_prompt = "No description provided."
-        return f"Primary user prompt (must follow this exactly): {user_prompt}"
+        q_text = self._clean_text(question_text)
+        script_text = self._clean_text(script)
+        answer_list = [self._clean_text(a) for a in (answers or []) if self._clean_text(a)]
+
+        parts = [
+            f"User source prompt (possibly Vietnamese): {user_prompt}",
+            "Task: translate to English and expand into a detailed visual prompt for image generation.",
+            "Required detail level: long and specific, around 90-170 words in prompt.",
+            "Important composition rules: keep a clear scene background, keep total characters to 1-2, and avoid extra people.",
+        ]
+        if q_text:
+            parts.append(f"Question context: {q_text}")
+        if script_text:
+            parts.append(f"Script context: {script_text}")
+        if answer_list:
+            parts.append(f"Answer options context: {' | '.join(answer_list[:4])}")
+
+        answer_target = self._clean_text(answer_focus)
+        if answer_target:
+            parts.append(f"Variant focus: emphasize this answer action: {answer_target}")
+
+        return "\n".join(parts)
+
+    def _looks_like_low_detail_prompt(self, prompt: str, style_positive: str) -> bool:
+        cleaned = self._clean_text(prompt)
+        if not cleaned:
+            return True
+
+        # Prompt must be English-only for Draw Things; reject Vietnamese/non-ASCII leakage.
+        if any(ord(ch) > 127 for ch in cleaned):
+            return True
+
+        word_count = len(cleaned.split())
+        if word_count < 45:
+            return True
+
+        lowered = cleaned.lower()
+        leaked_markers = [
+            "user source prompt",
+            "task:",
+            "important composition rules",
+            "answer options context",
+            "question context",
+            "script context",
+        ]
+        if any(marker in lowered for marker in leaked_markers):
+            return True
+
+        # Heuristic for Vietnamese text leakage even if some characters are ASCII.
+        if re.search(r"\b(sinh|thay|giao|nu\s+sinh|lop\s+hoc|kiem\s+tra|bai\s+lam)\b", lowered):
+            return True
+
+        # Reject prompts that are basically only style boilerplate.
+        normalized = cleaned.lower().strip(" ,.")
+        style_normalized = self._clean_text(style_positive).lower().strip(" ,.")
+        if style_normalized and normalized == style_normalized:
+            return True
+        if style_normalized and normalized.startswith(style_normalized) and word_count < 65:
+            return True
+
+        return False
+
+    def _apply_scene_guardrails(self, prompt: str, negative_prompt: str, for_action: bool) -> tuple[str, str]:
+        scene_positive = (
+            "monochrome black and white manga-style, educational textbook illustration, "
+            "medium-wide composition, clear environment/background context, full scene view, 1-2 characters only"
+        )
+        if for_action:
+            scene_positive += ", one clear primary action, no crowd"
+
+        scene_negative = (
+            "crowd, many people, extra characters, background characters, duplicate people, "
+            "close-up portrait, headshot crop, isolated single person on blank background, empty background, "
+            "complex background clutter"
+        )
+
+        final_prompt = self._clean_text(prompt)
+        final_negative = self._clean_text(negative_prompt)
+
+        if scene_positive.lower() not in final_prompt.lower():
+            final_prompt = f"{final_prompt}, {scene_positive}" if final_prompt else scene_positive
+
+        if final_negative:
+            if scene_negative.lower() not in final_negative.lower():
+                final_negative = f"{final_negative}, {scene_negative}"
+        else:
+            final_negative = scene_negative
+
+        return final_prompt, final_negative
 
     def _extract_lm_bundle(self, data: dict) -> tuple[str, str]:
         """Extract prompt/negative_prompt from OpenAI-compatible response variants."""
@@ -142,39 +236,49 @@ class AIPhotoService:
             return reasoning.strip()
         return ""
 
-    def _build_fallback_prompt_bundle(self, for_action: bool) -> tuple[str, str]:
+    def _build_fallback_prompt_bundle(self, for_action: bool, lm_input: str | None = None) -> tuple[str, str]:
         """Fallback uses generic drawing-style constraints plus a simple safe scene."""
         fallback_prompt = (
-            "simple jlpt worksheet illustration, monochrome black lineart on white background, "
-            "clean outline, minimal scene, clear human figures"
+            "monochrome black and white manga-style educational illustration, medium-wide composition, "
+            "clear classroom scene with desks, blackboard, and windows, exactly two characters only, "
+            "one female student standing beside a teacher's desk and holding a test paper, one male teacher sitting and working at the desk, "
+            "a clear arrow marker pointing to the female student, clean outline, simple gray shading"
         )
         if for_action:
-            fallback_prompt += ", focus on one clear action"
+            fallback_prompt += ", one clear primary action, no crowd"
 
         fallback_negative = (
-            "color, gradient, shading, grayscale tones, rough sketch, noisy texture, text, watermark, "
-            "logo, 3d, photorealistic, blur, distortion, bad anatomy"
+            "color, photo, complex shading, gradients, text, watermark, logo, 3d, photorealistic, blur, distortion, "
+            "bad anatomy, crowd, many people, extra characters, duplicate people, close-up portrait, empty background"
         )
-        return fallback_prompt, fallback_negative
+        return self._apply_scene_guardrails(fallback_prompt, fallback_negative, for_action)
 
     async def _build_english_prompt(self, lm_input: str, for_action: bool) -> tuple[str, str]:
         style_positive = self._clean_text(self.base_prompt) or (
-            "strictly monochrome, black lines on pure white background, clean lineart, "
-            "simple outline, high contrast, no shading, no grayscale"
+            "monochrome black and white manga-style, clean lineart, high contrast, educational worksheet style"
         )
         style_negative = self._clean_text(self.negative_prompt) or (
-            "color, gradient, shading, grayscale tones, rough sketch, noisy texture, text, watermark, "
-            "logo, 3d, photorealistic, blur, distortion, bad anatomy"
+            "(high contrast:1.4), (photo:1.2), color, complex shading, gradients, complex background, text, words, "
+            "watermark, error, cropped, signature, blurred, out of focus, duplicate characters, distorted faces, "
+            "three legs, more than two eyes, missing limbs"
         )
 
         system = (
-            "You are a Stable Diffusion prompt writer for JLPT listening illustrations. "
-            "Use the primary user prompt as the main content. "
-            "Generate English prompt + negative_prompt in JSON. "
+            "You are a Draw Things prompt writer for JLPT listening illustrations. "
+            "Your job is to translate the user source prompt to English and then enrich it into a detailed, concrete scene prompt. "
+            "Generate an English prompt and a negative prompt in JSON. "
             "Output JSON only with exactly these keys: {\"prompt\":\"...\",\"negative_prompt\":\"...\"}. "
+            "The prompt and negative_prompt must be English only, plain ASCII only, and must not contain Vietnamese words. "
             "Prompt must describe scene according to user request; keep composition clear and natural. "
+            "Prompt must be long and detailed (around 90-170 words), not a short generic template. "
+            "Preserve all explicit entities and actions from the user request (who, where, posture, direction, objects, relationship). "
+            "If the user mentions an arrow marker, include a clear arrow and its target person in the prompt. "
+            "Always keep environment context and background objects (not character-only portraits). "
+            "Use medium-wide framing to show both character(s) and place. "
+            "Default to 1-2 people only unless user explicitly asks for more. "
             f"Always include these global style tags in prompt: {style_positive}. "
             f"Always include these global negative tags in negative_prompt: {style_negative}. "
+            "negative_prompt must not be empty. "
             "No markdown, no explanation."
         )
         if for_action:
@@ -187,8 +291,8 @@ class AIPhotoService:
                     {"role": "system", "content": system},
                     {"role": "user", "content": lm_input},
                 ],
-                "temperature": 0.35,
-                "max_tokens": 360,
+                "temperature": 0.3,
+                "max_tokens": 520,
             },
             {
                 "model": self.lm_model,
@@ -203,7 +307,7 @@ class AIPhotoService:
                     {"role": "user", "content": lm_input},
                 ],
                 "temperature": 0.2,
-                "max_tokens": 260,
+                "max_tokens": 420,
             },
         ]
 
@@ -224,14 +328,19 @@ class AIPhotoService:
                     prompt, negative_prompt = self._extract_lm_bundle(data)
                     prompt = prompt.strip().strip('"').strip("'")
                     negative_prompt = negative_prompt.strip().strip('"').strip("'")
-                    if prompt:
+                    if prompt and not self._looks_like_low_detail_prompt(prompt, style_positive):
                         final_prompt = prompt
-                        final_negative = negative_prompt or ""
+                        final_negative = negative_prompt or style_negative
                         if style_positive and style_positive.lower() not in final_prompt.lower():
                             final_prompt = f"{style_positive}, {final_prompt}"
                         if style_negative and style_negative.lower() not in final_negative.lower():
                             final_negative = f"{style_negative}, {final_negative}".strip().strip(",")
+                        final_prompt, final_negative = self._apply_scene_guardrails(
+                            final_prompt, final_negative, for_action
+                        )
                         return final_prompt, final_negative
+                    if prompt:
+                        logger.warning("LM Studio prompt too short/generic on attempt %s; retrying", index + 1)
 
                     reasoning = self._extract_reasoning_content(data)
                     if reasoning:
@@ -242,7 +351,7 @@ class AIPhotoService:
                                 {
                                     "role": "system",
                                     "content": (
-                                        "Convert the provided analysis into final JSON with prompt and negative_prompt for Stable Diffusion. "
+                                        "Convert the provided analysis into final JSON with prompt and negative_prompt for Flux.2 [Klein] 4B. "
                                         "Return only {\"prompt\":\"...\",\"negative_prompt\":\"...\"}."
                                     ),
                                 },
@@ -258,14 +367,19 @@ class AIPhotoService:
                             recovered_prompt, recovered_negative = self._extract_lm_bundle(recover_data)
                             recovered_prompt = recovered_prompt.strip().strip('"').strip("'")
                             recovered_negative = recovered_negative.strip().strip('"').strip("'")
-                            if recovered_prompt:
+                            if recovered_prompt and not self._looks_like_low_detail_prompt(recovered_prompt, style_positive):
                                 final_prompt = recovered_prompt
-                                final_negative = recovered_negative or ""
+                                final_negative = recovered_negative or style_negative
                                 if style_positive and style_positive.lower() not in final_prompt.lower():
                                     final_prompt = f"{style_positive}, {final_prompt}"
                                 if style_negative and style_negative.lower() not in final_negative.lower():
                                     final_negative = f"{style_negative}, {final_negative}".strip().strip(",")
+                                final_prompt, final_negative = self._apply_scene_guardrails(
+                                    final_prompt, final_negative, for_action
+                                )
                                 return final_prompt, final_negative
+                            if recovered_prompt:
+                                logger.warning("LM Studio recovered prompt too short/generic on attempt %s", index + 1)
                         except httpx.HTTPStatusError as exc:
                             response_text = exc.response.text[:400] if exc.response is not None else ""
                             last_error_detail = f"HTTP {exc.response.status_code}: {response_text}" if exc.response is not None else str(exc)
@@ -286,26 +400,30 @@ class AIPhotoService:
             )
 
         logger.warning("LM Studio returned empty prompt after retries. Using JLPT fallback prompt bundle.")
-        return self._build_fallback_prompt_bundle(for_action)
+        return self._build_fallback_prompt_bundle(for_action, lm_input)
 
 
     # ------------------------------------------------------------------
     # Draw Things generation
     # ------------------------------------------------------------------
 
-    async def _generate_single_image(self, lm_prompt: str, negative_prompt: str | None = None) -> Image.Image:
-        """Send only Gemma-generated prompt so Draw Things uses its own saved preset/config."""
+    async def _generate_single_image(self, lm_prompt: str, negative_prompt: str | None = None) -> PILImage:
+        """Send prompt and negative_prompt while keeping Draw Things preset runtime settings."""
         final_prompt = lm_prompt.strip()
         if not final_prompt:
             raise HTTPException(status_code=500, detail="Prompt từ Gemma 4 đang rỗng.")
 
-        logger.info("Draw Things final prompt: %s", final_prompt)
+        final_negative = self._clean_text(negative_prompt) or self._clean_text(self.negative_prompt) or (
+            "color, gradient, shading, grayscale tones, rough sketch, noisy texture, text, watermark, "
+            "logo, 3d, photorealistic, blur, distortion, bad anatomy"
+        )
 
-        # Intentionally pass only prompt to let Draw Things keep all runtime settings
-        # (model/sampler/steps/cfg/size/negative prompt/seed) from its own UI preset.
-        payload: dict = {"prompt": final_prompt}
-        if negative_prompt and negative_prompt.strip():
-            payload["negative_prompt"] = negative_prompt.strip()
+        logger.info("Draw Things final prompt: %s", final_prompt)
+        logger.info("Draw Things final negative_prompt: %s", final_negative)
+
+        # Intentionally pass only prompt/negative_prompt so Draw Things keeps model and runtime settings
+        # (including Flux preset choices) from its own UI preset.
+        payload: dict = {"prompt": final_prompt, "negative_prompt": final_negative}
 
         try:
             async with httpx.AsyncClient(timeout=180.0) as client:
@@ -329,7 +447,7 @@ class AIPhotoService:
     # Image utilities
     # ------------------------------------------------------------------
 
-    def _decode_base64_image(self, raw_base64: str) -> Image.Image:
+    def _decode_base64_image(self, raw_base64: str) -> PILImage:
         clean = raw_base64.split(",")[-1] if "," in raw_base64 else raw_base64
         try:
             return Image.open(io.BytesIO(base64.b64decode(clean))).convert("RGB")
@@ -338,12 +456,12 @@ class AIPhotoService:
                 status_code=500, detail="Invalid image data received from Draw Things."
             ) from exc
 
-    def _encode_image_to_data_url(self, image: Image.Image) -> str:
+    def _encode_image_to_data_url(self, image: PILImage) -> str:
         buf = io.BytesIO()
         image.save(buf, format="PNG")
         return f"data:image/png;base64,{base64.b64encode(buf.getvalue()).decode()}"
 
-    def _draw_label_badge(self, image: Image.Image, label: str) -> Image.Image:
+    def _draw_label_badge(self, image: PILImage, label: str) -> PILImage:
         """Overlay a filled circle with the letter label at the top-left corner."""
         img = image.copy()
         draw = ImageDraw.Draw(img)
@@ -362,7 +480,7 @@ class AIPhotoService:
         draw.text((cx - tw / 2, cy - th / 2), label, fill="white", font=font)
         return img
 
-    def _create_2x2_grid(self, images: List[Image.Image]) -> Image.Image:
+    def _create_2x2_grid(self, images: List[PILImage]) -> PILImage:
         """Stitch 4 labelled panels into a 2×2 grid."""
         w, h = images[0].size
         canvas = Image.new("RGB", (w * 2, h * 2), color="white")
@@ -372,7 +490,7 @@ class AIPhotoService:
             canvas.paste(labelled, pos)
         return canvas
 
-    def _save_image(self, image: Image.Image, photo_type: PhotoType) -> str:
+    def _save_image(self, image: PILImage, photo_type: PhotoType) -> str:
         ts = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
         filename = f"{photo_type.value}-{ts}-{uuid4().hex[:8]}.png"
         path = self.output_dir / filename
@@ -408,7 +526,7 @@ class AIPhotoService:
                     status_code=422,
                     detail="Action type requires exactly 4 answer choices.",
                 )
-            panels: List[Image.Image] = []
+            panels: List[PILImage] = []
             prompts: List[str] = []
             for answer in answers[:4]:
                 lm_input = self._format_lm_input(
